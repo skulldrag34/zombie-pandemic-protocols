@@ -1,0 +1,3572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0a0f0a">
+<title>ZOMBIE PANDEMIC: PROTOCOLS</title>
+<style>
+  :root {
+    --bg: #0a0f0a; --panel: #10160f; --panel-raised: #151d13; --line: #263624;
+    --text: #c9d6c0; --text-dim: #6f8168; --toxic: #7fb238; --toxic-dim: #4d6c2c;
+    --blood: #b23a3a; --blood-dim: #6e2626; --amber: #d9a441; --amber-dim: #7a5c26;
+    --cyan: #4a9b96; --purple: #9a6fd9;
+    --font: "Consolas", "JetBrains Mono", "Courier New", monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); display: flex; justify-content: center; padding: 18px 12px 40px; min-height: 100vh; }
+  .crt-overlay { pointer-events: none; position: fixed; inset: 0; background: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.10) 3px); mix-blend-mode: multiply; z-index: 50; }
+  .vignette { pointer-events: none; position: fixed; inset: 0; box-shadow: inset 0 0 140px rgba(0,0,0,0.75); z-index: 49; }
+  #app { width: 100%; max-width: 940px; animation: boot 0.5s ease-out; }
+  #app.hidden { display: none; }
+  @keyframes boot { 0% { opacity: 0; filter: brightness(3) blur(2px); } 40% { opacity: 1; filter: brightness(1.8); } 100% { opacity: 1; filter: brightness(1); } }
+
+  .titlebar { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid var(--toxic-dim); padding-bottom: 10px; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
+  .titlebar h1 { font-size: 17px; letter-spacing: 2px; margin: 0; color: var(--toxic); text-shadow: 0 0 8px rgba(127,178,56,0.35); }
+  .titlebar .sector-tag { font-size: 12px; color: var(--text-dim); }
+  .titlebar .sector-tag b { color: var(--amber); font-weight: normal; }
+
+  .savebar { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .savebar button, .savebar label { font-family: var(--font); font-size: 10.5px; background: var(--panel-raised); border: 1px solid var(--line); color: var(--text-dim); padding: 5px 10px; border-radius: 3px; cursor: pointer; }
+  .savebar button:hover, .savebar label:hover { color: var(--toxic); border-color: var(--toxic-dim); }
+  .savebar input[type=file] { display: none; }
+
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 3px; padding: 12px 14px; margin-bottom: 12px; }
+  .panel-label { font-size: 10px; color: var(--text-dim); letter-spacing: 1.5px; margin-bottom: 8px; display: flex; justify-content: space-between; }
+
+  .hud-top { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; font-size: 11px; }
+  .chip { border: 1px solid var(--line); background: var(--panel-raised); padding: 4px 9px; border-radius: 3px; }
+  .chip.cash { color: var(--amber); } .chip.scrap { color: var(--cyan); } .chip.lvl { color: var(--toxic); } .chip.quest { color: var(--purple); }
+
+  .stat-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .stat-row:last-child { margin-bottom: 0; }
+  .stat-label { width: 40px; font-size: 11px; color: var(--text-dim); flex-shrink: 0; }
+  .bar-track { flex: 1; height: 14px; background: #0c110b; border: 1px solid var(--line); position: relative; overflow: hidden; }
+  .bar-fill { height: 100%; transition: width 0.35s ease; }
+  .bar-fill.hp { background: linear-gradient(to right, var(--blood-dim), var(--blood)); }
+  .bar-fill.ap { background: linear-gradient(to right, var(--toxic-dim), var(--toxic)); }
+  .bar-fill.xp { background: linear-gradient(to right, var(--amber-dim), var(--amber)); }
+  .bar-fill.zhp { background: linear-gradient(to right, #6e2626, #d94f4f); }
+  .bar-fill.chp { background: linear-gradient(to right, #2c4d6e, #4a9bd9); }
+  .bar-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10.5px; color: #eef2ea; text-shadow: 0 0 3px #000; }
+  .gear-line { font-size: 11.5px; color: var(--text-dim); margin-top: 8px; line-height: 1.6; }
+  .gear-line span { color: var(--amber); }
+
+  .tabbar { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
+  .tabbtn { font-family: var(--font); font-size: 11px; letter-spacing: 0.5px; background: var(--panel-raised); border: 1px solid var(--line); color: var(--text-dim); padding: 7px 12px; border-radius: 3px; cursor: pointer; }
+  .tabbtn.active { color: var(--toxic); border-color: var(--toxic-dim); background: #16220f; }
+  .tabbtn:hover { color: var(--toxic); }
+  .tabpanel { display: none; } .tabpanel.active { display: block; }
+
+  .grid-2col { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  @media (min-width: 640px) { .grid-2col { grid-template-columns: 190px 1fr; } }
+  .minimap { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
+  .cell { aspect-ratio: 1; border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--text-dim); background: #0c110b; border-radius: 2px; position: relative; }
+  .cell.player { border-color: var(--toxic); color: var(--toxic); box-shadow: 0 0 6px rgba(127,178,56,0.5) inset; }
+  .cell.d0 { background: #14210f; } .cell.d1 { background: #1a2410; } .cell.d2 { background: #241f10; }
+  .cell.d3 { background: #2a180e; } .cell.d4 { background: #2e130f; } .cell.d5 { background: #300c0c; }
+  .cell.boss { border-color: var(--purple); box-shadow: 0 0 6px rgba(154,111,217,0.6) inset; }
+  .cell.claimed { border-color: var(--amber); }
+  .shopdot { position: absolute; top: 0; right: 1px; font-size: 7px; color: var(--amber); }
+  .cachedot { position: absolute; bottom: 0; left: 1px; font-size: 7px; color: var(--cyan); }
+  .postdot { position: absolute; bottom: 0; right: 1px; font-size: 7px; color: var(--toxic); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 9.5px; color: var(--text-dim); margin-top: 8px; }
+  .legend span { display: inline-flex; align-items: center; gap: 3px; }
+  .legend i { width: 9px; height: 9px; display: inline-block; border: 1px solid var(--line); border-radius: 2px; }
+
+  .log-feed { height: 170px; overflow-y: auto; font-size: 12.5px; line-height: 1.55; scrollbar-width: thin; scrollbar-color: var(--toxic-dim) transparent; }
+  .log-feed::-webkit-scrollbar { width: 6px; } .log-feed::-webkit-scrollbar-thumb { background: var(--toxic-dim); }
+  .log-line { margin-bottom: 4px; }
+  .log-line.combat { color: var(--blood); } .log-line.loot { color: var(--amber); } .log-line.system { color: var(--text-dim); }
+  .log-line.move { color: var(--text); } .log-line.build { color: var(--cyan); } .log-line.story { color: var(--purple); }
+  .log-line::before { content: "\203A "; opacity: 0.6; }
+
+  .npc-card { border: 1px solid var(--cyan); background: var(--panel-raised); padding: 12px; border-radius: 3px; margin-bottom: 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .npc-card .info { flex: 1; min-width: 160px; }
+  .npc-card .title { color: var(--cyan); font-size: 13px; margin-bottom: 3px; }
+  .npc-card .desc { font-size: 11px; color: var(--text-dim); }
+  .npc-card .btns { display: flex; gap: 6px; }
+  .cache-card { border: 1px solid var(--amber); background: var(--panel-raised); padding: 12px; border-radius: 3px; margin-bottom: 12px; }
+  .cache-card .title { color: var(--amber); font-size: 13px; margin-bottom: 4px; }
+  .cache-card .desc { font-size: 11px; color: var(--text-dim); margin-bottom: 8px; }
+  .vendor-header { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px dashed var(--line); }
+  .vendor-header .greeting { font-size: 11.5px; color: var(--text-dim); font-style: italic; flex: 1; }
+  .shop-card.locked { opacity: 0.5; }
+  .shop-card .lockline { font-size: 10px; color: var(--blood); margin-bottom: 4px; }
+
+  .cat-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; }
+  .cat-tabs button { font-family: var(--font); font-size: 10.5px; background: var(--panel-raised); border: 1px solid var(--line); color: var(--text-dim); padding: 5px 9px; border-radius: 3px; cursor: pointer; }
+  .cat-tabs button.active { color: var(--amber); border-color: var(--amber-dim); }
+  .inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .inv-card { border: 1px solid var(--line); background: var(--panel-raised); padding: 8px 9px; border-radius: 3px; font-size: 11.5px; }
+  .inv-card .name { color: var(--text); } .inv-card .count { color: var(--amber); float: right; }
+  .inv-card .stats { color: var(--text-dim); font-size: 10px; margin: 4px 0; }
+  .inv-card .row-btns { display: flex; gap: 5px; margin-top: 5px; flex-wrap: wrap; }
+  .mini-btn { font-family: var(--font); font-size: 10px; background: none; border: 1px solid var(--toxic-dim); color: var(--toxic); border-radius: 2px; padding: 3px 7px; cursor: pointer; }
+  .mini-btn:hover:not(:disabled) { background: var(--toxic-dim); color: #eef2ea; }
+  .mini-btn:disabled { opacity: 0.3; cursor: default; }
+  .mini-btn.sell { border-color: var(--amber-dim); color: var(--amber); }
+  .mini-btn.sell:hover:not(:disabled) { background: var(--amber-dim); color: #1a1408; }
+  .mini-btn.scrap { border-color: var(--cyan); color: var(--cyan); }
+  .mini-btn.scrap:hover:not(:disabled) { background: var(--cyan); color: #06201e; }
+  .mini-btn.danger2 { border-color: var(--blood); color: var(--blood); }
+  .empty-note { color: var(--text-dim); font-size: 11.5px; font-style: italic; }
+
+  .recipe-card, .room-card, .shop-card, .achv-card { border: 1px solid var(--line); background: var(--panel-raised); padding: 10px; border-radius: 3px; margin-bottom: 8px; }
+  .recipe-card .title, .room-card .title, .shop-card .title, .achv-card .title { color: var(--amber); font-size: 12.5px; margin-bottom: 4px; }
+  .recipe-card .desc, .room-card .desc, .shop-card .desc, .achv-card .desc { color: var(--text-dim); font-size: 11px; margin-bottom: 6px; }
+  .req-list { font-size: 10.5px; color: var(--text-dim); margin-bottom: 6px; }
+  .req-list .ok { color: var(--toxic); } .req-list .short { color: var(--blood); }
+  .progress-track { height: 8px; background: #0c110b; border: 1px solid var(--line); margin-top: 6px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--cyan); transition: width 0.3s linear; }
+  .room-card.built { border-color: var(--toxic-dim); } .room-card.built .title { color: var(--toxic); }
+  .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; margin-bottom: 14px; }
+  .achv-card.unlocked { border-color: var(--toxic-dim); } .achv-card.unlocked .title { color: var(--toxic); }
+  .achv-card.locked { opacity: 0.55; }
+  .achv-card .bonus { font-size: 10px; color: var(--cyan); }
+  .achv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+  .quest-card { border: 1px solid var(--purple); background: var(--panel-raised); padding: 12px; border-radius: 3px; margin-bottom: 12px; }
+  .quest-card .title { color: var(--purple); font-size: 13px; margin-bottom: 6px; }
+
+  .gear-slot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 8px; }
+  .gear-slot-card { border: 1px solid var(--line); background: var(--panel-raised); padding: 8px 9px; border-radius: 3px; font-size: 11px; }
+  .gear-slot-card .slotname { color: var(--text-dim); font-size: 9.5px; letter-spacing: 1px; margin-bottom: 3px; }
+  .gear-slot-card .itemname { color: var(--amber); margin-bottom: 3px; }
+  .gear-slot-card .itemname.empty { color: var(--text-dim); font-style: italic; }
+  .gear-slot-card .stats { color: var(--text-dim); font-size: 10px; }
+
+  .wmap-controls { display: grid; grid-template-columns: repeat(3, 40px); grid-template-rows: repeat(3, 40px); gap: 4px; justify-content: center; margin-bottom: 12px; }
+  .wmap-controls button { font-family: var(--font); font-size: 13px; background: var(--panel-raised); border: 1px solid var(--line); color: var(--text); border-radius: 3px; cursor: pointer; }
+  .wmap-controls button:hover { border-color: var(--toxic); color: var(--toxic); }
+  .wmap-controls .wmap-center { font-size: 10px; }
+  .wmap-viewport { overflow: hidden; border: 1px solid var(--line); border-radius: 3px; background: #0c110b; padding: 8px; margin-bottom: 10px; cursor: grab; }
+  .wmap-viewport.dragging { cursor: grabbing; }
+  .wmap-grid { display: grid; gap: 2px; touch-action: none; user-select: none; }
+  .wmap-cell { aspect-ratio: 1; border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text-dim); background: #0c110b; border-radius: 2px; position: relative; cursor: pointer; }
+  .wmap-cell.player { border-color: var(--toxic); color: var(--toxic); box-shadow: 0 0 6px rgba(127,178,56,0.5) inset; cursor: default; }
+  .wmap-cell.selected { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber) inset; }
+  .wmap-cell.d0 { background: #14210f; } .wmap-cell.d1 { background: #1a2410; } .wmap-cell.d2 { background: #241f10; }
+  .wmap-cell.d3 { background: #2a180e; } .wmap-cell.d4 { background: #2e130f; } .wmap-cell.d5 { background: #300c0c; }
+  .wmap-cell.boss { border-color: var(--purple); box-shadow: 0 0 6px rgba(154,111,217,0.6) inset; }
+  .wmap-cell.claimed { border-color: var(--amber); }
+  .wmap-info { border: 1px solid var(--line); background: var(--panel-raised); padding: 10px 12px; border-radius: 3px; margin-bottom: 10px; font-size: 11.5px; }
+  .wmap-info .title { color: var(--amber); font-size: 13px; margin-bottom: 4px; }
+  .wmap-jump { display: flex; gap: 6px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .wmap-jump input { font-family: var(--font); background: #0c110b; border: 1px solid var(--line); color: var(--text); padding: 5px 8px; border-radius: 3px; width: 60px; font-size: 11px; }
+
+  .roster-card { border: 1px solid var(--cyan); background: var(--panel-raised); padding: 12px; border-radius: 3px; margin-bottom: 10px; }
+  .roster-card.active-traveler { border-color: var(--toxic); }
+  .roster-card .rhead { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+  .roster-card .rname { color: var(--cyan); font-size: 13px; }
+  .roster-card.active-traveler .rname { color: var(--toxic); }
+  .roster-card .rstatus { font-size: 10.5px; color: var(--text-dim); }
+  .roster-card .gearline { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 10.5px; color: var(--text-dim); margin-bottom: 5px; }
+  .roster-card select { font-family: var(--font); font-size: 10px; background: #0c110b; border: 1px solid var(--line); color: var(--text); padding: 3px 5px; border-radius: 2px; max-width: 130px; }
+  .roster-full-note { font-size: 11px; color: var(--blood); margin-bottom: 8px; }
+
+  .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+  .dpad { display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(2, 44px); gap: 4px; justify-content: center; }
+  .action-list { display: flex; flex-direction: column; gap: 6px; }
+  button.act { font-family: var(--font); font-size: 12px; background: var(--panel-raised); border: 1px solid var(--line); color: var(--text); border-radius: 3px; padding: 9px 6px; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+  button.act:hover:not(:disabled) { border-color: var(--toxic); color: var(--toxic); }
+  button.act:active:not(:disabled) { transform: translateY(1px); }
+  button.act:disabled { opacity: 0.3; cursor: default; }
+  button.act .key { color: var(--text-dim); font-size: 9px; display: block; }
+
+  .footer-hint { text-align: center; font-size: 10.5px; color: var(--text-dim); margin-top: 12px; letter-spacing: 0.5px; }
+  .footer-hint kbd { border: 1px solid var(--line); border-radius: 2px; padding: 0 4px; font-family: var(--font); }
+
+  .overlay { position: fixed; inset: 0; background: rgba(4,6,4,0.9); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 14px; overflow-y: auto; }
+  .overlay.hidden { display: none; }
+
+  .death-card { border: 1px solid var(--blood-dim); background: var(--panel); padding: 30px 36px; text-align: center; max-width: 380px; }
+  .death-card h2 { color: var(--blood); letter-spacing: 3px; text-shadow: 0 0 12px rgba(178,58,58,0.6); margin: 0 0 14px; }
+  .death-card p { font-size: 12.5px; color: var(--text-dim); margin: 5px 0; }
+  .death-card p span { color: var(--text); }
+  .death-card button { margin-top: 18px; font-family: var(--font); background: none; border: 1px solid var(--toxic); color: var(--toxic); padding: 10px 22px; border-radius: 3px; cursor: pointer; letter-spacing: 1px; }
+  .death-card button:hover { background: var(--toxic); color: #0a0f0a; }
+
+  .cured-card { border: 1px solid var(--purple); background: var(--panel); padding: 30px 36px; text-align: center; max-width: 420px; }
+  .cured-card h2 { color: var(--purple); letter-spacing: 3px; text-shadow: 0 0 14px rgba(154,111,217,0.6); margin: 0 0 14px; }
+  .cured-card p { font-size: 12.5px; color: var(--text-dim); margin: 5px 0; }
+  .cured-card p span { color: var(--text); }
+  .cured-card button { margin-top: 18px; font-family: var(--font); background: none; border: 1px solid var(--purple); color: var(--purple); padding: 10px 22px; border-radius: 3px; cursor: pointer; letter-spacing: 1px; }
+  .cured-card button:hover { background: var(--purple); color: #0a0f0a; }
+
+  .combat-card { border: 1px solid var(--blood-dim); background: var(--panel); padding: 20px; width: 100%; max-width: 460px; }
+  .combat-card.boss { border-color: var(--purple); }
+  .combat-card.safehouse-defense { border-color: var(--cyan); }
+  .combat-card h2 { margin: 0 0 4px; font-size: 14px; letter-spacing: 2px; color: var(--blood); text-align: center; }
+  .combat-card.boss h2 { color: var(--purple); }
+  .combat-card.safehouse-defense h2 { color: var(--cyan); }
+  .combat-sub { text-align: center; font-size: 10.5px; color: var(--text-dim); margin-bottom: 14px; }
+  .crosshair-wrap { display: flex; justify-content: center; margin-bottom: 14px; }
+  .crosshair { width: 120px; height: 120px; position: relative; }
+  .crosshair::before, .crosshair::after { content: ""; position: absolute; background: var(--blood); opacity: 0.65; }
+  .crosshair::before { left: 50%; top: 0; bottom: 0; width: 1px; transform: translateX(-50%); }
+  .crosshair::after { top: 50%; left: 0; right: 0; height: 1px; transform: translateY(-50%); }
+  .crosshair .ring1, .crosshair .ring2 { position: absolute; border: 1px solid var(--blood); border-radius: 50%; opacity: 0.55; }
+  .crosshair .ring1 { inset: 10px; } .crosshair .ring2 { inset: 34px; }
+  .crosshair .zlabel { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--blood); }
+  .crosshair.shake { animation: shake 0.25s; }
+  @keyframes shake { 0%,100% { transform: translate(0,0);} 25% { transform: translate(-3px,2px);} 50% { transform: translate(3px,-2px);} 75% { transform: translate(-2px,-2px);} }
+  .zstat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 10.5px; text-align: center; margin-bottom: 10px; color: var(--text-dim); }
+  .zstat-grid b { display: block; color: var(--text); font-size: 13px; }
+  .combat-log { height: 90px; overflow-y: auto; font-size: 11.5px; margin-bottom: 12px; border: 1px solid var(--line); padding: 6px 8px; background: #0c110b; }
+  .combat-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .fire-btn { font-family: var(--font); font-size: 13px; background: var(--blood-dim); border: 1px solid var(--blood); color: #f3e6e6; padding: 12px; border-radius: 3px; cursor: pointer; letter-spacing: 1px; grid-column: span 2; }
+  .fire-btn:hover:not(:disabled) { background: var(--blood); }
+  .fire-btn:disabled { opacity: 0.4; cursor: default; }
+  .fire-hint { grid-column: span 2; text-align: center; font-size: 10px; color: var(--blood); margin-top: -4px; margin-bottom: 2px; }
+  .flee-btn, .move-btn { font-family: var(--font); font-size: 11.5px; background: var(--panel-raised); border: 1px solid var(--line); color: var(--text-dim); border-radius: 3px; cursor: pointer; padding: 9px 6px; }
+  .flee-btn:hover:not(:disabled), .move-btn:hover:not(:disabled) { color: var(--text); border-color: var(--text-dim); }
+  .flee-btn:disabled, .move-btn:disabled { opacity: 0.35; cursor: default; }
+  .combat-subtabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; }
+  .combat-subtabs button { font-family: var(--font); font-size: 10.5px; background: var(--panel-raised); border: 1px solid var(--line); color: var(--text-dim); border-radius: 3px; padding: 7px 4px; cursor: pointer; }
+  .combat-subtabs button.active { color: var(--amber); border-color: var(--amber-dim); }
+  .combat-subpanel { margin-top: 8px; display: flex; flex-direction: column; gap: 5px; max-height: 130px; overflow-y: auto; }
+  .combat-subpanel .subrow { display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--line); background: var(--panel-raised); padding: 6px 8px; border-radius: 3px; font-size: 11px; }
+  .combat-subpanel .subrow button { font-family: var(--font); font-size: 10px; background: none; border: 1px solid var(--toxic-dim); color: var(--toxic); border-radius: 2px; padding: 3px 8px; cursor: pointer; }
+  .combat-subpanel .subrow button:disabled { opacity: 0.3; cursor: default; }
+  .accuracy-line { text-align: center; font-size: 11px; color: var(--amber); margin-bottom: 8px; }
+  .queue-line { text-align: center; font-size: 10px; color: var(--blood); margin-bottom: 6px; }
+
+  .creation-card { border: 1px solid var(--toxic-dim); background: var(--panel); padding: 26px 28px; width: 100%; max-width: 560px; }
+  .creation-card h2 { color: var(--toxic); letter-spacing: 2px; text-align: center; margin: 0 0 4px; }
+  .creation-sub { text-align: center; color: var(--text-dim); font-size: 11px; margin-bottom: 18px; }
+  .creation-row { display: flex; gap: 16px; margin-bottom: 16px; align-items: flex-start; flex-wrap: wrap; }
+  .portrait-frame { border: 1px solid var(--line); border-radius: 4px; padding: 6px; background: #0c110b; filter: grayscale(15%) sepia(8%); }
+  .name-input, .select-input { font-family: var(--font); background: #0c110b; border: 1px solid var(--line); color: var(--text); padding: 8px 10px; border-radius: 3px; width: 100%; font-size: 13px; }
+  .name-input:focus, .select-input:focus { outline: none; border-color: var(--toxic-dim); }
+  .creation-col { flex: 1; min-width: 180px; }
+  .creation-col label { font-size: 10px; color: var(--text-dim); letter-spacing: 1px; display: block; margin-bottom: 5px; }
+  .reroll-btn { font-family: var(--font); font-size: 10px; background: var(--panel-raised); border: 1px solid var(--line); color: var(--text-dim); padding: 5px 8px; border-radius: 3px; cursor: pointer; margin-top: 6px; width: 100%; }
+  .reroll-btn:hover { color: var(--toxic); border-color: var(--toxic-dim); }
+  .attr-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 12px; }
+  .attr-row .aname { width: 78px; color: var(--text-dim); }
+  .attr-row .aval { width: 20px; text-align: center; color: var(--amber); }
+  .attr-row .adesc { flex: 1; font-size: 9.5px; color: var(--text-dim); }
+  .attr-btn { font-family: var(--font); background: var(--panel-raised); border: 1px solid var(--line); color: var(--text); width: 22px; height: 22px; border-radius: 3px; cursor: pointer; line-height: 1; }
+  .attr-btn:hover:not(:disabled) { border-color: var(--toxic); color: var(--toxic); }
+  .attr-btn:disabled { opacity: 0.25; cursor: default; }
+  .points-left { text-align: center; font-size: 11px; color: var(--amber); margin: 8px 0 14px; }
+  .start-btn { font-family: var(--font); background: var(--toxic-dim); border: 1px solid var(--toxic); color: #eef2ea; padding: 12px; border-radius: 3px; cursor: pointer; width: 100%; font-size: 13px; letter-spacing: 1px; }
+  .start-btn:hover:not(:disabled) { background: var(--toxic); }
+  .start-btn:disabled { opacity: 0.35; cursor: default; }
+  .creation-divider { border-top: 1px dashed var(--line); margin: 16px 0; padding-top: 14px; }
+  .continue-note { text-align: center; font-size: 11px; color: var(--cyan); margin-bottom: 10px; }
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<div class="crt-overlay"></div>
+<div class="vignette"></div>
+
+<div id="app" class="hidden">
+  <div class="titlebar">
+    <h1>ZOMBIE PANDEMIC: PROTOCOLS</h1>
+    <div class="sector-tag">SECTOR <b id="sectorCoords">[0,0]</b> &mdash; <span id="sectorName">Safehouse</span></div>
+  </div>
+
+  <div class="savebar">
+    <button id="btnSave">SAVE GAME (.json)</button>
+    <label for="loadFileInput">LOAD GAME (.json)</label>
+    <input type="file" id="loadFileInput" accept="application/json" />
+    <button id="btnNewChar">NEW CHARACTER</button>
+  </div>
+
+  <div class="panel">
+    <div class="hud-top">
+      <div class="chip lvl">LV <span id="lvlNum"></span></div>
+      <div class="chip cash">$ <span id="cashNum"></span></div>
+      <div class="chip scrap">SCRAP <span id="scrapNum"></span></div>
+      <div class="chip quest hidden" id="questChip"></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-label">HP</div>
+      <div class="bar-track"><div class="bar-fill hp" id="hpBar"></div><div class="bar-num" id="hpNum"></div></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-label">STAM</div>
+      <div class="bar-track"><div class="bar-fill ap" id="apBar"></div><div class="bar-num" id="apNum"></div></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-label">XP</div>
+      <div class="bar-track"><div class="bar-fill xp" id="xpBar"></div><div class="bar-num" id="xpNum"></div></div>
+    </div>
+    <div class="gear-line" id="gearLine"></div>
+  </div>
+
+  <div class="tabbar">
+    <button class="tabbtn active" data-tab="field">FIELD <span style="opacity:.5">1</span></button>
+    <button class="tabbtn" data-tab="inventory">INVENTORY <span style="opacity:.5">2</span></button>
+    <button class="tabbtn" data-tab="crafting">CRAFTING <span style="opacity:.5">3</span></button>
+    <button class="tabbtn" data-tab="safehouse">SAFEHOUSE <span style="opacity:.5">4</span></button>
+    <button class="tabbtn" data-tab="shop">SHOP <span style="opacity:.5">5</span></button>
+    <button class="tabbtn" data-tab="character">CHARACTER <span style="opacity:.5">6</span></button>
+    <button class="tabbtn" data-tab="achievements">ACHIEVEMENTS <span style="opacity:.5">7</span></button>
+    <button class="tabbtn" data-tab="worldmap">WORLD MAP <span style="opacity:.5">8</span></button>
+  </div>
+
+  <div class="tabpanel active" id="tab-field">
+    <div id="npcCardWrap"></div>
+    <div id="cacheCardWrap"></div>
+    <div class="grid-2col">
+      <div class="panel">
+        <div class="panel-label">SCOUTED SECTORS</div>
+        <div class="minimap" id="minimap"></div>
+        <div class="legend" id="mapLegend"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-label">MISSION LOG</div>
+        <div class="log-feed" id="logFeed"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-label">ACTIONS</div>
+      <div class="controls">
+        <div class="dpad">
+          <div></div><button class="act" id="btnN">N<span class="key">1 STAM</span></button><div></div>
+          <button class="act" id="btnW">W<span class="key">1 STAM</span></button>
+          <button class="act" id="btnR" title="Rest">&bull;<span class="key">rest</span></button>
+          <button class="act" id="btnE">E<span class="key">1 STAM</span></button>
+          <div></div><button class="act" id="btnS">S<span class="key">1 STAM</span></button><div></div>
+        </div>
+        <div class="action-list">
+          <button class="act" id="btnF">SCAVENGE<span class="key">F &middot; 2 STAM</span></button>
+          <button class="act" id="btnH">USE AID ITEM<span class="key">H</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabpanel" id="tab-inventory">
+    <div class="panel">
+      <div class="panel-label">INVENTORY</div>
+      <div class="cat-tabs" id="catTabs"></div>
+      <div class="inv-grid" id="invGrid"></div>
+    </div>
+  </div>
+
+  <div class="tabpanel" id="tab-crafting">
+    <div class="panel">
+      <div class="panel-label">FIELD CRAFTING</div>
+      <div id="craftList"></div>
+    </div>
+  </div>
+
+  <div class="tabpanel" id="tab-safehouse">
+    <div class="panel">
+      <div class="panel-label">SAFEHOUSE &mdash; build from Sector [0,0] only</div>
+      <div id="roomList"></div>
+    </div>
+  </div>
+
+  <div class="tabpanel" id="tab-shop">
+    <div class="panel">
+      <div class="panel-label" id="shopLabel">VENDOR</div>
+      <div id="shopContent"></div>
+    </div>
+  </div>
+
+  <div class="tabpanel" id="tab-character">
+    <div class="panel">
+      <div class="panel-label">SURVIVOR RECORD</div>
+      <div id="characterContent"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-label">ROSTER <span id="rosterCountLabel"></span><button class="mini-btn" id="btnToggleAutoHeal" style="float:right;"></button></div>
+      <div id="rosterContent"></div>
+    </div>
+  </div>
+
+  <div class="tabpanel" id="tab-achievements">
+    <div class="panel">
+      <div class="panel-label">ACHIEVEMENTS</div>
+      <div class="achv-grid" id="achvGrid"></div>
+    </div>
+  </div>
+
+  <div class="tabpanel" id="tab-worldmap">
+    <div class="panel">
+      <div class="panel-label">WORLD MAP <span id="wmapCoordsLabel" style="color:var(--text-dim);font-weight:normal;"></span></div>
+      <div class="wmap-controls">
+        <div></div><button id="wmapPanN">&uarr;</button><div></div>
+        <button id="wmapPanW">&larr;</button><button class="wmap-center" id="wmapRecenter" title="Recenter on you">&bull;</button><button id="wmapPanE">&rarr;</button>
+        <div></div><button id="wmapPanS">&darr;</button><div></div>
+      </div>
+      <div class="wmap-jump">
+        <span style="font-size:10.5px;color:var(--text-dim);">Jump to:</span>
+        <input type="number" id="wmapJumpX" placeholder="x" />
+        <input type="number" id="wmapJumpY" placeholder="y" />
+        <button class="mini-btn" id="wmapJumpBtn">go</button>
+      </div>
+      <div class="wmap-viewport" id="wmapViewport">
+        <div class="wmap-grid" id="wmapGrid"></div>
+      </div>
+      <div class="wmap-info" id="wmapInfo"></div>
+      <div class="legend" id="wmapLegend"></div>
+    </div>
+  </div>
+
+  <div class="footer-hint">
+    <kbd>&uarr;&darr;&larr;&rarr;</kbd> or <kbd>N S E W</kbd> move &middot; <kbd>F</kbd> scavenge &middot; <kbd>H</kbd> aid &middot; <kbd>R</kbd> rest &middot; <kbd>1-8</kbd> tabs
+  </div>
+</div>
+
+<div class="overlay hidden" id="deathOverlay">
+  <div class="death-card">
+    <h2>YOU DIED</h2>
+    <p>Sectors scouted: <span id="dSectors"></span></p>
+    <p>Zombies put down: <span id="dKills"></span></p>
+    <p>Turns survived: <span id="dTurns"></span></p>
+    <button id="btnRespawn">WAKE UP AT SAFEHOUSE</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="curedOverlay">
+  <div class="cured-card">
+    <h2>PATIENT ZERO NEUTRALIZED</h2>
+    <p>The source strain is contained. The wasteland doesn't heal overnight &mdash; but it can, now.</p>
+    <p>Level reached: <span id="cLevel"></span></p>
+    <p>Zombies put down: <span id="cKills"></span></p>
+    <p>Turns survived: <span id="cTurns"></span></p>
+    <button id="btnContinuePlaying">CONTINUE PLAYING</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="combatOverlay">
+  <div class="combat-card" id="combatCard">
+    <h2 id="combatTitle">HOSTILE CONTACT</h2>
+    <div class="combat-sub" id="combatSub"></div>
+    <div class="queue-line" id="queueLine"></div>
+    <div class="crosshair-wrap">
+      <div class="crosshair" id="crosshair"><div class="ring1"></div><div class="ring2"></div><div class="zlabel" id="crosshairLabel">Z</div></div>
+    </div>
+    <div class="zstat-grid">
+      <div>DISTANCE<b id="zDist"></b></div>
+      <div>SPEED<b id="zSpeed"></b></div>
+      <div>LEVEL<b id="zLevel"></b></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-label">Z-HP</div>
+      <div class="bar-track"><div class="bar-fill zhp" id="zHpBar"></div><div class="bar-num" id="zHpNum"></div></div>
+    </div>
+    <div class="stat-row hidden" id="companionRow">
+      <div class="stat-label">ALLY</div>
+      <div class="bar-track"><div class="bar-fill chp" id="cHpBar"></div><div class="bar-num" id="cHpNum"></div></div>
+    </div>
+    <div class="accuracy-line" id="accLine"></div>
+    <div class="combat-log" id="combatLog"></div>
+    <div class="combat-actions">
+      <button class="fire-btn" id="btnFire">FIRE</button>
+      <div class="fire-hint hidden" id="fireHint">Too far for melee &mdash; advance, switch weapons, or throw something.</div>
+      <button class="move-btn" id="btnAdvance">ADVANCE</button>
+      <button class="move-btn" id="btnRetreat">RETREAT</button>
+      <button class="flee-btn" id="btnFlee" style="grid-column: span 2;">FLEE</button>
+    </div>
+    <div class="combat-subtabs">
+      <button data-sub="weapon" id="subtabWeapon">SWITCH WEAPON</button>
+      <button data-sub="aid" id="subtabAid">USE AID</button>
+      <button data-sub="throw" id="subtabThrow">THROW</button>
+    </div>
+    <div class="combat-subpanel hidden" id="combatSubpanel"></div>
+  </div>
+</div>
+
+<div class="overlay" id="creationOverlay">
+  <div class="creation-card">
+    <h2>NEW SURVIVOR</h2>
+    <div class="creation-sub">Build your character and configure the outbreak before entering the wasteland.</div>
+    <div id="continueBlock"></div>
+
+    <div class="creation-row">
+      <div>
+        <div class="portrait-frame" id="portraitPreview"></div>
+        <button class="reroll-btn" id="btnReroll">REROLL LOOK</button>
+      </div>
+      <div class="creation-col">
+        <label>SURVIVOR NAME</label>
+        <input type="text" id="nameInput" class="name-input" maxlength="24" value="Survivor" />
+        <div style="margin-top:14px;">
+          <label>ATTRIBUTES</label>
+          <div id="attrRows"></div>
+        </div>
+      </div>
+    </div>
+    <div class="points-left" id="pointsLeft"></div>
+
+    <div class="creation-divider">
+      <label style="font-size:10px;color:var(--text-dim);letter-spacing:1px;">LOCATION</label>
+      <select id="locationSelect" class="select-input" style="margin-top:8px;"></select>
+    </div>
+
+    <div class="creation-divider">
+      <label style="font-size:10px;color:var(--text-dim);letter-spacing:1px;">OUTBREAK SETTINGS</label>
+      <div class="settings-grid" style="margin-top:8px;">
+        <div>
+          <label>Outbreak Severity</label>
+          <select id="severitySelect" class="select-input"></select>
+        </div>
+        <div>
+          <label>Infection Spread</label>
+          <select id="infectionSelect" class="select-input"></select>
+        </div>
+        <div>
+          <label>Civilians Armed %</label>
+          <select id="armedSelect" class="select-input"></select>
+        </div>
+      </div>
+    </div>
+
+    <button class="start-btn" id="btnStart" style="margin-top:10px;">ENTER THE WASTELAND</button>
+
+    <div class="creation-divider">
+      <label style="font-size:10px;color:var(--text-dim);letter-spacing:1px;">OR LOAD AN EXISTING SAVE</label>
+      <div class="savebar" style="margin-top:8px;">
+        <label for="creationLoadInput">LOAD GAME (.json)</label>
+        <input type="file" id="creationLoadInput" accept="application/json" />
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const AP_REGEN_MS = 10000;
+  const GARDEN_TICK_MS = 60000;
+  const MAX_ATTR = 10;
+  const MIN_ATTR = 1;
+  const CREATION_POOL = 5;
+  const EQUIP_SLOTS = ["head", "torso", "hands", "pants", "feet"];
+  const SLOT_LABELS = { head: "HEAD", torso: "TORSO", hands: "HANDS", pants: "PANTS", feet: "FEET" };
+  const MAX_ROSTER = 5;
+
+  const BARE_FISTS = { category: "Weapons", kind: "melee", damage: 8, accuracy: 20 };
+
+  const CATALOG = {
+    "Baseball Bat":            { category: "Weapons", kind: "melee",  damage: 15, accuracy: 0 },
+    "Rusty Pipe":              { category: "Weapons", kind: "melee",  damage: 10, accuracy: -5 },
+    "Crowbar":                 { category: "Weapons", kind: "melee",  damage: 18, accuracy: 0 },
+    "Machete":                 { category: "Weapons", kind: "melee",  damage: 25, accuracy: 5 },
+    "Pistol":                  { category: "Weapons", kind: "ranged", damage: 30, accuracy: 15 },
+    "Shotgun":                 { category: "Weapons", kind: "ranged", damage: 45, accuracy: 10 },
+    "Hunting Rifle":           { category: "Weapons", kind: "ranged", damage: 55, accuracy: 20 },
+    "Molotov Cocktail":        { category: "Weapons", kind: "thrown", damage: 40, accuracy: -10 },
+    "Improvised Flamethrower": { category: "Weapons", kind: "ranged", damage: 55, accuracy: -15 },
+
+    "Bandana":              { category: "Clothing", slot: "head",  defense: 1, attrBonus: { per: 1 } },
+    "Camo Hoodie":          { category: "Clothing", slot: "head",  defense: 2, accuracy: 5, attrBonus: { per: 1 } },
+    "Motorcycle Helmet":    { category: "Armor",    slot: "head",  defense: 8, hp: 5, attrBonus: { per: 1 } },
+
+    "Leather Jacket":       { category: "Clothing", slot: "torso", defense: 3, hp: 5 },
+    "Padded Vest":          { category: "Armor",    slot: "torso", defense: 5, hp: 8 },
+    "Riot Armor":           { category: "Armor",    slot: "torso", defense: 12, hp: 15 },
+    "Scrap Plate Armor":    { category: "Armor",    slot: "torso", defense: 8, hp: 10 },
+
+    "Work Gloves":          { category: "Clothing", slot: "hands", defense: 1, attrBonus: { str: 1 } },
+    "Reinforced Gauntlets": { category: "Armor",    slot: "hands", defense: 3, attrBonus: { str: 2 } },
+
+    "Cargo Pants":          { category: "Clothing", slot: "pants", defense: 2, hp: 5, attrBonus: { end: 1 } },
+    "Padded Leg Guards":    { category: "Armor",    slot: "pants", defense: 6, hp: 10, attrBonus: { end: 1 } },
+
+    "Running Shoes":        { category: "Clothing", slot: "feet",  attrBonus: { agi: 2 } },
+    "Combat Boots":         { category: "Armor",    slot: "feet",  defense: 4, attrBonus: { agi: 1 } },
+
+    "Bandage":                 { category: "Aid", heal: 30 },
+    "Medkit":                  { category: "Aid", heal: 60 },
+    "Canned Food":             { category: "Aid", heal: 10 },
+    "Painkillers":             { category: "Aid", heal: 15 },
+    "Energy Drink":            { category: "Aid", stamina: 15 },
+
+    "Ammo":                    { category: "Ammo" },
+
+    "Scrap Metal":             { category: "Other" },
+    "Cloth Strips":            { category: "Other" },
+    "Empty Bottle":            { category: "Other" },
+    "Duct Tape":               { category: "Other" },
+    "Wallet":                  { category: "Other", sellValue: 5 },
+    "Watch":                   { category: "Other", sellValue: 12 },
+    "Jewelry":                 { category: "Other", sellValue: 25 },
+    "Research Fragment":       { category: "Other" },
+
+    "Reinforced Combat Vest":  { category: "Armor", slot: "torso", defense: 15, hp: 20, questReward: true },
+    "Precision Rifle":         { category: "Weapons", kind: "ranged", damage: 65, accuracy: 25, questReward: true },
+    "Trauma Kit":              { category: "Aid", heal: 90, questReward: true }
+  };
+
+  const LOOT_TABLES = {
+    Safehouse:   ["Canned Food"],
+    Residential: ["Canned Food","Canned Food","Bandage","Rusty Pipe","Cloth Strips","Wallet","Bandana","Work Gloves","Energy Drink"],
+    Commercial:  ["Bandage","Crowbar","Canned Food","Empty Bottle","Watch","Cargo Pants","Motorcycle Helmet","Energy Drink"],
+    Industrial:  ["Scrap Metal","Scrap Metal","Duct Tape","Cloth Strips","Empty Bottle","Reinforced Gauntlets","Padded Leg Guards"],
+    Military:    ["Ammo","Ammo","Pistol","Medkit","Scrap Metal","Combat Boots"],
+    Wasteland:   ["Scrap Metal","Scrap Metal","Ammo","Ammo","Machete","Jewelry","Hunting Rifle","Combat Boots"]
+  };
+
+  const LANDMARKS = {
+    "0,0": { name: "Safehouse Sector",        type: "Safehouse",   danger: 0 },
+    "0,1": { name: "Suburban Neighborhood",   type: "Residential", danger: 1 },
+    "1,0": { name: "Downtown Strip Mall",     type: "Commercial",  danger: 2 },
+    "1,1": { name: "Police Precinct",         type: "Military",    danger: 3 }
+  };
+
+  const ADJ = ["Overgrown", "Burned-Out", "Flooded", "Silent", "Collapsed", "Fogbound", "Looted", "Barricaded"];
+  const NOUN = {
+    Residential: ["Housing Block", "Cul-de-Sac", "Apartment Row", "Trailer Park"],
+    Commercial:  ["Shopping Plaza", "Retail Strip", "Gas Station Row", "Market District"],
+    Industrial:  ["Rail Yard", "Warehouse District", "Factory Row", "Loading Docks"],
+    Military:    ["Checkpoint", "Armory Ruins", "Barracks", "Outpost"],
+    Wasteland:   ["Ash Field", "Ruins", "Dead Zone", "Crater District"]
+  };
+
+  const LOCATION_THEMES = {
+    "New York City": {
+      Residential: ["Upper West Side Block", "Bronx Housing Row", "Bed-Stuy Brownstones", "Astoria Cul-de-Sac"],
+      Commercial:  ["Times Square Storefronts", "SoHo Retail Strip", "Fifth Avenue Ruins", "Flatiron Plaza"],
+      Industrial:  ["Red Hook Warehouses", "Long Island City Rail Yard", "Gowanus Canal Works"],
+      Military:    ["Governors Island Checkpoint", "Fort Hamilton Armory", "National Guard Outpost"],
+      Wasteland:   ["Central Park Wilds", "East River Flats", "Jamaica Bay Marsh"]
+    },
+    "Los Angeles": {
+      Residential: ["Silver Lake Bungalows", "Van Nuys Housing Row", "Echo Park Cul-de-Sac", "Compton Block"],
+      Commercial:  ["Hollywood Blvd Storefronts", "Rodeo Drive Ruins", "Downtown LA Plaza"],
+      Industrial:  ["Vernon Rail Yard", "Long Beach Port Works", "Boyle Heights Warehouses"],
+      Military:    ["LAX Checkpoint", "Fort MacArthur Outpost", "National Guard Armory"],
+      Wasteland:   ["Griffith Park Wilds", "LA River Basin", "Mojave Fringe"]
+    },
+    "Chicago": {
+      Residential: ["Wicker Park Row", "South Side Housing Block", "Lincoln Park Bungalows", "Pilsen Cul-de-Sac"],
+      Commercial:  ["Magnificent Mile Storefronts", "The Loop Plaza", "Wrigleyville Retail Strip"],
+      Industrial:  ["Back of the Yards Works", "Cicero Rail Yard", "Calumet Harbor Docks"],
+      Military:    ["Naval Station Great Lakes Checkpoint", "National Guard Armory"],
+      Wasteland:   ["Lake Michigan Shoreline Wilds", "Forest Preserve Fringe"]
+    },
+    "London": {
+      Residential: ["Camden Terrace Row", "Brixton Housing Block", "Notting Hill Cul-de-Sac"],
+      Commercial:  ["Oxford Street Storefronts", "Piccadilly Ruins", "Soho Retail Strip"],
+      Industrial:  ["Docklands Warehouses", "Bermondsey Rail Yard"],
+      Military:    ["Tower of London Checkpoint", "Territorial Army Outpost"],
+      Wasteland:   ["Hampstead Heath Wilds", "Thames Estuary Flats"]
+    },
+    "Tokyo": {
+      Residential: ["Shibuya Housing Block", "Setagaya Row", "Nakano Cul-de-Sac"],
+      Commercial:  ["Shinjuku Storefronts", "Akihabara Ruins", "Ginza Plaza"],
+      Industrial:  ["Odaiba Warehouses", "Kawasaki Rail Yard"],
+      Military:    ["JSDF Checkpoint", "Yokosuka Naval Outpost"],
+      Wasteland:   ["Mount Takao Wilds", "Tokyo Bay Flats"]
+    },
+    "Sydney": {
+      Residential: ["Bondi Housing Row", "Newtown Cul-de-Sac", "Parramatta Block"],
+      Commercial:  ["George Street Storefronts", "Circular Quay Plaza"],
+      Industrial:  ["Botany Bay Warehouses", "Port Kembla Rail Yard"],
+      Military:    ["Garden Island Checkpoint", "Holsworthy Outpost"],
+      Wasteland:   ["Blue Mountains Fringe", "Royal National Park Wilds"]
+    }
+  };
+  const LOCATION_OPTIONS = ["Generic Wasteland (no theme)", "New York City", "Los Angeles", "Chicago", "London", "Tokyo", "Sydney"];
+
+  const SEVERITY_SETTINGS = {
+    Low:       { ambush: 0.7, dmg: 0.8, hordeChance: 0.05 },
+    Medium:    { ambush: 1.0, dmg: 1.0, hordeChance: 0.12 },
+    High:      { ambush: 1.3, dmg: 1.2, hordeChance: 0.22 },
+    Nightmare: { ambush: 1.6, dmg: 1.5, hordeChance: 0.35 }
+  };
+  const SEVERITY_OPTIONS = ["Low", "Medium", "High", "Nightmare"];
+  const INFECTION_DIVISOR = { Slow: 3, Normal: 2, Fast: 1 };
+  const INFECTION_OPTIONS = ["Slow", "Normal", "Fast"];
+  const ARMED_PCT = { Low: 0.2, Medium: 0.45, High: 0.7 };
+  const ARMED_OPTIONS = ["Low", "Medium", "High"];
+  const NPC_STARTER_WEAPONS = ["Rusty Pipe", "Crowbar", "Baseball Bat"];
+
+  const SAFEHOUSE_EVENT_CHECK_MS = 90000;
+  const SAFEHOUSE_EVENT_GRACE_TURNS = 10;
+  const SEVERITY_SAFEHOUSE_CHANCE = { Low: 0.05, Medium: 0.10, High: 0.18, Nightmare: 0.30 };
+  const SEVERITY_SAFEHOUSE_LEVEL_RANGE = { Low: [1, 2], Medium: [2, 3], High: [3, 4], Nightmare: [4, 5] };
+  const SEVERITY_SAFEHOUSE_COUNT = { Low: 1, Medium: 2, High: 2, Nightmare: 3 };
+  const BARRICADE_TIERS = [
+    { level: 1, cost: { scrap: 15, cash: 20 }, timeMs: 20000 },
+    { level: 2, cost: { scrap: 25, cash: 35 }, timeMs: 25000 },
+    { level: 3, cost: { scrap: 35, cash: 55 }, timeMs: 30000 },
+    { level: 4, cost: { scrap: 50, cash: 80 }, timeMs: 35000 },
+    { level: 5, cost: { scrap: 70, cash: 120 }, timeMs: 45000 }
+  ];
+  const DEFENSE_PER_BARRICADE_LEVEL = 8;
+
+  const MAX_CLAIMED_BLOCKS = 8;
+  const CLAIM_BASE_COST = { scrap: 15, cash: 25 };
+  const CLAIM_BASE_TIME_MS = 20000;
+  const CLAIM_TIME_STEP_MS = 4000;
+  const CLAIM_DANGER_CAP = 2;
+  const CLAIM_DEFENSE_BONUS = 5;
+  const CLAIM_SCRAP_TICK_MS = 180000;
+
+  const MAX_SAFEHOUSE_INTEGRITY = 100;
+  const SAFEHOUSE_DAMAGE_BARELY = [10, 20];
+  const SAFEHOUSE_DAMAGE_OVERRUN = [25, 40];
+  const SAFEHOUSE_REPAIR_SCRAP_PER_POINT = 0.5;
+  const SAFEHOUSE_REPAIR_TIME_PER_POINT_MS = 500;
+  const SAFEHOUSE_REPAIR_MIN_TIME_MS = 10000;
+  const SAFEHOUSE_PASSIVE_REPAIR_CHECK_MS = 180000;
+  const SAFEHOUSE_PASSIVE_REPAIR_PER_GUARD = 2;
+
+  const FITNESS_TIERS = [
+    { level: 1, cost: { scrap: 10, cash: 15 }, timeMs: 60000, bonus: 2 },
+    { level: 2, cost: { scrap: 15, cash: 25 }, timeMs: 90000, bonus: 2 },
+    { level: 3, cost: { scrap: 20, cash: 35 }, timeMs: 120000, bonus: 2 },
+    { level: 4, cost: { scrap: 25, cash: 50 }, timeMs: 150000, bonus: 2 },
+    { level: 5, cost: { scrap: 30, cash: 70 }, timeMs: 180000, bonus: 2 }
+  ];
+  const MARKSMANSHIP_TIERS = [
+    { level: 1, cost: { scrap: 10, cash: 15 }, timeMs: 60000, bonus: 2 },
+    { level: 2, cost: { scrap: 15, cash: 25 }, timeMs: 90000, bonus: 2 },
+    { level: 3, cost: { scrap: 20, cash: 35 }, timeMs: 120000, bonus: 2 },
+    { level: 4, cost: { scrap: 25, cash: 50 }, timeMs: 150000, bonus: 2 },
+    { level: 5, cost: { scrap: 30, cash: 70 }, timeMs: 180000, bonus: 2 }
+  ];
+
+  const PLAYER_LEVEL_CAP = 25;
+  const TITLE_TIERS = [
+    { threshold: 0, title: "Grizzled", color: "#6f8168" },
+    { threshold: 400, title: "Unbroken", color: "#7fb238" },
+    { threshold: 1200, title: "Dread Walker", color: "#4a9b96" },
+    { threshold: 3000, title: "Wasteland Myth", color: "#d9a441" },
+    { threshold: 7000, title: "Living Legend", color: "#9a6fd9" }
+  ];
+
+  const COMPANION_LEVEL_CAP = 10;
+  const COMPANION_XP_PER_LEVEL = 30;
+  const COMPANION_HP_PER_LEVEL = 8;
+  const COMPANION_AUTOHEAL_CHECK_MS = 15000;
+  const COMPANION_AUTOHEAL_THRESHOLD = 0.6;
+  const COMPANION_AUTOHEAL_PRIORITY = ["Medkit", "Bandage", "Painkillers", "Canned Food"];
+
+  const VENDOR_QUEST_CHANCE = 0.35;
+  const VENDOR_QUEST_COOLDOWN_MS = 300000;
+  const VENDOR_REP_CAP = 10;
+  const VENDOR_REP_DISCOUNT_PER_POINT = 0.03;
+  const VENDOR_FETCH_ITEM_POOL = ["Canned Food", "Bandage", "Cloth Strips", "Duct Tape", "Scrap Metal", "Empty Bottle", "Ammo", "Energy Drink"];
+  const VENDOR_PREMIUM_ITEM_CHANCE = 0.25;
+  const VENDOR_PREMIUM_ITEMS = ["Reinforced Combat Vest", "Precision Rifle", "Trauma Kit"];
+
+  const RECIPES = [
+    { id: "craft_bandage", name: "Bandage", inputs: { "Cloth Strips": 2 }, output: { name: "Bandage", qty: 1 }, timeMs: 15000 },
+    { id: "craft_molotov", name: "Molotov Cocktail", inputs: { "Empty Bottle": 1, "Cloth Strips": 1, "Scrap Metal": 1 }, output: { name: "Molotov Cocktail", qty: 1 }, timeMs: 25000 },
+    { id: "craft_flamethrower", name: "Improvised Flamethrower", inputs: { "Empty Bottle": 1, "Duct Tape": 1, "Scrap Metal": 2 }, output: { name: "Improvised Flamethrower", qty: 1 }, timeMs: 40000 },
+    { id: "craft_armor", name: "Scrap Plate Armor", inputs: { "Scrap Metal": 3, "Duct Tape": 1 }, output: { name: "Scrap Plate Armor", qty: 1 }, timeMs: 30000 }
+  ];
+
+  const ROOMS = [
+    { id: "armory",  name: "Armory",         cost: { scrap: 20, cash: 50 }, timeMs: 30000, desc: "+15% weapon damage" },
+    { id: "sickbay", name: "Sickbay",        cost: { scrap: 15, cash: 30 }, timeMs: 25000, desc: "+50% healing from Aid items" },
+    { id: "range",   name: "Shooting Range", cost: { scrap: 25, cash: 40 }, timeMs: 35000, desc: "+10 combat accuracy" },
+    { id: "garden",  name: "Garden",         cost: { scrap: 10, cash: 20 }, timeMs: 20000, desc: "Grows 1 Canned Food/min" },
+    { id: "gym",     name: "Gym",            cost: { scrap: 15, cash: 25 }, timeMs: 25000, desc: "+5 max stamina" },
+    { id: "workshop",name: "Workshop",       cost: { scrap: 20, cash: 35 }, timeMs: 30000, desc: "-30% crafting time" },
+    { id: "lab",     name: "Lab",            cost: { scrap: 30, cash: 80 }, timeMs: 45000, desc: "Decode Research Fragments into Patient Zero's location" }
+  ];
+
+  const SHOP_STOCK_POOL = [
+    { name: "Bandage", price: 15 }, { name: "Medkit", price: 40 }, { name: "Ammo", price: 18, qty: 10 },
+    { name: "Crowbar", price: 25 }, { name: "Machete", price: 60, minLevel: 2 }, { name: "Pistol", price: 150, minLevel: 2 },
+    { name: "Shotgun", price: 260, minLevel: 4 }, { name: "Padded Vest", price: 70 }, { name: "Riot Armor", price: 220, minLevel: 4 },
+    { name: "Leather Jacket", price: 50 }, { name: "Camo Hoodie", price: 45 }, { name: "Running Shoes", price: 40 },
+    { name: "Cloth Strips", price: 3 }, { name: "Duct Tape", price: 5 }, { name: "Scrap Metal", price: 4 },
+    { name: "Empty Bottle", price: 2 }, { name: "Painkillers", price: 12 }, { name: "Energy Drink", price: 22 },
+    { name: "Bandana", price: 20 }, { name: "Motorcycle Helmet", price: 90, minLevel: 2 },
+    { name: "Work Gloves", price: 15 }, { name: "Reinforced Gauntlets", price: 60, minLevel: 2 },
+    { name: "Cargo Pants", price: 25 }, { name: "Padded Leg Guards", price: 70, minLevel: 3 },
+    { name: "Combat Boots", price: 55, minLevel: 2 }
+  ];
+  const SAFEHOUSE_STOCK = [
+    { name: "Bandage", price: 18 }, { name: "Ammo", price: 20, qty: 10 }, { name: "Cloth Strips", price: 4 },
+    { name: "Duct Tape", price: 6 }, { name: "Scrap Metal", price: 5 }, { name: "Energy Drink", price: 25 }
+  ];
+  const SHOP_NAMES = ["Ray's Trading Post", "Diane's General Store", "Old Pete's Stash", "Route 9 Swap Shop", "Miller's Salvage Counter", "Nomad Bill's Cart"];
+  const NPC_NAMES = [
+    "Rook", "Sable", "Dutch", "Marlowe", "Ceci", "Finch", "Talon", "Hazel", "Cole", "Wren",
+    "Ahmed", "Rashid", "Muhammad", "Moses", "Zachary", "Adam", "Yolanda", "Sarah",
+    "Priya", "Mei", "Diego", "Fatima", "Kwame", "Ingrid", "Santiago", "Naomi",
+    "Jamal", "Elena", "Kenji", "Rosa", "Tobias", "Amara"
+  ];
+  const VENDOR_GREETINGS = [
+    "Careful out there. Everything here's got a price, but at least I don't bite.",
+    "Found most of this before the dead did. Yours, if you can pay.",
+    "Don't linger too long &mdash; this spot draws attention after dark.",
+    "Cash, trade, whatever you've got. Just don't make me chase you for it.",
+    "Been keeping the lights on here since the world ended. Take a look.",
+    "You look like you've earned a discount. Shame I can't afford to give one."
+  ];
+
+  const ATTR_INFO = {
+    str: { label: "STR", full: "Strength", desc: "melee damage & toughness" },
+    agi: { label: "AGI", full: "Agility", desc: "accuracy & flee chance" },
+    end: { label: "END", full: "Endurance", desc: "max HP & stamina" },
+    per: { label: "PER", full: "Perception", desc: "ranged accuracy & better finds" },
+    lck: { label: "LCK", full: "Luck", desc: "crit chance & bonus loot" }
+  };
+
+  const ACHIEVEMENT_ATTR_BONUS = {
+    first_blood: { str: 1 }, exterminator: { str: 1 }, zombie_slayer: { str: 1 }, apocalypse_veteran: { str: 2 },
+    scout: { per: 1 }, explorer: { per: 1 }, pathfinder: { agi: 1 },
+    survivor_lv5: { end: 1 }, wasteland_legend: { end: 2 }, nine_lives: { end: 1 },
+    close_call: { lck: 1 }, critical_thinker: { lck: 1 }, ghost: { agi: 1 }, entrepreneur: { lck: 1 },
+    home_improvement: { end: 1 }, renaissance_survivor: { per: 1 }, made_a_friend: { per: 1 }, fortress: { end: 1 },
+    compound_builder: { end: 1 },
+    iron_body: { end: 1 }, dead_eye: { per: 1 },
+    peak_condition: { end: 1 }, battle_hardened: { str: 1 },
+    quest_runner: { lck: 1 }, trusted_trader: { per: 1 },
+    living_legend: { str: 1, agi: 1, end: 1, per: 1, lck: 1 },
+    patient_zero: { str: 1, agi: 1, end: 1, per: 1, lck: 1 }
+  };
+
+  const ACHIEVEMENTS = [
+    { id: "first_blood", name: "First Blood", desc: "Kill your first zombie.", bonus: "+1 STR", check: s => s.kills >= 1 },
+    { id: "exterminator", name: "Exterminator", desc: "Kill 10 zombies.", bonus: "+1 STR", check: s => s.kills >= 10 },
+    { id: "zombie_slayer", name: "Zombie Slayer", desc: "Kill 50 zombies.", bonus: "+1 STR", check: s => s.kills >= 50 },
+    { id: "apocalypse_veteran", name: "Apocalypse Veteran", desc: "Kill 100 zombies.", bonus: "+2 STR", check: s => s.kills >= 100 },
+    { id: "scout", name: "Scout", desc: "Scout 10 sectors.", bonus: "+1 PER", check: s => s.visited.size >= 10 },
+    { id: "explorer", name: "Explorer", desc: "Scout 25 sectors.", bonus: "+1 PER", check: s => s.visited.size >= 25 },
+    { id: "pathfinder", name: "Pathfinder", desc: "Scout 50 sectors.", bonus: "+1 AGI", check: s => s.visited.size >= 50 },
+    { id: "survivor_lv5", name: "Survivor", desc: "Reach level 5.", bonus: "+1 END", check: s => s.level >= 5 },
+    { id: "wasteland_legend", name: "Wasteland Legend", desc: "Reach level 10.", bonus: "+2 END", check: s => s.level >= 10 },
+    { id: "nine_lives", name: "Nine Lives", desc: "Respawn from death 5 times.", bonus: "+1 END", check: s => s.deathCount >= 5 },
+    { id: "close_call", name: "Close Call", desc: "Win a fight with under 10% HP remaining.", bonus: "+1 LCK", check: s => s.hadCloseCallWin },
+    { id: "critical_thinker", name: "Critical Thinker", desc: "Land a critical hit.", bonus: "+1 LCK", check: s => s.hasCrit },
+    { id: "ghost", name: "Ghost", desc: "Successfully flee 5 times.", bonus: "+1 AGI", check: s => s.fleeSuccesses >= 5 },
+    { id: "entrepreneur", name: "Entrepreneur", desc: "Earn $500 in lifetime cash.", bonus: "+1 LCK", check: s => s.totalCashEarned >= 500 },
+    { id: "home_improvement", name: "Home Improvement", desc: "Build every Safehouse room.", bonus: "+1 END", check: s => ROOMS.every(r => s.builtRooms.has(r.id)) },
+    { id: "renaissance_survivor", name: "Renaissance Survivor", desc: "Craft every known recipe at least once.", bonus: "+1 PER", check: s => RECIPES.every(r => s.craftedRecipes.has(r.id)) },
+    { id: "made_a_friend", name: "Made a Friend", desc: "Recruit a companion.", bonus: "+1 PER", check: s => s.companionEverRecruited },
+    { id: "fortress", name: "Fortress", desc: "Max out the Safehouse barricade.", bonus: "+1 END", check: s => s.barricadeLevel >= 5 },
+    { id: "compound_builder", name: "Compound Builder", desc: "Claim the maximum 8 territory blocks.", bonus: "+1 END", check: s => claimedCount() >= MAX_CLAIMED_BLOCKS },
+    { id: "iron_body", name: "Iron Body", desc: "Max out Fitness Training at the Gym.", bonus: "+1 END", check: s => s.fitnessLevel >= FITNESS_TIERS.length },
+    { id: "dead_eye", name: "Dead Eye", desc: "Max out Marksmanship Training at the Shooting Range.", bonus: "+1 PER", check: s => s.marksmanshipLevel >= MARKSMANSHIP_TIERS.length },
+    { id: "peak_condition", name: "Peak Condition", desc: "Reach the maximum character level (25).", bonus: "+1 END", check: s => s.level >= PLAYER_LEVEL_CAP },
+    { id: "battle_hardened", name: "Battle-Hardened", desc: "Train a companion to maximum level (10).", bonus: "+1 STR", check: s => s.battleHardenedEverReached },
+    { id: "quest_runner", name: "Quest Runner", desc: "Complete 5 vendor quests.", bonus: "+1 LCK", check: s => s.totalVendorQuestsCompleted >= 5 },
+    { id: "trusted_trader", name: "Trusted Trader", desc: "Reach maximum reputation with any single vendor.", bonus: "+1 PER", check: s => Object.values(s.vendorRep).some(v => v.rep >= VENDOR_REP_CAP) },
+    { id: "living_legend", name: "Living Legend", desc: "Earn the top reputation title through post-cap experience.", bonus: "+1 all attributes", check: s => currentTitleTier().title === "Living Legend" },
+    { id: "patient_zero", name: "Patient Zero", desc: "Cure the pandemic.", bonus: "+1 all attributes", check: s => s.questStage === "cured" }
+  ];
+
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function hash(x, y, seed) {
+    let h = (x * 374761393 + y * 668265263 + (seed || 0) * 982451653) ^ (x * 3266489917);
+    h = (h ^ (h >>> 13)) * 1274126177;
+    h = h ^ (h >>> 16);
+    return Math.abs(h);
+  }
+
+  function sectorAt(x, y) {
+    const seed = s.seed || 0;
+    const key = `${x},${y}`;
+    let base;
+    if (LANDMARKS[key]) base = Object.assign({}, LANDMARKS[key]);
+    else {
+      const dist = Math.abs(x) + Math.abs(y);
+      const divisor = INFECTION_DIVISOR[s.settings.infection] || 2;
+      const h = hash(x, y, seed);
+      const dangerRoll = Math.min(10, 1 + Math.floor(dist / divisor) + (h % 100 < 15 ? 1 : 0));
+      let type;
+      if (dangerRoll <= 1) type = "Residential";
+      else if (dangerRoll === 2) type = (h % 2 === 0) ? "Residential" : "Commercial";
+      else if (dangerRoll === 3) type = (h % 2 === 0) ? "Commercial" : "Industrial";
+      else if (dangerRoll === 4) type = (h % 2 === 0) ? "Industrial" : "Military";
+      else type = (h % 3 === 0) ? "Military" : "Wasteland";
+      const theme = s.locationTheme && LOCATION_THEMES[s.locationTheme];
+      const nounList = (theme && theme[type]) ? theme[type] : NOUN[type];
+      const adj = ADJ[h % ADJ.length];
+      const noun = nounList[(h >> 4) % nounList.length];
+      base = { name: `${adj} ${noun}`, type, danger: dangerRoll };
+    }
+
+    if (s.questStage === "located" && s.patientZeroCoords && x === s.patientZeroCoords.x && y === s.patientZeroCoords.y) {
+      base.isBossSector = true;
+    }
+
+    if (key === "0,0") { base.hasShop = true; base.shopName = "Home Supply Locker"; base.shopStock = SAFEHOUSE_STOCK; base.hasCache = false; return base; }
+
+    const cacheRoll = hash(x + 4000, y + 4000, seed) % 100;
+    base.hasCache = cacheRoll < 20;
+    if (base.hasCache) {
+      const rng = mulberry32(hash(x + 5000, y + 5000, seed));
+      const table = LOOT_TABLES[base.type] || ["Scrap Metal"];
+      const itemCount = 3 + Math.floor(rng() * 3);
+      const items = [];
+      for (let i = 0; i < itemCount; i++) items.push(table[Math.floor(rng() * table.length)]);
+      base.cacheLoot = items;
+    }
+
+    if (base.type === "Wasteland") { base.hasShop = false; return base; }
+
+    const dist = Math.abs(x) + Math.abs(y);
+    const shopChance = Math.min(25, 3 + dist * 2);
+    const shopRoll = hash(x + 1000, y + 1000, seed) % 100;
+    base.hasShop = shopRoll < shopChance;
+    if (base.hasShop) {
+      const nameIdx = hash(x + 3000, y + 3000, seed) % SHOP_NAMES.length;
+      base.shopName = SHOP_NAMES[nameIdx];
+      base.shopStock = pickShopStock(x, y, seed);
+    }
+    return base;
+  }
+
+  function pickShopStock(x, y, seed) {
+    const rng = mulberry32(hash(x + 2000, y + 2000, seed));
+    const pool = SHOP_STOCK_POOL.slice();
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      const tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+    }
+    return pool.slice(0, 5);
+  }
+
+  function newGame() {
+    return {
+      name: "Survivor",
+      portraitSeed: Math.floor(Math.random() * 4294967295),
+      seed: Math.floor(Math.random() * 4294967295),
+      locationTheme: null,
+      settings: { severity: "Medium", infection: "Normal", armedPct: "Medium" },
+      attributes: { str: 1, agi: 1, end: 1, per: 1, lck: 1 },
+      unspentPoints: 0,
+      hp: 100, baseMaxHp: 100,
+      stamina: 20, maxStaminaBase: 20,
+      xp: 0, level: 1, xpToNext: 100,
+      cash: 20, totalCashEarned: 0,
+      x: 0, y: 0,
+      inventory: { "Canned Food": 2, "Bandage": 1, "Baseball Bat": 1, "Wallet": 1, "Scrap Metal": 5 },
+      equippedWeapon: "Baseball Bat",
+      equipment: { head: null, torso: null, hands: null, pants: null, feet: null },
+      lastApRegen: Date.now(),
+      lastGardenTick: Date.now(),
+      builtRooms: new Set(),
+      barricadeLevel: 0,
+      lastSafehouseCheck: Date.now(),
+      craftQueue: null,
+      buildQueue: null,
+      visited: new Set(["0,0"]),
+      collectedCaches: new Set(),
+      claimedBlocks: {},
+      lastClaimTick: Date.now(),
+      fitnessLevel: 0,
+      marksmanshipLevel: 0,
+      postCapXp: 0,
+      battleHardenedEverReached: false,
+      vendorQuests: {},
+      vendorRep: {},
+      totalVendorQuestsCompleted: 0,
+      autoHealCompanions: true,
+      lastCompanionHealTick: Date.now(),
+      safehouseIntegrity: MAX_SAFEHOUSE_INTEGRITY,
+      lastSafehouseRepairTick: Date.now(),
+      kills: 0, turns: 0, dead: false, deathCount: 0,
+      combat: null,
+      roster: [], companionEverRecruited: false,
+      pendingNpc: null,
+      fleeSuccesses: 0, hasCrit: false, hadCloseCallWin: false,
+      questStage: "none", patientZeroCoords: null,
+      achievements: new Set(),
+      craftedRecipes: new Set(),
+      log: []
+    };
+  }
+
+  let s = newGame();
+  let gameStarted = false;
+  let logTick = 0, combatLogTick = 0;
+  let lastRenderedLogTick = -1, lastRenderedCombatLogTick = -1;
+  let activeCat = "All";
+  let combatSubTab = null;
+
+  function addLog(text, cls) {
+    s.log.push({ text, cls: cls || "system" });
+    if (s.log.length > 60) s.log.shift();
+    logTick++;
+  }
+  addLog("Terminal online. Welcome back to the wasteland, Survivor.", "system");
+
+  function getScrap() { return s.inventory["Scrap Metal"] || 0; }
+  function addScrap(n) { s.inventory["Scrap Metal"] = (s.inventory["Scrap Metal"] || 0) + n; }
+  function spendScrap(n) {
+    const cur = s.inventory["Scrap Metal"] || 0;
+    s.inventory["Scrap Metal"] = Math.max(0, cur - n);
+    if (s.inventory["Scrap Metal"] <= 0) delete s.inventory["Scrap Metal"];
+  }
+
+  // --- ROSTER HELPERS ---
+  function activeCompanion() { return s.roster.find(c => c.mode === "travel") || null; }
+  function guardingCompanions() { return s.roster.filter(c => c.mode === "guard"); }
+
+  function computeCompanionAttack(companion) {
+    if (!companion) return { damage: 0, hasWeapon: false };
+    const levelBonus = (companion.level || 1) - 1;
+    const weaponName = companion.equipment && companion.equipment.weapon;
+    if (weaponName && CATALOG[weaponName]) return { damage: CATALOG[weaponName].damage + levelBonus, hasWeapon: true };
+    return { damage: 3 + levelBonus, hasWeapon: false };
+  }
+
+  function computeCompanionDefense(companion) {
+    if (!companion) return 0;
+    const levelBonus = (companion.level || 1) - 1;
+    const armorName = companion.equipment && companion.equipment.armor;
+    if (armorName && CATALOG[armorName]) return (CATALOG[armorName].defense || 0) + levelBonus;
+    return levelBonus;
+  }
+
+  function computeGearBonuses() {
+    let defense = 0, hp = 0, accuracy = 0;
+    const attr = { str: 0, agi: 0, end: 0, per: 0, lck: 0 };
+    EQUIP_SLOTS.forEach(slot => {
+      const name = s.equipment[slot];
+      if (!name) return;
+      const item = CATALOG[name];
+      if (!item) return;
+      defense += item.defense || 0;
+      hp += item.hp || 0;
+      accuracy += item.accuracy || 0;
+      if (item.attrBonus) Object.keys(item.attrBonus).forEach(k => { attr[k] += item.attrBonus[k]; });
+    });
+    return { defense, hp, accuracy, attr };
+  }
+
+  function computeAchievementAttrBonus() {
+    const attr = { str: 0, agi: 0, end: 0, per: 0, lck: 0 };
+    s.achievements.forEach(id => {
+      const bonus = ACHIEVEMENT_ATTR_BONUS[id];
+      if (bonus) Object.keys(bonus).forEach(k => { attr[k] += bonus[k]; });
+    });
+    return attr;
+  }
+
+  // --- DERIVED STATS ---
+  function computeDerived() {
+    let weaponDmgMult = 1, healMult = 1, craftTimeMult = 1;
+    if (s.builtRooms.has("armory")) weaponDmgMult *= 1.15;
+    if (s.builtRooms.has("sickbay")) healMult *= 1.5;
+    if (s.builtRooms.has("workshop")) craftTimeMult *= 0.7;
+
+    const gear = computeGearBonuses();
+    const achAttr = computeAchievementAttrBonus();
+    const effAttr = {
+      str: s.attributes.str + gear.attr.str + achAttr.str,
+      agi: s.attributes.agi + gear.attr.agi + achAttr.agi,
+      end: s.attributes.end + gear.attr.end + achAttr.end,
+      per: s.attributes.per + gear.attr.per + achAttr.per,
+      lck: s.attributes.lck + gear.attr.lck + achAttr.lck
+    };
+
+    let accuracyBonus = gear.accuracy;
+    let staminaMaxBonus = 0;
+    if (s.builtRooms.has("range")) accuracyBonus += 10;
+    if (s.builtRooms.has("gym")) staminaMaxBonus += 5;
+    const marksmanshipAccuracy = s.marksmanshipLevel * 2;
+    staminaMaxBonus += s.fitnessLevel * 2;
+
+    const meleeDamageMult = 1 + (effAttr.str - 1) * 0.05;
+    const strHpBonus = (effAttr.str - 1) * 2;
+    const endHpBonus = (effAttr.end - 1) * 8;
+    const endStaminaBonus = (effAttr.end - 1) * 1;
+    accuracyBonus += (effAttr.agi - 1) * 3;
+    const perceptionAccuracy = (effAttr.per - 1) * 4;
+    const fleeBonus = (effAttr.agi - 1) * 3;
+    const critChance = (effAttr.lck - 1) * 3;
+    const lootLuck = (effAttr.lck - 1) * 2;
+    const perceptionRareBias = (effAttr.per - 1) * 3;
+
+    const maxHp = s.baseMaxHp + strHpBonus + endHpBonus + gear.hp;
+    const maxStamina = s.maxStaminaBase + staminaMaxBonus + endStaminaBonus;
+    const defenseTotal = gear.defense;
+
+    const sev = SEVERITY_SETTINGS[s.settings.severity] || SEVERITY_SETTINGS.Medium;
+    let safehouseDefense = s.barricadeLevel * DEFENSE_PER_BARRICADE_LEVEL;
+    safehouseDefense += claimedCount() * CLAIM_DEFENSE_BONUS;
+    if (s.builtRooms.has("armory")) safehouseDefense += 5;
+    guardingCompanions().forEach(c => {
+      const atk = computeCompanionAttack(c);
+      safehouseDefense += atk.hasWeapon ? atk.damage : 5;
+    });
+    const integrityMult = 0.5 + 0.5 * (s.safehouseIntegrity / MAX_SAFEHOUSE_INTEGRITY);
+    safehouseDefense = Math.round(safehouseDefense * integrityMult);
+
+    return { weaponDmgMult, healMult, accuracyBonus, maxStamina, craftTimeMult, defenseTotal,
+      meleeDamageMult, maxHp, perceptionAccuracy, marksmanshipAccuracy, fleeBonus, critChance, lootLuck, perceptionRareBias, sev, safehouseDefense, effAttr };
+  }
+
+  function getWeaponStats(name) { if (name === "Bare Fists") return BARE_FISTS; return CATALOG[name] || BARE_FISTS; }
+  function currentSector() { return sectorAt(s.x, s.y); }
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  function computeAttackPercent(weaponStats, derived, zLevel) {
+    const rangedAcc = (weaponStats.kind !== "melee") ? (derived.perceptionAccuracy + derived.marksmanshipAccuracy) : 0;
+    const pct = 55 + weaponStats.accuracy + derived.accuracyBonus + rangedAcc - zLevel * 4;
+    return clamp(Math.round(pct), 10, 95);
+  }
+
+  function fallbackMeleeWeapon() {
+    return Object.keys(s.inventory).find(n => CATALOG[n] && CATALOG[n].category === "Weapons" && CATALOG[n].kind === "melee") || "Bare Fists";
+  }
+
+  function unequipIfMatches(name) {
+    if (s.equippedWeapon === name) s.equippedWeapon = fallbackMeleeWeapon();
+    EQUIP_SLOTS.forEach(slot => { if (s.equipment[slot] === name) s.equipment[slot] = null; });
+  }
+
+  // --- TIME-BASED TICKS ---
+  function tickRegen() {
+    if (s.dead) return;
+    const derived = computeDerived();
+    const now = Date.now();
+
+    const apTicks = Math.floor((now - s.lastApRegen) / AP_REGEN_MS);
+    if (apTicks > 0) {
+      if (s.stamina < derived.maxStamina) s.stamina = Math.min(derived.maxStamina, s.stamina + apTicks);
+      s.lastApRegen = now;
+    }
+
+    if (s.builtRooms.has("garden")) {
+      const gTicks = Math.floor((now - s.lastGardenTick) / GARDEN_TICK_MS);
+      if (gTicks > 0) {
+        s.inventory["Canned Food"] = (s.inventory["Canned Food"] || 0) + gTicks;
+        s.lastGardenTick = now;
+        addLog(`Garden yielded ${gTicks} Canned Food.`, "loot");
+      }
+    } else { s.lastGardenTick = now; }
+
+    if (s.craftQueue && now >= s.craftQueue.finishAt) {
+      const recipe = RECIPES.find(r => r.id === s.craftQueue.recipeId);
+      if (recipe) {
+        s.inventory[recipe.output.name] = (s.inventory[recipe.output.name] || 0) + recipe.output.qty;
+        s.craftedRecipes.add(recipe.id);
+        const craftXp = Math.max(3, Math.round(recipe.timeMs / 2000));
+        gainXp(craftXp);
+        addLog(`Crafting complete: ${recipe.output.name} x${recipe.output.qty}. +${craftXp} XP.`, "loot");
+      }
+      s.craftQueue = null;
+    }
+    if (s.buildQueue && now >= s.buildQueue.finishAt) {
+      if (s.buildQueue.kind === "barricade") {
+        s.barricadeLevel = s.buildQueue.targetLevel;
+        const tier = BARRICADE_TIERS[s.buildQueue.targetLevel - 1];
+        const buildXp = Math.max(5, Math.round((tier ? tier.timeMs : 20000) / 1500));
+        gainXp(buildXp);
+        addLog(`Barricade reinforced to Level ${s.barricadeLevel} (+${DEFENSE_PER_BARRICADE_LEVEL} Defense). +${buildXp} XP.`, "build");
+      } else if (s.buildQueue.kind === "claim") {
+        const key = `${s.buildQueue.x},${s.buildQueue.y}`;
+        s.claimedBlocks[key] = { postedCompanionId: null };
+        const buildXp = Math.max(5, Math.round(claimCost().timeMs / 1500));
+        gainXp(buildXp);
+        addLog(`Sector [${key}] claimed. The compound grows. +${buildXp} XP.`, "build");
+        checkAchievements();
+      } else if (s.buildQueue.kind === "fitness") {
+        s.fitnessLevel = s.buildQueue.targetLevel;
+        const tier = FITNESS_TIERS[s.buildQueue.targetLevel - 1];
+        const buildXp = Math.max(5, Math.round(tier.timeMs / 1500));
+        gainXp(buildXp);
+        addLog(`Fitness training complete: Tier ${s.fitnessLevel}/5 (+${tier.bonus} Max Stamina). +${buildXp} XP.`, "build");
+        checkAchievements();
+      } else if (s.buildQueue.kind === "marksmanship") {
+        s.marksmanshipLevel = s.buildQueue.targetLevel;
+        const tier = MARKSMANSHIP_TIERS[s.buildQueue.targetLevel - 1];
+        const buildXp = Math.max(5, Math.round(tier.timeMs / 1500));
+        gainXp(buildXp);
+        addLog(`Marksmanship training complete: Tier ${s.marksmanshipLevel}/5 (+${tier.bonus} Ranged Accuracy). +${buildXp} XP.`, "build");
+        checkAchievements();
+      } else if (s.buildQueue.kind === "repair") {
+        s.safehouseIntegrity = MAX_SAFEHOUSE_INTEGRITY;
+        addLog(`Safehouse structural repairs complete. Integrity restored to 100%.`, "build");
+      } else {
+        const room = ROOMS.find(r => r.id === s.buildQueue.roomId);
+        if (room) {
+          s.builtRooms.add(room.id);
+          const buildXp = Math.max(5, Math.round(room.timeMs / 1500));
+          gainXp(buildXp);
+          addLog(`Safehouse upgrade complete: ${room.name} online. +${buildXp} XP.`, "build");
+        }
+      }
+      s.buildQueue = null;
+    }
+    if (s.stamina > derived.maxStamina) s.stamina = derived.maxStamina;
+
+    const claimN = claimedCount();
+    if (claimN > 0) {
+      const cTicks = Math.floor((now - s.lastClaimTick) / CLAIM_SCRAP_TICK_MS);
+      if (cTicks > 0) {
+        const yieldAmt = cTicks * claimN;
+        addScrap(yieldAmt);
+        s.lastClaimTick = now;
+        addLog(`Compound outposts yielded ${yieldAmt} Scrap Metal.`, "loot");
+      }
+    } else {
+      s.lastClaimTick = now;
+    }
+
+    if (s.autoHealCompanions && s.roster.length > 0 && now - s.lastCompanionHealTick >= COMPANION_AUTOHEAL_CHECK_MS) {
+      s.lastCompanionHealTick = now;
+      s.roster.forEach(c => {
+        if (c.hp < c.maxHp * COMPANION_AUTOHEAL_THRESHOLD) {
+          const itemName = COMPANION_AUTOHEAL_PRIORITY.find(n => s.inventory[n] > 0);
+          if (itemName) {
+            const healAmt = Math.round(CATALOG[itemName].heal * derived.healMult);
+            s.inventory[itemName] -= 1;
+            if (s.inventory[itemName] <= 0) delete s.inventory[itemName];
+            c.hp = Math.min(c.maxHp, c.hp + healAmt);
+            addLog(`${c.name} used a ${itemName} to patch themself up (auto-heal). +${healAmt} HP.`, "loot");
+          }
+        }
+      });
+    }
+
+    if (s.safehouseIntegrity < MAX_SAFEHOUSE_INTEGRITY && now - s.lastSafehouseRepairTick >= SAFEHOUSE_PASSIVE_REPAIR_CHECK_MS) {
+      s.lastSafehouseRepairTick = now;
+      const guardCount = guardingCompanions().length;
+      if (guardCount > 0) {
+        const repairAmt = guardCount * SAFEHOUSE_PASSIVE_REPAIR_PER_GUARD;
+        const before = s.safehouseIntegrity;
+        s.safehouseIntegrity = Math.min(MAX_SAFEHOUSE_INTEGRITY, s.safehouseIntegrity + repairAmt);
+        if (s.safehouseIntegrity > before) addLog(`Guards patched up the Safehouse structure. +${s.safehouseIntegrity - before} integrity.`, "build");
+      }
+    } else if (s.safehouseIntegrity >= MAX_SAFEHOUSE_INTEGRITY) {
+      s.lastSafehouseRepairTick = now;
+    }
+
+    checkSafehouseEvent(now);
+  }
+
+  function checkSafehouseEvent(now) {
+    if (s.dead || s.combat) return;
+    if (s.turns < SAFEHOUSE_EVENT_GRACE_TURNS) return;
+    const elapsed = now - s.lastSafehouseCheck;
+    if (elapsed < SAFEHOUSE_EVENT_CHECK_MS) return;
+    s.lastSafehouseCheck = now;
+    const chance = SEVERITY_SAFEHOUSE_CHANCE[s.settings.severity] || 0.1;
+    if (Math.random() >= chance) return;
+
+    const range = SEVERITY_SAFEHOUSE_LEVEL_RANGE[s.settings.severity] || [2, 3];
+    const level = range[0] + Math.floor(Math.random() * (range[1] - range[0] + 1));
+    const baseCount = SEVERITY_SAFEHOUSE_COUNT[s.settings.severity] || 2;
+    const count = Math.max(1, baseCount + (Math.random() < 0.3 ? 1 : 0) - (Math.random() < 0.2 ? 1 : 0));
+
+    if (s.x === 0 && s.y === 0) startSafehouseDefenseCombat(level, count);
+    else autoResolveSafehouseEvent(level, count);
+  }
+
+  function startSafehouseDefenseCombat(level, count) {
+    combatSubTab = null;
+    const queue = [];
+    for (let i = 1; i < count; i++) queue.push({ level });
+    const first = spawnZombie(level);
+    s.combat = Object.assign({ queue, startX: s.x, startY: s.y, log: [], isBoss: false, isSafehouseDefense: true }, first);
+    combatLog(`SAFEHOUSE UNDER ATTACK! A level ${level} horde (${count}) breaches the barricade.`);
+  }
+
+  function autoResolveSafehouseEvent(level, count) {
+    const derived = computeDerived();
+    const defense = derived.safehouseDefense;
+    const threat = level * 10 * count;
+    let outcome = "repelled";
+    if (defense < threat * 0.5) outcome = "overrun";
+    else if (defense < threat) outcome = "barely";
+
+    const guards = guardingCompanions();
+    if (outcome === "repelled") {
+      const reward = 5 + Math.floor(Math.random() * 10);
+      addScrap(reward);
+      addLog(`Safehouse alert: a level ${level} horde (${count}) probed the perimeter while you were out and was repelled. Salvaged ${reward} Scrap Metal from the wreckage.`, "build");
+      guards.forEach(c => gainCompanionXp(c, level * 4));
+    } else {
+      const lossPct = outcome === "overrun" ? 0.35 : 0.15;
+      const scrapLoss = Math.round(getScrap() * lossPct);
+      const cashLoss = Math.round(s.cash * lossPct);
+      spendScrap(scrapLoss);
+      s.cash = Math.max(0, s.cash - cashLoss);
+      const dmgRange = outcome === "overrun" ? SAFEHOUSE_DAMAGE_OVERRUN : SAFEHOUSE_DAMAGE_BARELY;
+      const structDmg = dmgRange[0] + Math.floor(Math.random() * (dmgRange[1] - dmgRange[0] + 1));
+      s.safehouseIntegrity = Math.max(0, s.safehouseIntegrity - structDmg);
+      addLog(`Safehouse alert: a level ${level} horde (${count}) ${outcome === "overrun" ? "overran" : "breached"} the barricade while you were away. Lost ${scrapLoss} Scrap Metal, $${cashLoss}, and ${structDmg} structural integrity.`, "combat");
+      if (guards.length > 0) {
+        const victim = guards[Math.floor(Math.random() * guards.length)];
+        const dmg = outcome === "overrun" ? 20 + Math.floor(Math.random() * 20) : 8 + Math.floor(Math.random() * 10);
+        victim.hp = Math.max(0, victim.hp - dmg);
+        if (victim.hp <= 0) {
+          addLog(`${victim.name} fell defending the Safehouse.`, "combat");
+          s.roster = s.roster.filter(c => c.id !== victim.id);
+        } else {
+          addLog(`${victim.name} held the line, took ${dmg} damage guarding the Safehouse.`, "combat");
+          gainCompanionXp(victim, level * 3);
+        }
+        guards.filter(c => c.id !== victim.id).forEach(c => { if (c.hp > 0) gainCompanionXp(c, level * 2); });
+      }
+    }
+  }
+
+  function currentTitleTier() {
+    let tier = TITLE_TIERS[0];
+    for (const t of TITLE_TIERS) { if (s.postCapXp >= t.threshold) tier = t; }
+    return tier;
+  }
+
+  function addPostCapXp(amount) {
+    const oldTier = currentTitleTier();
+    s.postCapXp += amount;
+    const newTier = currentTitleTier();
+    if (newTier.title !== oldTier.title) {
+      addLog(`Your reputation grows &mdash; new title earned: "${newTier.title}".`, "story");
+      checkAchievements();
+    }
+  }
+
+  function gainXp(amount) {
+    if (s.level >= PLAYER_LEVEL_CAP) { addPostCapXp(amount); return; }
+    s.xp += amount;
+    while (s.level < PLAYER_LEVEL_CAP && s.xp >= s.xpToNext) {
+      s.xp -= s.xpToNext;
+      s.level += 1; s.baseMaxHp += 10; s.unspentPoints += 1;
+      const derived = computeDerived();
+      s.hp = Math.min(derived.maxHp, s.hp + 20);
+      s.xpToNext = Math.round(s.xpToNext * 1.35);
+      if (s.level >= PLAYER_LEVEL_CAP) {
+        addLog(`LEVEL UP! You are now level ${s.level} &mdash; the maximum level. +1 attribute point available. Further XP now earns reputation titles instead.`, "loot");
+        checkAchievements();
+      } else {
+        addLog(`LEVEL UP! You are now level ${s.level}. +1 attribute point available (Character tab).`, "loot");
+      }
+    }
+    if (s.level >= PLAYER_LEVEL_CAP && s.xp > 0) {
+      const leftover = s.xp;
+      s.xp = 0;
+      addPostCapXp(leftover);
+    }
+  }
+
+  function gainCompanionXp(companion, amount) {
+    if (!companion || (companion.level || 1) >= COMPANION_LEVEL_CAP) return;
+    companion.xp = (companion.xp || 0) + amount;
+    while ((companion.level || 1) < COMPANION_LEVEL_CAP && companion.xp >= COMPANION_XP_PER_LEVEL) {
+      companion.xp -= COMPANION_XP_PER_LEVEL;
+      companion.level = (companion.level || 1) + 1;
+      companion.maxHp += COMPANION_HP_PER_LEVEL;
+      companion.hp = Math.min(companion.maxHp, companion.hp + COMPANION_HP_PER_LEVEL);
+      addLog(`${companion.name} leveled up! Now Level ${companion.level} (${companion.maxHp} Max HP).`, "loot");
+      if (companion.level >= COMPANION_LEVEL_CAP) {
+        s.battleHardenedEverReached = true;
+        addLog(`${companion.name} has reached maximum training.`, "story");
+        checkAchievements();
+      }
+    }
+  }
+
+  function pickLoot(table, derived) {
+    if (Math.random() * 100 < derived.perceptionRareBias) return table[table.length - 1];
+    return table[Math.floor(Math.random() * table.length)];
+  }
+
+  function checkAchievements() {
+    ACHIEVEMENTS.forEach(a => {
+      if (!s.achievements.has(a.id) && a.check(s)) {
+        s.achievements.add(a.id);
+        addLog(`ACHIEVEMENT UNLOCKED: ${a.name} (${a.bonus})`, "story");
+      }
+    });
+  }
+
+  // --- NPC COMPANIONS / ROSTER ---
+  function rollNpcEncounter() {
+    if (s.pendingNpc) return;
+    const sector = currentSector();
+    if (sector.type === "Safehouse") return;
+    if (Math.random() < 0.06) {
+      const armed = Math.random() < (ARMED_PCT[s.settings.armedPct] || 0.45);
+      const name = NPC_NAMES[Math.floor(Math.random() * NPC_NAMES.length)];
+      const startingWeapon = armed ? NPC_STARTER_WEAPONS[Math.floor(Math.random() * NPC_STARTER_WEAPONS.length)] : null;
+      s.pendingNpc = { name, portraitSeed: Math.floor(Math.random() * 4294967295), startingWeapon, maxHp: 40 };
+      addLog(`You spot a survivor nearby: ${name}${armed ? ` (carrying a ${startingWeapon})` : " (unarmed)"}.`, "system");
+    }
+  }
+
+  // --- VENDOR QUESTS ---
+  function generateVendorQuest() {
+    const lvl = s.level;
+    const isFetch = Math.random() < 0.5;
+    if (isFetch) {
+      const itemName = VENDOR_FETCH_ITEM_POOL[Math.floor(Math.random() * VENDOR_FETCH_ITEM_POOL.length)];
+      const qtyNeeded = 3 + Math.floor(lvl / 3);
+      const rewardXp = Math.round(qtyNeeded * 12 * (1 + lvl * 0.05));
+      const rewardCash = Math.round(lvl * 8 + qtyNeeded * 6);
+      return { type: "fetch", itemName, qtyNeeded, rewardXp, rewardCash, rewardRepGain: 2, status: "offered" };
+    }
+    const zombieLevelMin = Math.min(5, Math.max(1, Math.floor(lvl / 4) + 1));
+    const countNeeded = 2 + Math.floor(lvl / 5);
+    const rewardXp = Math.round(countNeeded * zombieLevelMin * 14);
+    const rewardCash = Math.round(lvl * 10 + countNeeded * 8);
+    return { type: "bounty", zombieLevelMin, countNeeded, progress: 0, rewardXp, rewardCash, rewardRepGain: 3, status: "offered" };
+  }
+
+  function rollVendorQuest() {
+    const sector = currentSector();
+    if (!sector.hasShop) return;
+    const key = `${s.x},${s.y}`;
+    const existing = s.vendorQuests[key];
+    if (existing && (existing.status === "offered" || existing.status === "active")) return;
+    if (existing && existing.status === "completed" && Date.now() < existing.cooldownUntil) return;
+    if (Math.random() < VENDOR_QUEST_CHANCE) {
+      s.vendorQuests[key] = generateVendorQuest();
+      addLog(`${sector.shopName} has a job posted, if you're interested.`, "system");
+    }
+  }
+
+  function acceptVendorQuest(key) {
+    const quest = s.vendorQuests[key];
+    if (!quest || quest.status !== "offered") return;
+    quest.status = "active";
+    addLog(`Quest accepted: ${describeVendorQuest(quest)}.`, "system");
+    render();
+  }
+
+  function declineVendorQuest(key) {
+    const quest = s.vendorQuests[key];
+    if (!quest || quest.status !== "offered") return;
+    s.vendorQuests[key] = { status: "completed", cooldownUntil: Date.now() + VENDOR_QUEST_COOLDOWN_MS };
+    addLog(`Declined the job.`, "system");
+    render();
+  }
+
+  function describeVendorQuest(quest) {
+    if (quest.type === "fetch") return `bring ${quest.qtyNeeded}x ${quest.itemName}`;
+    return `kill ${quest.countNeeded} level ${quest.zombieLevelMin}+ zombies`;
+  }
+
+  function fetchQuestSatisfied(quest) {
+    return quest.type === "fetch" && (s.inventory[quest.itemName] || 0) >= quest.qtyNeeded;
+  }
+
+  function turnInVendorQuest(key) {
+    const quest = s.vendorQuests[key];
+    if (!quest || quest.status !== "active") return;
+    if (quest.type === "fetch") {
+      if (!fetchQuestSatisfied(quest)) return;
+      s.inventory[quest.itemName] -= quest.qtyNeeded;
+      if (s.inventory[quest.itemName] <= 0) delete s.inventory[quest.itemName];
+    } else {
+      if (quest.progress < quest.countNeeded) return;
+    }
+    s.cash += quest.rewardCash; s.totalCashEarned += quest.rewardCash;
+    gainXp(quest.rewardXp);
+    addVendorRep(key, quest.rewardRepGain);
+    s.totalVendorQuestsCompleted += 1;
+    let rewardMsg = `Quest complete: +${quest.rewardXp} XP, +$${quest.rewardCash}, reputation improved.`;
+    if (Math.random() < VENDOR_PREMIUM_ITEM_CHANCE) {
+      const premium = VENDOR_PREMIUM_ITEMS[Math.floor(Math.random() * VENDOR_PREMIUM_ITEMS.length)];
+      s.inventory[premium] = (s.inventory[premium] || 0) + 1;
+      rewardMsg += ` The vendor throws in something special: ${premium}.`;
+    }
+    addLog(rewardMsg, "loot");
+    s.vendorQuests[key] = { status: "completed", cooldownUntil: Date.now() + VENDOR_QUEST_COOLDOWN_MS };
+    checkAchievements();
+    render();
+  }
+
+  function recruitNpc() {
+    if (!s.pendingNpc) return;
+    if (s.roster.length >= MAX_ROSTER) {
+      addLog(`Your roster is full (${MAX_ROSTER}/${MAX_ROSTER}). Dismiss someone from the Character tab first if you want to bring ${s.pendingNpc.name} along.`, "system");
+      render();
+      return;
+    }
+    const gift = ["Canned Food", "Bandage"].find(n => s.inventory[n] > 0);
+    if (gift) { s.inventory[gift] -= 1; if (s.inventory[gift] <= 0) delete s.inventory[gift]; }
+    const noTraveler = !activeCompanion();
+    const companion = {
+      id: s.pendingNpc.portraitSeed, name: s.pendingNpc.name, portraitSeed: s.pendingNpc.portraitSeed,
+      hp: s.pendingNpc.maxHp, maxHp: s.pendingNpc.maxHp, mode: noTraveler ? "travel" : "guard",
+      level: 1, xp: 0,
+      equipment: { weapon: s.pendingNpc.startingWeapon, armor: null }
+    };
+    s.roster.push(companion);
+    s.companionEverRecruited = true;
+    addLog(`${companion.name} joins you${gift ? `, grateful for the ${gift.toLowerCase()}` : ""}${companion.mode === "guard" ? " and heads to the Safehouse to guard" : ""}.`, "story");
+    s.pendingNpc = null;
+    render();
+  }
+
+  function dismissNpc() {
+    if (!s.pendingNpc) return;
+    addLog(`${s.pendingNpc.name} wishes you luck and moves on.`, "system");
+    s.pendingNpc = null;
+    render();
+  }
+
+  function clearPostForCompanion(id) {
+    Object.keys(s.claimedBlocks).forEach(k => { if (s.claimedBlocks[k].postedCompanionId === id) s.claimedBlocks[k].postedCompanionId = null; });
+  }
+
+  function dismissCompanionById(id) {
+    const comp = s.roster.find(c => c.id === id);
+    if (!comp) return;
+    const returned = [];
+    if (comp.equipment.weapon) { s.inventory[comp.equipment.weapon] = (s.inventory[comp.equipment.weapon] || 0) + 1; returned.push(comp.equipment.weapon); }
+    if (comp.equipment.armor) { s.inventory[comp.equipment.armor] = (s.inventory[comp.equipment.armor] || 0) + 1; returned.push(comp.equipment.armor); }
+    addLog(`${comp.name} parts ways with you${returned.length ? `, leaving behind their ${returned.join(" and ")}` : ""}.`, "system");
+    clearPostForCompanion(id);
+    s.roster = s.roster.filter(c => c.id !== id);
+    render();
+  }
+
+  function setCompanionMode(id, mode) {
+    const comp = s.roster.find(c => c.id === id);
+    if (!comp) return;
+    if (mode === "travel") {
+      s.roster.forEach(c => { if (c.id !== id && c.mode === "travel") { c.mode = "guard"; addLog(`${c.name} stays behind to guard the Safehouse.`, "system"); } });
+      clearPostForCompanion(id);
+    }
+    comp.mode = mode;
+    addLog(`${comp.name} is now ${mode === "guard" ? "guarding the Safehouse" : "traveling with you"}.`, "system");
+    render();
+  }
+
+  function healRosterCompanionWithBestItem(id) {
+    const companion = s.roster.find(c => c.id === id);
+    if (!companion || companion.hp >= companion.maxHp) return;
+    const itemName = COMPANION_AUTOHEAL_PRIORITY.find(n => s.inventory[n] > 0);
+    if (!itemName) { addLog("No aid items in inventory to heal them with.", "system"); render(); return; }
+    const derived = computeDerived();
+    const healAmt = Math.round(CATALOG[itemName].heal * derived.healMult);
+    s.inventory[itemName] -= 1;
+    if (s.inventory[itemName] <= 0) delete s.inventory[itemName];
+    companion.hp = Math.min(companion.maxHp, companion.hp + healAmt);
+    addLog(`Patched up ${companion.name} with ${itemName}. +${healAmt} HP.`, "loot");
+    render();
+  }
+
+  function toggleAutoHealCompanions() {
+    s.autoHealCompanions = !s.autoHealCompanions;
+    addLog(`Companion auto-heal is now ${s.autoHealCompanions ? "ON" : "OFF"}.`, "system");
+    render();
+  }
+
+  function giveGearToCompanionId(id, name) {
+    const comp = s.roster.find(c => c.id === id);
+    if (!comp) return;
+    const item = CATALOG[name];
+    if (!item || !(s.inventory[name] > 0)) return;
+    if (item.category === "Weapons") {
+      const old = comp.equipment.weapon;
+      s.inventory[name] -= 1; if (s.inventory[name] <= 0) delete s.inventory[name];
+      if (old) s.inventory[old] = (s.inventory[old] || 0) + 1;
+      comp.equipment.weapon = name;
+      addLog(`Handed ${name} to ${comp.name}.`, "system");
+    } else if (item.category === "Armor" || item.category === "Clothing") {
+      const old = comp.equipment.armor;
+      s.inventory[name] -= 1; if (s.inventory[name] <= 0) delete s.inventory[name];
+      if (old) s.inventory[old] = (s.inventory[old] || 0) + 1;
+      comp.equipment.armor = name;
+      addLog(`Gave ${name} to ${comp.name} to wear.`, "system");
+    }
+    render();
+  }
+
+  function takeGearFromCompanionId(id, slotKind) {
+    const comp = s.roster.find(c => c.id === id);
+    if (!comp) return;
+    const name = comp.equipment[slotKind];
+    if (!name) return;
+    s.inventory[name] = (s.inventory[name] || 0) + 1;
+    comp.equipment[slotKind] = null;
+    addLog(`Took the ${name} back from ${comp.name}.`, "system");
+    render();
+  }
+
+  // --- COMBAT ---
+  function spawnZombie(level) { return { level, hp: level * 20, maxHp: level * 20, distance: 5 + level, speed: 2 + Math.floor(level * 0.6) }; }
+
+  function startCombat(danger) {
+    combatSubTab = null;
+    const derived = computeDerived();
+    let hordeSize = 1;
+    const dangerMult = 1 + danger * 0.15;
+    if (Math.random() < derived.sev.hordeChance * dangerMult) hordeSize++;
+    if (Math.random() < derived.sev.hordeChance * dangerMult * 0.6) hordeSize++;
+    if (danger >= 4 && Math.random() < derived.sev.hordeChance * dangerMult * 0.35) hordeSize++;
+    if (danger >= 6 && Math.random() < derived.sev.hordeChance * dangerMult * 0.2) hordeSize++;
+    hordeSize = Math.min(5, hordeSize);
+
+    const queue = [];
+    for (let i = 1; i < hordeSize; i++) queue.push({ level: danger });
+    const first = spawnZombie(danger);
+    s.combat = Object.assign({ queue, startX: s.x, startY: s.y, log: [], isBoss: false }, first);
+
+    if (hordeSize > 1) combatLog(`AMBUSH! A horde of ${hordeSize} shamblers pours out of the ${currentSector().name.toLowerCase()}.`);
+    else combatLog(`Contact! A level ${danger} shambler emerges from the ${currentSector().name.toLowerCase()}.`);
+  }
+
+  function startBossCombat() {
+    combatSubTab = null;
+    s.combat = { level: "BOSS", hp: 320, maxHp: 320, distance: 10, speed: 6, startX: s.x, startY: s.y, log: [], isBoss: true, queue: [] };
+    combatLog("PATIENT ZERO. The origin strain, still standing after everything. This ends here.");
+  }
+
+  function combatLog(text) {
+    s.combat.log.push(text);
+    if (s.combat.log.length > 40) s.combat.log.shift();
+    combatLogTick++;
+  }
+
+  function currentAttackPercent() {
+    const derived = computeDerived();
+    const wstats = getWeaponStats(s.equippedWeapon);
+    const usedStats = (wstats.kind === "ranged" && (s.inventory["Ammo"] || 0) <= 0) ? BARE_FISTS : wstats;
+    return computeAttackPercent(usedStats, derived, typeof s.combat.level === "number" ? s.combat.level : 6);
+  }
+
+  function resolveZombieTurn(derived) {
+    if (!s.combat || s.combat.hp <= 0) return;
+    const zLvl = typeof s.combat.level === "number" ? s.combat.level : 8;
+    const companion = activeCompanion();
+    if (s.combat.distance <= 0) {
+      const rawDmg = Math.round(zLvl * 8 * (0.8 + Math.random() * 0.4) * derived.sev.dmg);
+      let dmgTaken = Math.max(1, rawDmg - derived.defenseTotal);
+      if (companion && computeCompanionAttack(companion).hasWeapon && Math.random() < 0.25) {
+        const compDef = computeCompanionDefense(companion);
+        const compDmgTaken = Math.max(1, rawDmg - compDef);
+        companion.hp = Math.max(0, companion.hp - compDmgTaken);
+        combatLog(`${companion.name} takes the hit for you! (${compDmgTaken} damage)`);
+        if (companion.hp <= 0) { addLog(`${companion.name} has fallen protecting you.`, "combat"); s.roster = s.roster.filter(c => c.id !== companion.id); }
+      } else {
+        s.hp = Math.max(0, s.hp - dmgTaken);
+        combatLog(`The zombie claws you for ${dmgTaken} damage!`);
+        if (s.hp <= 0) { s.dead = true; s.deathCount += 1; s.combat = null; addLog("Your vision fades to static...", "combat"); }
+      }
+    } else {
+      combatLog(`The shambler closes in. Distance: ${s.combat.distance}.`);
+    }
+  }
+
+  function advanceZombieDistance() {
+    if (!s.combat) return;
+    s.combat.distance = Math.max(0, s.combat.distance - s.combat.speed);
+  }
+
+  function canFireNow() {
+    if (!s.combat) return false;
+    const wstats = getWeaponStats(s.equippedWeapon);
+    const effective = (wstats.kind === "ranged" && (s.inventory["Ammo"] || 0) <= 0) ? BARE_FISTS : wstats;
+    if (effective.kind === "melee" && s.combat.distance > 0) return false;
+    return true;
+  }
+
+  function playerCloseAmount() { return 3 + Math.floor((s.attributes.agi - 1) / 3); }
+  function playerRetreatAmount() { return 3 + Math.floor((s.attributes.agi - 1) / 3); }
+
+  function advanceOnEnemy() {
+    if (!s.combat || s.dead) return;
+    if (s.combat.distance <= 0) return;
+    const derived = computeDerived();
+    s.combat.distance = Math.max(0, s.combat.distance - playerCloseAmount());
+    if (s.combat.distance <= 0) combatLog("You close the gap and get in close.");
+    else combatLog(`You push forward. Distance: ${s.combat.distance}.`);
+    advanceZombieDistance();
+    resolveZombieTurn(derived);
+    render();
+  }
+
+  function retreatFromEnemy() {
+    if (!s.combat || s.dead) return;
+    const derived = computeDerived();
+    s.combat.distance = Math.min(20, s.combat.distance + playerRetreatAmount());
+    combatLog(`You fall back. Distance: ${s.combat.distance}.`);
+    advanceZombieDistance();
+    resolveZombieTurn(derived);
+    render();
+  }
+
+  function awardKillKRewards(zombieLevel) {
+    const derived = computeDerived();
+    const xpReward = zombieLevel * 10;
+    const cashReward = zombieLevel * 5;
+    s.kills += 1; s.cash += cashReward; s.totalCashEarned += cashReward;
+    gainXp(xpReward);
+    addLog(`Put down a level ${zombieLevel} zombie. +${xpReward} XP, +$${cashReward}.`, "combat");
+    const traveler = activeCompanion();
+    if (traveler) gainCompanionXp(traveler, zombieLevel * 3);
+
+    Object.keys(s.vendorQuests).forEach(key => {
+      const quest = s.vendorQuests[key];
+      if (quest.status === "active" && quest.type === "bounty" && zombieLevel >= quest.zombieLevelMin && quest.progress < quest.countNeeded) {
+        quest.progress += 1;
+        if (quest.progress >= quest.countNeeded) addLog(`Bounty target reached for a vendor job &mdash; return to turn it in.`, "story");
+      }
+    });
+
+    if (Math.random() * 100 < (50 + derived.lootLuck)) {
+      const table = LOOT_TABLES[currentSector().type] || ["Scrap Metal"];
+      const found = pickLoot(table, derived);
+      s.inventory[found] = (s.inventory[found] || 0) + 1;
+      addLog(`The zombie dropped: ${found}.`, "loot");
+      if (Math.random() * 100 < derived.lootLuck) {
+        const bonus = pickLoot(table, derived);
+        s.inventory[bonus] = (s.inventory[bonus] || 0) + 1;
+        addLog(`Lucky find: also grabbed ${bonus}.`, "loot");
+      }
+    }
+
+    const sector = currentSector();
+    if ((sector.type === "Military" || sector.type === "Wasteland") && (s.inventory["Research Fragment"] || 0) < 3 && s.questStage === "none" && Math.random() < 0.08) {
+      s.inventory["Research Fragment"] = (s.inventory["Research Fragment"] || 0) + 1;
+      addLog(`Among the remains: a sealed Research Fragment (${s.inventory["Research Fragment"]}/3).`, "story");
+    }
+  }
+
+  function fireAttack(overrideWeaponName) {
+    if (!s.combat || s.dead) return;
+    const derived = computeDerived();
+    let weaponName = overrideWeaponName || s.equippedWeapon;
+    let wstats = getWeaponStats(weaponName);
+    let usingBareFists = false;
+    const isOverride = !!overrideWeaponName && overrideWeaponName !== s.equippedWeapon;
+
+    if (wstats.kind === "ranged" && !isOverride) {
+      if ((s.inventory["Ammo"] || 0) > 0) { s.inventory["Ammo"] -= 1; if (s.inventory["Ammo"] === 0) delete s.inventory["Ammo"]; }
+      else { usingBareFists = true; wstats = BARE_FISTS; combatLog("Out of ammo &mdash; fighting bare-handed!"); }
+    } else if (wstats.kind === "thrown") {
+      if ((s.inventory[weaponName] || 0) <= 0) { usingBareFists = true; wstats = BARE_FISTS; }
+    }
+
+    if (!isOverride && wstats.kind === "melee" && s.combat.distance > 0 && !usingBareFists) {
+      addLog("Too far away to swing &mdash; advance, switch to a ranged weapon, or throw something.", "system");
+      render();
+      return;
+    }
+
+    const zLevelForCalc = typeof s.combat.level === "number" ? s.combat.level : 6;
+    const pct = computeAttackPercent(wstats, derived, zLevelForCalc);
+    const roll = Math.random() * 100;
+    const shakeEl = document.getElementById("crosshair");
+
+    if (roll <= pct) {
+      const meleeMult = (wstats.kind === "melee") ? derived.meleeDamageMult : 1;
+      let dmg = Math.max(1, Math.round(wstats.damage * derived.weaponDmgMult * meleeMult * (0.85 + Math.random() * 0.3)));
+      let crit = false;
+      if (Math.random() * 100 < derived.critChance) { dmg = Math.round(dmg * 1.5); crit = true; s.hasCrit = true; }
+      s.combat.hp = Math.max(0, s.combat.hp - dmg);
+      combatLog(`${crit ? "CRITICAL HIT! " : "Hit! "}${usingBareFists ? "Bare Fists" : weaponName} deals ${dmg} damage.`);
+      if (shakeEl) { shakeEl.classList.remove("shake"); void shakeEl.offsetWidth; shakeEl.classList.add("shake"); }
+    } else {
+      combatLog(`Miss! The shambler shrugs off a wild swing.`);
+    }
+
+    const companion = activeCompanion();
+    if (companion && s.combat.hp > 0) {
+      const atk = computeCompanionAttack(companion);
+      const compRoll = Math.random() * 100;
+      if (compRoll <= 60) {
+        const compDmg = Math.max(1, Math.round(atk.damage * (0.8 + Math.random() * 0.4)));
+        s.combat.hp = Math.max(0, s.combat.hp - compDmg);
+        combatLog(`${companion.name} ${atk.hasWeapon ? "opens fire" : "lends a hand"}: ${compDmg} damage.`);
+      }
+    }
+
+    if (!usingBareFists && wstats.kind === "thrown") {
+      s.inventory[weaponName] -= 1;
+      if (s.inventory[weaponName] <= 0) {
+        delete s.inventory[weaponName];
+        combatLog(`${weaponName} spent.${(!isOverride) ? " Reverting to bare hands." : ""}`);
+        if (!isOverride) s.equippedWeapon = fallbackMeleeWeapon();
+      }
+    }
+
+    if (s.combat.hp <= 0) {
+      if (s.combat.isBoss) {
+        s.questStage = "cured";
+        addLog("Patient Zero has fallen. The source strain is contained.", "story");
+        s.combat = null;
+        checkAchievements();
+        render();
+        showCuredOverlay();
+        return;
+      }
+      const hpPctAtKill = s.hp / derived.maxHp;
+      if (hpPctAtKill < 0.10) s.hadCloseCallWin = true;
+      awardKillKRewards(s.combat.level);
+
+      if (s.combat.queue.length > 0) {
+        const next = s.combat.queue.shift();
+        Object.assign(s.combat, spawnZombie(next.level));
+        combatLog("Another shambler closes in from the horde!");
+        render();
+        return;
+      }
+      const isSafehouseDefense = s.combat.isSafehouseDefense;
+      s.combat = null;
+      if (isSafehouseDefense) addLog("The horde is destroyed. Safehouse successfully defended!", "build");
+      checkAchievements();
+      render();
+      return;
+    }
+
+    advanceZombieDistance();
+    resolveZombieTurn(derived);
+    render();
+  }
+
+  function switchWeaponInCombat(name) {
+    if (!s.combat || s.dead) return;
+    const item = CATALOG[name];
+    if (!item || item.category !== "Weapons" || !(s.inventory[name] > 0)) return;
+    s.equippedWeapon = name;
+    const derived = computeDerived();
+    combatLog(`Switched to ${name}.`);
+    advanceZombieDistance();
+    resolveZombieTurn(derived);
+    render();
+  }
+
+  function throwWeaponInCombat(name) {
+    if (!s.combat || s.dead) return;
+    const item = CATALOG[name];
+    if (!item || item.category !== "Weapons" || item.kind !== "thrown" || !(s.inventory[name] > 0)) return;
+    fireAttack(name);
+  }
+
+  function attemptFlee() {
+    if (!s.combat || s.dead) return;
+    const derived = computeDerived();
+    const zLvl = typeof s.combat.level === "number" ? s.combat.level : 8;
+    const chance = clamp(50 + s.combat.distance * 5 - zLvl * 5 + derived.fleeBonus, 5, 90);
+    const roll = Math.random() * 100;
+    if (roll <= chance) {
+      addLog("Broke contact and retreated to safer ground.", "system");
+      s.x = s.combat.startX; s.y = s.combat.startY; s.combat = null;
+      s.fleeSuccesses += 1;
+      checkAchievements();
+      render(); return;
+    }
+    combatLog("Flee attempt failed &mdash; it's still on you!");
+    s.combat.distance = Math.max(0, s.combat.distance - s.combat.speed);
+    if (s.combat.distance <= 0) {
+      const rawDmg = Math.round(zLvl * 8 * (0.8 + Math.random() * 0.4) * derived.sev.dmg);
+      const dmgTaken = Math.max(1, rawDmg - derived.defenseTotal);
+      s.hp = Math.max(0, s.hp - dmgTaken);
+      combatLog(`Caught mid-retreat &mdash; takes ${dmgTaken} damage!`);
+      if (s.hp <= 0) { s.dead = true; s.deathCount += 1; s.combat = null; addLog("Your vision fades to static...", "combat"); }
+    }
+    render();
+  }
+
+  // --- FIELD ACTIONS ---
+  function move(dir) {
+    if (s.dead || s.combat) return;
+    if (s.pendingNpc) { addLog(`${s.pendingNpc.name} was left behind.`, "system"); s.pendingNpc = null; }
+    if (s.stamina < 1) { addLog("Not enough stamina to move.", "system"); render(); return; }
+    s.stamina -= 1; s.turns += 1;
+    if (dir === "n") s.y += 1; if (dir === "s") s.y -= 1; if (dir === "e") s.x += 1; if (dir === "w") s.x -= 1;
+    const key = `${s.x},${s.y}`;
+    s.visited.add(key);
+    const sector = sectorAt(s.x, s.y);
+    addLog(`Advanced to [${s.x},${s.y}] &mdash; ${sector.name}${sector.hasShop ? " (vendor present)" : ""}.`, "move");
+    rollVendorQuest();
+
+    if (sector.isBossSector) {
+      startBossCombat();
+    } else {
+      const derived = computeDerived();
+      if (sector.danger > 0 && Math.random() < Math.min(0.75, sector.danger * 0.22 * derived.sev.ambush)) {
+        startCombat(sector.danger);
+      } else {
+        rollNpcEncounter();
+      }
+    }
+    checkAchievements();
+    render();
+  }
+
+  function scavenge() {
+    if (s.dead || s.combat) return;
+    if (s.stamina < 2) { addLog("Not enough stamina to scavenge.", "system"); render(); return; }
+    s.stamina -= 2; s.turns += 1;
+    const derived = computeDerived();
+    const sector = currentSector();
+    const table = LOOT_TABLES[sector.type] || ["Scrap Metal"];
+    const found = pickLoot(table, derived);
+    s.inventory[found] = (s.inventory[found] || 0) + 1;
+    gainXp(2);
+    addLog(`Searched the area. Found: ${found}.`, "loot");
+    if (Math.random() * 100 < derived.lootLuck) {
+      const bonus = pickLoot(table, derived);
+      s.inventory[bonus] = (s.inventory[bonus] || 0) + 1;
+      addLog(`Lucky find: also grabbed ${bonus}.`, "loot");
+    }
+    checkAchievements();
+    render();
+  }
+
+  function collectCache() {
+    if (s.dead || s.combat) return;
+    const sector = currentSector();
+    const key = `${s.x},${s.y}`;
+    if (!sector.hasCache || s.collectedCaches.has(key)) return;
+    sector.cacheLoot.forEach(item => { s.inventory[item] = (s.inventory[item] || 0) + 1; });
+    s.collectedCaches.add(key);
+    addLog(`Found a supply cache: ${sector.cacheLoot.join(", ")}.`, "loot");
+    render();
+  }
+
+  function useAidItem(name, target) {
+    target = target || "self";
+    if (s.dead) return;
+    const item = CATALOG[name];
+    if (!item || item.category !== "Aid" || !(s.inventory[name] > 0)) return;
+    const companion = activeCompanion();
+    if (target === "companion" && !companion) return;
+    const derived = computeDerived();
+
+    if (item.stamina) {
+      if (s.stamina >= derived.maxStamina) return;
+      s.inventory[name] -= 1;
+      if (s.inventory[name] <= 0) delete s.inventory[name];
+      s.stamina = Math.min(derived.maxStamina, s.stamina + item.stamina);
+      addLog(`Used ${name}. +${item.stamina} Stamina.`, "loot");
+      render();
+      return;
+    }
+
+    const healAmt = Math.round(item.heal * derived.healMult);
+    s.inventory[name] -= 1;
+    if (s.inventory[name] <= 0) delete s.inventory[name];
+    if (target === "companion") {
+      companion.hp = Math.min(companion.maxHp, companion.hp + healAmt);
+      addLog(`Patched up ${companion.name} with ${name}. +${healAmt} HP.`, "loot");
+    } else {
+      s.hp = Math.min(derived.maxHp, s.hp + healAmt);
+      addLog(`Used ${name}. +${healAmt} HP.`, "loot");
+    }
+    if (s.combat) resolveZombieTurn(derived);
+    render();
+  }
+
+  function useDefaultAid() {
+    const priority = ["Medkit", "Bandage", "Painkillers", "Canned Food"];
+    const found = priority.find(n => s.inventory[n] > 0);
+    if (found) useAidItem(found); else { addLog("No aid items in inventory.", "system"); render(); }
+  }
+
+  function rest() {
+    if (s.dead || s.combat) return;
+    addLog("Held position, watching the perimeter. Stamina regenerates over time.", "system");
+    render();
+  }
+
+  function equip(name) {
+    if (s.dead) return;
+    const item = CATALOG[name];
+    if (!item || !(s.inventory[name] > 0)) return;
+    if (item.category === "Weapons") { s.equippedWeapon = name; render(); return; }
+    if ((item.category === "Armor" || item.category === "Clothing") && item.slot) {
+      s.equipment[item.slot] = (s.equipment[item.slot] === name) ? null : name;
+      render();
+    }
+  }
+
+  function sellItem(name) {
+    const item = CATALOG[name];
+    if (!item || !item.sellValue || !(s.inventory[name] > 0)) return;
+    s.inventory[name] -= 1; if (s.inventory[name] <= 0) delete s.inventory[name];
+    s.cash += item.sellValue; s.totalCashEarned += item.sellValue;
+    addLog(`Sold ${name} for $${item.sellValue}.`, "loot");
+    checkAchievements();
+    render();
+  }
+
+  function getScrapValue(name) {
+    const item = CATALOG[name];
+    if (!item) return 0;
+    if (item.category === "Weapons" && item.kind !== "thrown") return Math.max(1, Math.round((item.damage || 10) / 12));
+    if (item.category === "Armor") return Math.max(1, Math.round((item.defense || 5) / 4));
+    if (item.category === "Clothing") return 1;
+    return 0;
+  }
+
+  function scrapItem(name) {
+    const val = getScrapValue(name);
+    if (val <= 0 || !(s.inventory[name] > 0) || name === "Scrap Metal") return;
+    s.inventory[name] -= 1;
+    if (s.inventory[name] <= 0) { delete s.inventory[name]; unequipIfMatches(name); }
+    addScrap(val);
+    addLog(`Broke down ${name} for ${val} Scrap Metal.`, "loot");
+    render();
+  }
+
+  function getVendorRep(key) { return (s.vendorRep[key] && s.vendorRep[key].rep) || 0; }
+  function addVendorRep(key, amount) {
+    if (!s.vendorRep[key]) s.vendorRep[key] = { rep: 0, questsCompleted: 0 };
+    s.vendorRep[key].rep = Math.min(VENDOR_REP_CAP, s.vendorRep[key].rep + amount);
+    s.vendorRep[key].questsCompleted += 1;
+  }
+  function vendorDiscountMult(key) { return 1 - (getVendorRep(key) * VENDOR_REP_DISCOUNT_PER_POINT); }
+  function vendorSellBonusMult(key) { return 1 + (getVendorRep(key) * VENDOR_REP_DISCOUNT_PER_POINT); }
+
+  function shopSellPrice(name) {
+    const item = CATALOG[name];
+    if (!item) return 1;
+    if (item.sellValue) return item.sellValue;
+    if (item.category === "Weapons") return Math.max(1, Math.round((item.damage || 10) * 1.2));
+    if (item.category === "Armor") return Math.max(1, Math.round((item.defense || 5) * 2.5));
+    if (item.category === "Clothing") return 8;
+    if (item.category === "Ammo") return 1;
+    return 1;
+  }
+
+  function buyItem(name, price, qty) {
+    if (s.cash < price) return;
+    s.cash -= price;
+    s.inventory[name] = (s.inventory[name] || 0) + (qty || 1);
+    addLog(`Bought ${qty && qty > 1 ? qty + "x " : ""}${name} for $${price}.`, "loot");
+    render();
+  }
+
+  function sellAtShop(name) {
+    if (!(s.inventory[name] > 0)) return;
+    const key = `${s.x},${s.y}`;
+    const price = Math.max(1, Math.round(shopSellPrice(name) * vendorSellBonusMult(key)));
+    s.inventory[name] -= 1; if (s.inventory[name] <= 0) { delete s.inventory[name]; unequipIfMatches(name); }
+    s.cash += price; s.totalCashEarned += price;
+    addLog(`Sold ${name} to the vendor for $${price}.`, "loot");
+    checkAchievements();
+    render();
+  }
+
+  function startCraft(recipeId) {
+    if (s.craftQueue) return;
+    const recipe = RECIPES.find(r => r.id === recipeId);
+    if (!recipe) return;
+    for (const [item, qty] of Object.entries(recipe.inputs)) if ((s.inventory[item] || 0) < qty) return;
+    for (const [item, qty] of Object.entries(recipe.inputs)) { s.inventory[item] -= qty; if (s.inventory[item] <= 0) delete s.inventory[item]; }
+    const derived = computeDerived();
+    s.craftQueue = { recipeId, finishAt: Date.now() + Math.round(recipe.timeMs * derived.craftTimeMult) };
+    addLog(`Started crafting ${recipe.name}.`, "system");
+    render();
+  }
+
+  function startBuild(roomId) {
+    if (s.buildQueue) return;
+    if (s.x !== 0 || s.y !== 0) { addLog("Return to the Safehouse Sector [0,0] to build.", "system"); render(); return; }
+    const room = ROOMS.find(r => r.id === roomId);
+    if (!room || s.builtRooms.has(roomId)) return;
+    if (getScrap() < room.cost.scrap || s.cash < room.cost.cash) return;
+    spendScrap(room.cost.scrap); s.cash -= room.cost.cash;
+    s.buildQueue = { kind: "room", roomId, finishAt: Date.now() + room.timeMs };
+    addLog(`Construction started: ${room.name}.`, "build");
+    checkAchievements();
+    render();
+  }
+
+  function decodeFragments() {
+    if (!s.builtRooms.has("lab")) return;
+    if ((s.inventory["Research Fragment"] || 0) < 3) return;
+    if (s.questStage !== "none") return;
+    s.inventory["Research Fragment"] -= 3;
+    if (s.inventory["Research Fragment"] <= 0) delete s.inventory["Research Fragment"];
+    const rng = mulberry32(hash(1, 1, s.seed) ^ 0x5bd1e995);
+    const dist = 10 + Math.floor(rng() * 5);
+    const angle = rng() * Math.PI * 2;
+    const px = Math.round(Math.cos(angle) * dist);
+    const py = Math.round(Math.sin(angle) * dist);
+    s.patientZeroCoords = { x: px, y: py };
+    s.questStage = "located";
+    addLog(`Fragments decoded. Patient Zero's signal traces to Sector [${px},${py}]. Go finish this.`, "story");
+    render();
+  }
+
+  function startBarricadeUpgrade() {
+    if (s.buildQueue) return;
+    if (s.x !== 0 || s.y !== 0) { addLog("Return to the Safehouse Sector [0,0] to build.", "system"); render(); return; }
+    const nextLevel = s.barricadeLevel + 1;
+    if (nextLevel > BARRICADE_TIERS.length) return;
+    const tier = BARRICADE_TIERS[nextLevel - 1];
+    if (getScrap() < tier.cost.scrap || s.cash < tier.cost.cash) return;
+    spendScrap(tier.cost.scrap); s.cash -= tier.cost.cash;
+    s.buildQueue = { kind: "barricade", targetLevel: nextLevel, finishAt: Date.now() + tier.timeMs };
+    addLog(`Barricade reinforcement started (targeting Level ${nextLevel}).`, "build");
+    render();
+  }
+
+  function safehouseRepairCost() {
+    const missing = MAX_SAFEHOUSE_INTEGRITY - s.safehouseIntegrity;
+    return {
+      scrap: Math.max(1, Math.round(missing * SAFEHOUSE_REPAIR_SCRAP_PER_POINT)),
+      timeMs: Math.max(SAFEHOUSE_REPAIR_MIN_TIME_MS, Math.round(missing * SAFEHOUSE_REPAIR_TIME_PER_POINT_MS)),
+      missing
+    };
+  }
+
+  function startSafehouseRepair() {
+    if (s.buildQueue) return;
+    if (s.x !== 0 || s.y !== 0) { addLog("Return to the Safehouse Sector [0,0] to make repairs.", "system"); render(); return; }
+    const cost = safehouseRepairCost();
+    if (cost.missing <= 0) return;
+    if (getScrap() < cost.scrap) return;
+    spendScrap(cost.scrap);
+    s.buildQueue = { kind: "repair", finishAt: Date.now() + cost.timeMs };
+    addLog(`Repair work started on the Safehouse structure.`, "build");
+    render();
+  }
+
+  // --- COMPOUND EXPANSION ---
+  function isClaimed(x, y) { return !!s.claimedBlocks[`${x},${y}`]; }
+  function claimedCount() { return Object.keys(s.claimedBlocks).length; }
+  function compoundTileKeys() { return ["0,0"].concat(Object.keys(s.claimedBlocks)); }
+
+  function getClaimableNeighbors() {
+    const candidates = new Map();
+    compoundTileKeys().forEach(key => {
+      const [cx, cy] = key.split(",").map(Number);
+      [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]].forEach(([nx, ny]) => {
+        const nkey = `${nx},${ny}`;
+        if (nkey === "0,0" || isClaimed(nx, ny) || candidates.has(nkey)) return;
+        if (!s.visited.has(nkey)) return;
+        const sec = sectorAt(nx, ny);
+        if (sec.danger > CLAIM_DANGER_CAP) return;
+        candidates.set(nkey, { x: nx, y: ny, sector: sec });
+      });
+    });
+    return Array.from(candidates.values());
+  }
+
+  function claimCost() {
+    const n = claimedCount();
+    return {
+      scrap: Math.round(CLAIM_BASE_COST.scrap * (1 + n * 0.35)),
+      cash: Math.round(CLAIM_BASE_COST.cash * (1 + n * 0.35)),
+      timeMs: CLAIM_BASE_TIME_MS + n * CLAIM_TIME_STEP_MS
+    };
+  }
+
+  function startClaim(x, y) {
+    if (s.buildQueue) return;
+    if (s.x !== 0 || s.y !== 0) { addLog("Return to the Safehouse Sector [0,0] to direct expansion.", "system"); render(); return; }
+    if (claimedCount() >= MAX_CLAIMED_BLOCKS) return;
+    const eligible = getClaimableNeighbors().some(c => c.x === x && c.y === y);
+    if (!eligible) return;
+    const cost = claimCost();
+    if (getScrap() < cost.scrap || s.cash < cost.cash) return;
+    spendScrap(cost.scrap); s.cash -= cost.cash;
+    s.buildQueue = { kind: "claim", x, y, finishAt: Date.now() + cost.timeMs };
+    addLog(`Expansion crew dispatched to Sector [${x},${y}].`, "build");
+    render();
+  }
+
+  function postCompanionAtBlock(key, companionId) {
+    const block = s.claimedBlocks[key];
+    if (!block) return;
+    const comp = s.roster.find(c => c.id === companionId);
+    if (companionId && (!comp || comp.mode !== "guard")) return;
+    Object.keys(s.claimedBlocks).forEach(k => { if (s.claimedBlocks[k].postedCompanionId === companionId && companionId) s.claimedBlocks[k].postedCompanionId = null; });
+    block.postedCompanionId = companionId || null;
+    addLog(companionId ? `${comp.name} posted at Sector [${key}].` : `Post at Sector [${key}] left unmanned.`, "system");
+    render();
+  }
+
+  // --- FITNESS / MARKSMANSHIP TRAINING ---
+  function startFitnessTraining() {
+    if (s.buildQueue) return;
+    if (!s.builtRooms.has("gym")) return;
+    if (s.x !== 0 || s.y !== 0) { addLog("Return to the Safehouse Sector [0,0] to train.", "system"); render(); return; }
+    const nextLevel = s.fitnessLevel + 1;
+    if (nextLevel > FITNESS_TIERS.length) return;
+    const tier = FITNESS_TIERS[nextLevel - 1];
+    if (getScrap() < tier.cost.scrap || s.cash < tier.cost.cash) return;
+    spendScrap(tier.cost.scrap); s.cash -= tier.cost.cash;
+    s.buildQueue = { kind: "fitness", targetLevel: nextLevel, finishAt: Date.now() + tier.timeMs };
+    addLog(`Started a fitness training block (targeting Tier ${nextLevel}).`, "build");
+    render();
+  }
+
+  function startMarksmanshipTraining() {
+    if (s.buildQueue) return;
+    if (!s.builtRooms.has("range")) return;
+    if (s.x !== 0 || s.y !== 0) { addLog("Return to the Safehouse Sector [0,0] to train.", "system"); render(); return; }
+    const nextLevel = s.marksmanshipLevel + 1;
+    if (nextLevel > MARKSMANSHIP_TIERS.length) return;
+    const tier = MARKSMANSHIP_TIERS[nextLevel - 1];
+    if (getScrap() < tier.cost.scrap || s.cash < tier.cost.cash) return;
+    spendScrap(tier.cost.scrap); s.cash -= tier.cost.cash;
+    s.buildQueue = { kind: "marksmanship", targetLevel: nextLevel, finishAt: Date.now() + tier.timeMs };
+    addLog(`Started a marksmanship training block (targeting Tier ${nextLevel}).`, "build");
+    render();
+  }
+
+  function spendAttrPoint(key) {
+    if (s.unspentPoints <= 0) return;
+    if (s.attributes[key] >= MAX_ATTR) return;
+    s.attributes[key] += 1; s.unspentPoints -= 1;
+    render();
+  }
+
+  function respawnAtSafehouse() {
+    const derived = computeDerived();
+    s.dead = false; s.combat = null; s.x = 0; s.y = 0;
+    s.hp = Math.max(1, Math.round(derived.maxHp * 0.5));
+    const cashPenalty = Math.round(s.cash * 0.25);
+    s.cash = Math.max(0, s.cash - cashPenalty);
+    addLog(`Dragged back to the Safehouse and patched up${cashPenalty > 0 ? `, $${cashPenalty} poorer for the medical supplies` : ""}.`, "system");
+    document.getElementById("deathOverlay").classList.add("hidden");
+    checkAchievements();
+    render();
+  }
+
+  function showCuredOverlay() {
+    document.getElementById("cLevel").textContent = s.level;
+    document.getElementById("cKills").textContent = s.kills;
+    document.getElementById("cTurns").textContent = s.turns;
+    document.getElementById("curedOverlay").classList.remove("hidden");
+  }
+
+  function restartToCreation() {
+    document.getElementById("app").classList.add("hidden");
+    document.getElementById("deathOverlay").classList.add("hidden");
+    document.getElementById("combatOverlay").classList.add("hidden");
+    document.getElementById("curedOverlay").classList.add("hidden");
+    document.getElementById("creationOverlay").classList.remove("hidden");
+    gameStarted = false;
+    initCreationScreen();
+  }
+
+  // --- SAVE / LOAD ---
+  function serialize() {
+    return {
+      version: 6,
+      savedAt: Date.now(),
+      name: s.name, portraitSeed: s.portraitSeed, seed: s.seed, locationTheme: s.locationTheme, settings: s.settings,
+      attributes: s.attributes, unspentPoints: s.unspentPoints,
+      hp: s.hp, baseMaxHp: s.baseMaxHp, stamina: s.stamina, maxStaminaBase: s.maxStaminaBase,
+      xp: s.xp, level: s.level, xpToNext: s.xpToNext,
+      cash: s.cash, totalCashEarned: s.totalCashEarned, x: s.x, y: s.y,
+      inventory: s.inventory, equippedWeapon: s.equippedWeapon, equipment: s.equipment,
+      builtRooms: Array.from(s.builtRooms), visited: Array.from(s.visited),
+      collectedCaches: Array.from(s.collectedCaches),
+      barricadeLevel: s.barricadeLevel,
+      claimedBlocks: s.claimedBlocks,
+      fitnessLevel: s.fitnessLevel, marksmanshipLevel: s.marksmanshipLevel,
+      postCapXp: s.postCapXp, battleHardenedEverReached: s.battleHardenedEverReached,
+      vendorQuests: s.vendorQuests, vendorRep: s.vendorRep, totalVendorQuestsCompleted: s.totalVendorQuestsCompleted,
+      autoHealCompanions: s.autoHealCompanions,
+      safehouseIntegrity: s.safehouseIntegrity,
+      craftQueue: s.craftQueue, buildQueue: s.buildQueue,
+      kills: s.kills, turns: s.turns, deathCount: s.deathCount,
+      roster: s.roster, companionEverRecruited: s.companionEverRecruited,
+      fleeSuccesses: s.fleeSuccesses, hasCrit: s.hasCrit, hadCloseCallWin: s.hadCloseCallWin,
+      questStage: s.questStage, patientZeroCoords: s.patientZeroCoords,
+      achievements: Array.from(s.achievements), craftedRecipes: Array.from(s.craftedRecipes)
+    };
+  }
+
+  function migrateCompanionRecord(c) {
+    if (!c) return c;
+    if (!c.equipment) { c.equipment = { weapon: c.armed ? "Baseball Bat" : null, armor: null }; delete c.armed; delete c.bonusDamage; }
+    if (c.id === undefined) c.id = c.portraitSeed;
+    if (!c.mode) c.mode = "travel";
+    if (c.level === undefined) c.level = 1;
+    if (c.xp === undefined) c.xp = 0;
+    return c;
+  }
+
+  const OFFLINE_CREDIT_CAP_MS = 8 * 3600 * 1000;
+
+  function formatAwayDuration(ms) {
+    const totalMin = Math.floor(ms / 60000);
+    const h = Math.floor(totalMin / 60), m = totalMin % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }
+
+  // Credits income-type passive systems for time between the save and this load (capped).
+  // Stamina regen, Garden and Compound outposts only. Auto-heal and passive repair are
+  // deliberately online-only (they consume items / need decisions).
+  function applyOfflineCredit(savedAt) {
+    if (!Number.isFinite(savedAt)) return;
+    const awayRaw = Date.now() - savedAt;
+    if (!(awayRaw > 0)) return;
+    const awayMs = Math.min(awayRaw, OFFLINE_CREDIT_CAP_MS);
+    const derived = computeDerived();
+    const parts = [];
+    const staminaBefore = s.stamina;
+    const apTicks = Math.floor(awayMs / AP_REGEN_MS);
+    if (apTicks > 0 && s.stamina < derived.maxStamina) s.stamina = Math.min(derived.maxStamina, s.stamina + apTicks);
+    if (s.stamina > staminaBefore) parts.push(`+${s.stamina - staminaBefore} stamina`);
+    if (s.builtRooms.has("garden")) {
+      const g = Math.floor(awayMs / GARDEN_TICK_MS);
+      if (g > 0) { s.inventory["Canned Food"] = (s.inventory["Canned Food"] || 0) + g; parts.push(`+${g} Canned Food`); }
+    }
+    const n = claimedCount();
+    if (n > 0) {
+      const t = Math.floor(awayMs / CLAIM_SCRAP_TICK_MS);
+      if (t > 0) { addScrap(t * n); parts.push(`+${t * n} Scrap Metal`); }
+    }
+    if (parts.length) addLog(`While you were away (${formatAwayDuration(awayMs)}${awayRaw > awayMs ? ", capped" : ""}): ${parts.join(", ")}.`, "loot");
+  }
+
+  const QUEUE_MAX_REMAINING_MS = 600000;
+
+  function sanitizeCraftQueue(q) {
+    if (!q || typeof q !== "object" || !Number.isFinite(q.finishAt)) return null;
+    if (!RECIPES.some(r => r.id === q.recipeId)) return null;
+    return { recipeId: q.recipeId, finishAt: Math.min(q.finishAt, Date.now() + QUEUE_MAX_REMAINING_MS) };
+  }
+
+  function sanitizeBuildQueue(q, claimedKeys) {
+    if (!q || typeof q !== "object" || !Number.isFinite(q.finishAt)) return null;
+    const finishAt = Math.min(q.finishAt, Date.now() + QUEUE_MAX_REMAINING_MS);
+    const validLevel = (lvl, tiers) => Number.isInteger(lvl) && lvl >= 1 && lvl <= tiers.length;
+    switch (q.kind) {
+      case "room":
+        if (!ROOMS.some(r => r.id === q.roomId)) return null;
+        return { kind: "room", roomId: q.roomId, finishAt };
+      case "barricade":
+        if (!validLevel(q.targetLevel, BARRICADE_TIERS)) return null;
+        return { kind: "barricade", targetLevel: q.targetLevel, finishAt };
+      case "fitness":
+        if (!validLevel(q.targetLevel, FITNESS_TIERS)) return null;
+        return { kind: "fitness", targetLevel: q.targetLevel, finishAt };
+      case "marksmanship":
+        if (!validLevel(q.targetLevel, MARKSMANSHIP_TIERS)) return null;
+        return { kind: "marksmanship", targetLevel: q.targetLevel, finishAt };
+      case "repair":
+        return { kind: "repair", finishAt };
+      case "claim":
+        if (!Number.isInteger(q.x) || !Number.isInteger(q.y)) return null;
+        if (claimedKeys.length >= MAX_CLAIMED_BLOCKS || claimedKeys.includes(`${q.x},${q.y}`)) return null;
+        return { kind: "claim", x: q.x, y: q.y, finishAt };
+      default:
+        return null;
+    }
+  }
+
+  function applySaveData(data) {
+    const fresh = newGame();
+    Object.assign(fresh, data);
+    fresh.builtRooms = new Set(data.builtRooms || []);
+    fresh.visited = new Set(data.visited || ["0,0"]);
+    fresh.collectedCaches = new Set(data.collectedCaches || []);
+    fresh.achievements = new Set(data.achievements || []);
+    fresh.craftedRecipes = new Set(data.craftedRecipes || []);
+    fresh.settings = data.settings || { severity: "Medium", infection: "Normal", armedPct: "Medium" };
+
+    if (typeof data.scrap === "number" && data.scrap > 0) {
+      fresh.inventory = fresh.inventory || {};
+      fresh.inventory["Scrap Metal"] = (fresh.inventory["Scrap Metal"] || 0) + data.scrap;
+    }
+    delete fresh.scrap;
+
+    fresh.equipment = { head: null, torso: null, hands: null, pants: null, feet: null };
+    if (data.equippedArmor && CATALOG[data.equippedArmor] && CATALOG[data.equippedArmor].slot) {
+      fresh.equipment[CATALOG[data.equippedArmor].slot] = data.equippedArmor;
+    }
+    if (data.equippedClothing && CATALOG[data.equippedClothing] && CATALOG[data.equippedClothing].slot) {
+      fresh.equipment[CATALOG[data.equippedClothing].slot] = data.equippedClothing;
+    }
+    if (data.equipment) fresh.equipment = Object.assign(fresh.equipment, data.equipment);
+    delete fresh.equippedArmor; delete fresh.equippedClothing;
+
+    // Migrate roster: pre-roster saves had a single "companion" object; wrap it into an array.
+    if (data.roster && Array.isArray(data.roster)) {
+      fresh.roster = data.roster.map(migrateCompanionRecord);
+    } else if (data.companion) {
+      fresh.roster = [migrateCompanionRecord(data.companion)];
+    } else {
+      fresh.roster = [];
+    }
+    delete fresh.companion;
+    // Enforce single-traveler rule in case an older save or hand-edited file has more than one.
+    let travelerSeen = false;
+    fresh.roster.forEach(c => {
+      if (c.mode === "travel") { if (travelerSeen) c.mode = "guard"; else travelerSeen = true; }
+    });
+    if (fresh.roster.length > MAX_ROSTER) fresh.roster = fresh.roster.slice(0, MAX_ROSTER);
+
+    fresh.combat = null; fresh.dead = false; fresh.pendingNpc = null;
+    fresh.craftQueue = sanitizeCraftQueue(data.craftQueue);
+    fresh.buildQueue = sanitizeBuildQueue(data.buildQueue, Object.keys(fresh.claimedBlocks || {}));
+    fresh.lastApRegen = Date.now(); fresh.lastGardenTick = Date.now(); fresh.lastSafehouseCheck = Date.now(); fresh.lastClaimTick = Date.now(); fresh.lastCompanionHealTick = Date.now(); fresh.lastSafehouseRepairTick = Date.now();
+    fresh.claimedBlocks = data.claimedBlocks || {};
+    fresh.log = [];
+    s = fresh;
+    logTick = 0; combatLogTick = 0; lastRenderedLogTick = -1; lastRenderedCombatLogTick = -1;
+    addLog(`Save loaded. Welcome back, ${s.name}.`, "system");
+    applyOfflineCredit(data.savedAt);
+    if (typeof data.scrap === "number" && data.scrap > 0) addLog(`Migrated ${data.scrap} leftover Scrap currency into Scrap Metal.`, "system");
+    gameStarted = true;
+    document.getElementById("creationOverlay").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    document.getElementById("deathOverlay").classList.add("hidden");
+    document.getElementById("combatOverlay").classList.add("hidden");
+    document.getElementById("curedOverlay").classList.add("hidden");
+    render();
+  }
+
+  function downloadSave() {
+    const data = serialize();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `zp_save_${(s.name || "survivor").replace(/\s+/g, "_")}_lvl${s.level}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    addLog("Save file downloaded.", "system");
+    render();
+  }
+
+  function handleLoadFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try { applySaveData(JSON.parse(reader.result)); }
+      catch (e) { addLog("Failed to load save file: invalid format.", "system"); render(); }
+    };
+    reader.readAsText(file);
+  }
+
+  async function tryAutosave() {
+    if (!gameStarted) return;
+    try { if (window.storage && typeof window.storage.set === "function") await window.storage.set("zp_autosave", JSON.stringify(serialize()), false); }
+    catch (e) { /* best-effort only */ }
+  }
+
+  async function tryLoadAutosave() {
+    try {
+      if (window.storage && typeof window.storage.get === "function") {
+        const result = await window.storage.get("zp_autosave", false);
+        if (result && result.value) return JSON.parse(result.value);
+      }
+    } catch (e) { /* no autosave available */ }
+    return null;
+  }
+
+  // --- PORTRAIT ---
+  const SKIN_TONES = ["#e8b98a", "#c68642", "#8d5524", "#f1c27d", "#ffdbac"];
+  const HAIR_COLORS = ["#2b2b2b", "#5a3825", "#8a6d3b", "#c9c9c9", "#7a2e2e"];
+  const BG_TONES = ["#14210f", "#1a2410", "#241f10", "#0c1a1f", "#1a0f1f"];
+  const GEAR_COLORS = ["#4d6c2c", "#6e2626", "#7a5c26", "#4a9b96", "#555555"];
+
+  function renderPortraitSVG(seed) {
+    const rng = mulberry32(seed);
+    const skin = SKIN_TONES[Math.floor(rng() * SKIN_TONES.length)];
+    const hair = HAIR_COLORS[Math.floor(rng() * HAIR_COLORS.length)];
+    const bg = BG_TONES[Math.floor(rng() * BG_TONES.length)];
+    const gear = GEAR_COLORS[Math.floor(rng() * GEAR_COLORS.length)];
+    const hasHeadwear = rng() < 0.5;
+    const hasScar = rng() < 0.3;
+    return `<svg viewBox="0 0 100 100" width="96" height="96">
+      <rect width="100" height="100" fill="${bg}"/>
+      <circle cx="50" cy="55" r="28" fill="${skin}"/>
+      <path d="M22 45 Q50 15 78 45 L78 40 Q50 20 22 40 Z" fill="${hair}"/>
+      ${hasHeadwear ? `<rect x="18" y="30" width="64" height="10" fill="${gear}"/>` : ""}
+      <circle cx="40" cy="55" r="3" fill="#1a1a1a"/>
+      <circle cx="60" cy="55" r="3" fill="#1a1a1a"/>
+      <path d="M40 68 Q50 74 60 68" stroke="#3a2a20" stroke-width="2" fill="none"/>
+      ${hasScar ? `<path d="M62 45 L68 60" stroke="#7a3030" stroke-width="1.5"/>` : ""}
+    </svg>`;
+  }
+  function renderPortraitSVGSmall(seed) {
+    const svg = renderPortraitSVG(seed);
+    return svg.replace('width="96" height="96"', 'width="48" height="48"');
+  }
+
+  // --- RENDER: MAIN GAME ---
+  function render() {
+    if (!gameStarted) return;
+    tickRegen();
+    checkAchievements();
+    const derived = computeDerived();
+    const sector = currentSector();
+    const companion = activeCompanion();
+
+    document.getElementById("sectorCoords").textContent = `[${s.x},${s.y}]`;
+    document.getElementById("sectorName").textContent = sector.name + (sector.hasShop ? " \u2726" : "") + (sector.isBossSector ? " \u2620" : "");
+    document.getElementById("lvlNum").textContent = s.level;
+    document.getElementById("cashNum").textContent = s.cash;
+    document.getElementById("scrapNum").textContent = getScrap();
+
+    const questChip = document.getElementById("questChip");
+    if (s.questStage === "located") { questChip.textContent = `TARGET: [${s.patientZeroCoords.x},${s.patientZeroCoords.y}]`; questChip.classList.remove("hidden"); }
+    else if (s.questStage === "cured") { questChip.textContent = "CURED"; questChip.classList.remove("hidden"); }
+    else questChip.classList.add("hidden");
+
+    const hpPct = Math.max(0, (s.hp / derived.maxHp) * 100);
+    const apPct = Math.max(0, (s.stamina / derived.maxStamina) * 100);
+    const xpPct = Math.max(0, (s.xp / s.xpToNext) * 100);
+    document.getElementById("hpBar").style.width = hpPct + "%";
+    document.getElementById("apBar").style.width = apPct + "%";
+    document.getElementById("xpBar").style.width = xpPct + "%";
+    document.getElementById("hpNum").textContent = `${s.hp} / ${derived.maxHp}`;
+    document.getElementById("apNum").textContent = `${s.stamina} / ${derived.maxStamina}`;
+    document.getElementById("xpNum").textContent = `${s.xp} / ${s.xpToNext}`;
+
+    const wstats = getWeaponStats(s.equippedWeapon);
+    const meleeMult = wstats.kind === "melee" ? derived.meleeDamageMult : 1;
+    const ammoNote = wstats.kind === "ranged" ? ` (Ammo: ${s.inventory["Ammo"] || 0})` : "";
+    const equippedCount = EQUIP_SLOTS.filter(sl => s.equipment[sl]).length;
+    let gearHtml =
+      `WEAPON: <span>${s.equippedWeapon}${ammoNote}</span> &middot; DMG ${Math.round(wstats.damage * derived.weaponDmgMult * meleeMult)}<br>` +
+      `GEAR: <span>${equippedCount}/5 slots</span> &middot; DEF ${derived.defenseTotal}`;
+    if (companion) {
+      const atk = computeCompanionAttack(companion);
+      gearHtml += `<br>TRAVELING WITH: <span>${companion.name}</span> ${atk.hasWeapon ? `(${companion.equipment.weapon})` : "(unarmed)"} &middot; HP ${companion.hp}/${companion.maxHp}`;
+    }
+    const guards = guardingCompanions();
+    if (guards.length > 0) gearHtml += `<br>GUARDING SAFEHOUSE: <span>${guards.map(c => c.name).join(", ")}</span>`;
+    if (s.unspentPoints > 0) gearHtml += `<br><span style="color:var(--amber)">+${s.unspentPoints} unspent attribute point(s) &mdash; Character tab</span>`;
+    document.getElementById("gearLine").innerHTML = gearHtml;
+
+    renderMinimap();
+    renderLog();
+    renderNpcCard();
+    renderCacheCard();
+    renderInventoryTab(derived);
+    renderCraftingTab(derived);
+    renderSafehouseTab();
+    renderShopTab();
+    renderCharacterTab(derived);
+    renderRosterTab();
+    renderAchievementsTab();
+    renderWorldMapTab();
+
+    document.getElementById("btnN").disabled = s.dead || !!s.combat || s.stamina < 1;
+    document.getElementById("btnS").disabled = s.dead || !!s.combat || s.stamina < 1;
+    document.getElementById("btnE").disabled = s.dead || !!s.combat || s.stamina < 1;
+    document.getElementById("btnW").disabled = s.dead || !!s.combat || s.stamina < 1;
+    document.getElementById("btnF").disabled = s.dead || !!s.combat || s.stamina < 2;
+    document.getElementById("btnH").disabled = s.dead || !(["Medkit","Bandage","Painkillers","Canned Food"].some(n => s.inventory[n] > 0));
+    document.getElementById("btnR").disabled = s.dead || !!s.combat;
+
+    renderCombatOverlay();
+
+    const deathOverlay = document.getElementById("deathOverlay");
+    const combatOverlay = document.getElementById("combatOverlay");
+    if (s.dead) {
+      document.getElementById("dSectors").textContent = s.visited.size;
+      document.getElementById("dKills").textContent = s.kills;
+      document.getElementById("dTurns").textContent = s.turns;
+      deathOverlay.classList.remove("hidden");
+      combatOverlay.classList.add("hidden");
+    } else {
+      deathOverlay.classList.add("hidden");
+      if (s.combat) combatOverlay.classList.remove("hidden"); else combatOverlay.classList.add("hidden");
+    }
+  }
+
+  function renderNpcCard() {
+    const wrap = document.getElementById("npcCardWrap");
+    if (!s.pendingNpc || s.combat || s.dead) { wrap.innerHTML = ""; return; }
+    const npc = s.pendingNpc;
+    const rosterFullNote = s.roster.length >= MAX_ROSTER ? `<div class="desc" style="color:var(--blood);margin-top:4px;">Roster full (${MAX_ROSTER}/${MAX_ROSTER}) &mdash; dismiss someone in the Character tab first.</div>` : "";
+    wrap.innerHTML = `<div class="npc-card">
+      <div class="portrait-frame">${renderPortraitSVGSmall(npc.portraitSeed)}</div>
+      <div class="info">
+        <div class="title">${npc.name}${npc.startingWeapon ? ` (carrying a ${npc.startingWeapon})` : " (unarmed)"}</div>
+        <div class="desc">${npc.startingWeapon ? "Already has a weapon and will fight alongside you." : "Unarmed, but glad for the company &mdash; give them a weapon later from your inventory."}</div>
+        ${rosterFullNote}
+      </div>
+      <div class="btns">
+        <button class="mini-btn" id="btnRecruit" ${s.roster.length >= MAX_ROSTER ? "disabled" : ""}>RECRUIT</button>
+        <button class="mini-btn danger2" id="btnDismissNpc">IGNORE</button>
+      </div>
+    </div>`;
+    document.getElementById("btnRecruit").addEventListener("click", recruitNpc);
+    document.getElementById("btnDismissNpc").addEventListener("click", dismissNpc);
+  }
+
+  function renderCacheCard() {
+    const wrap = document.getElementById("cacheCardWrap");
+    const sector = currentSector();
+    const key = `${s.x},${s.y}`;
+    if (!sector.hasCache || s.collectedCaches.has(key) || s.combat || s.dead) { wrap.innerHTML = ""; return; }
+    wrap.innerHTML = `<div class="cache-card">
+      <div class="title">SUPPLY CACHE DETECTED</div>
+      <div class="desc">Someone stashed supplies here before the outbreak. Worth a look.</div>
+      <button class="mini-btn" id="btnCollectCache">COLLECT CACHE</button>
+    </div>`;
+    document.getElementById("btnCollectCache").addEventListener("click", collectCache);
+  }
+
+  function renderMinimap() {
+    const mm = document.getElementById("minimap");
+    mm.innerHTML = "";
+    for (let dy = 2; dy >= -2; dy--) {
+      for (let dx = -2; dx <= 2; dx++) {
+        const cx = s.x + dx, cy = s.y + dy;
+        const key = `${cx},${cy}`;
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        if (cx === s.x && cy === s.y) { cell.classList.add("player"); cell.textContent = "@"; }
+        else if (s.visited.has(key)) {
+          const sec = sectorAt(cx, cy);
+          cell.classList.add("d" + sec.danger);
+          if (sec.isBossSector) cell.classList.add("boss");
+          if (isClaimed(cx, cy)) cell.classList.add("claimed");
+          let inner = (sec.isBossSector ? "!" : sec.type[0]);
+          if (sec.hasShop) inner += '<span class="shopdot">$</span>';
+          if (sec.hasCache && !s.collectedCaches.has(key)) inner += '<span class="cachedot">+</span>';
+          if (isClaimed(cx, cy) && s.claimedBlocks[key].postedCompanionId) inner += '<span class="postdot">&#9679;</span>';
+          cell.innerHTML = inner;
+          cell.title = sec.name + (sec.hasShop ? ` (${sec.shopName})` : "") + (sec.isBossSector ? " \u2014 PATIENT ZERO" : "") + (sec.hasCache && !s.collectedCaches.has(key) ? " \u2014 cache" : "") + (isClaimed(cx, cy) ? " \u2014 claimed territory" : "");
+        } else if (s.questStage === "located" && s.patientZeroCoords && cx === s.patientZeroCoords.x && cy === s.patientZeroCoords.y) {
+          cell.classList.add("boss"); cell.textContent = "?"; cell.title = "Signal detected here";
+        }
+        mm.appendChild(cell);
+      }
+    }
+    document.getElementById("mapLegend").innerHTML = `
+      <span><i style="background:#14210f"></i>Safe/Low</span>
+      <span><i style="background:#241f10"></i>Moderate</span>
+      <span><i style="background:#300c0c"></i>High danger</span>
+      <span><i style="background:transparent;color:var(--amber);border:none">$</i>Vendor</span>
+      <span><i style="background:transparent;color:var(--cyan);border:none">+</i>Cache</span>
+      <span><i style="background:transparent;color:var(--purple);border:none">!</i>Patient Zero</span>
+      <span><i style="background:transparent;color:var(--toxic);border:none">@</i>You</span>
+      <span><i style="border-color:var(--amber);"></i>Claimed territory</span>
+    `;
+  }
+
+  // --- WORLD MAP (pannable) ---
+  const WORLD_MAP_RADIUS = 6; // 13x13 viewport
+  const WORLD_MAP_PAN_STEP = 6;
+  let mapPanX = 0, mapPanY = 0;
+  let mapSelected = null; // {x,y} or null
+
+  function panMap(dx, dy) {
+    mapPanX += dx * WORLD_MAP_PAN_STEP;
+    mapPanY += dy * WORLD_MAP_PAN_STEP;
+    render();
+  }
+
+  function recenterMap() {
+    mapPanX = 0; mapPanY = 0; mapSelected = null;
+    render();
+  }
+
+  function jumpToMapCoords(x, y) {
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    mapPanX = x - s.x; mapPanY = y - s.y;
+    render();
+  }
+
+  function selectMapSector(x, y) {
+    mapSelected = { x, y };
+    render();
+  }
+
+  function renderWorldMapTab() {
+    const centerX = s.x + mapPanX, centerY = s.y + mapPanY;
+    document.getElementById("wmapCoordsLabel").textContent = `viewing around [${centerX},${centerY}]${(mapPanX !== 0 || mapPanY !== 0) ? " (panned)" : ""}`;
+
+    const grid = document.getElementById("wmapGrid");
+    const size = WORLD_MAP_RADIUS * 2 + 1;
+    grid.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+    grid.innerHTML = "";
+    for (let dy = WORLD_MAP_RADIUS; dy >= -WORLD_MAP_RADIUS; dy--) {
+      for (let dx = -WORLD_MAP_RADIUS; dx <= WORLD_MAP_RADIUS; dx++) {
+        const cx = centerX + dx, cy = centerY + dy;
+        const key = `${cx},${cy}`;
+        const cell = document.createElement("div");
+        cell.className = "wmap-cell";
+        if (mapSelected && mapSelected.x === cx && mapSelected.y === cy) cell.classList.add("selected");
+
+        if (cx === s.x && cy === s.y) {
+          cell.classList.add("player"); cell.textContent = "@";
+        } else if (s.visited.has(key)) {
+          const sec = sectorAt(cx, cy);
+          cell.classList.add("d" + sec.danger);
+          if (sec.isBossSector) cell.classList.add("boss");
+          if (isClaimed(cx, cy)) cell.classList.add("claimed");
+          let inner = (sec.isBossSector ? "!" : sec.type[0]);
+          if (sec.hasShop) inner += '<span class="shopdot">$</span>';
+          if (sec.hasCache && !s.collectedCaches.has(key)) inner += '<span class="cachedot">+</span>';
+          if (isClaimed(cx, cy) && s.claimedBlocks[key].postedCompanionId) inner += '<span class="postdot">&#9679;</span>';
+          cell.innerHTML = inner;
+          cell.addEventListener("click", () => selectMapSector(cx, cy));
+        } else if (s.questStage === "located" && s.patientZeroCoords && cx === s.patientZeroCoords.x && cy === s.patientZeroCoords.y) {
+          cell.classList.add("boss"); cell.textContent = "?";
+          cell.addEventListener("click", () => selectMapSector(cx, cy));
+        } else {
+          cell.addEventListener("click", () => selectMapSector(cx, cy));
+        }
+        grid.appendChild(cell);
+      }
+    }
+
+    const info = document.getElementById("wmapInfo");
+    if (!mapSelected) {
+      info.innerHTML = `<div class="empty-note">Click any tile to inspect it.</div>`;
+    } else {
+      const { x, y } = mapSelected;
+      const selKey = `${x},${y}`;
+      if (!s.visited.has(selKey)) {
+        info.innerHTML = `<div class="title">Unexplored &mdash; [${x},${y}]</div><div class="desc" style="color:var(--text-dim);font-size:11px;">Scout this sector to learn what's there.</div>`;
+      } else {
+        const sec = sectorAt(x, y);
+        const dist = Math.abs(x) + Math.abs(y);
+        const claimedHere = isClaimed(x, y);
+        const postedComp = claimedHere && s.claimedBlocks[selKey].postedCompanionId ? s.roster.find(c => c.id === s.claimedBlocks[selKey].postedCompanionId) : null;
+        info.innerHTML = `<div class="title">${sec.name} &mdash; [${x},${y}]</div>
+          <div style="color:var(--text-dim);font-size:11px;">Type: ${sec.type} &middot; Danger: ${sec.danger} &middot; Distance from Safehouse: ${dist}
+          ${sec.hasShop ? `<br>Vendor: ${sec.shopName}` : ""}
+          ${sec.hasCache ? `<br>Supply cache: ${s.collectedCaches.has(selKey) ? "already collected" : "uncollected"}` : ""}
+          ${claimedHere ? `<br><span style="color:var(--amber);">Claimed compound territory${postedComp ? ` &mdash; posted: ${postedComp.name}` : " &mdash; unmanned"}</span>` : ""}
+          ${sec.isBossSector ? `<br><span style="color:var(--purple);">Patient Zero signal detected here.</span>` : ""}</div>`;
+      }
+    }
+
+    document.getElementById("wmapLegend").innerHTML = `
+      <span><i style="background:#14210f"></i>Safe/Low</span>
+      <span><i style="background:#241f10"></i>Moderate</span>
+      <span><i style="background:#300c0c"></i>High danger</span>
+      <span><i style="background:transparent;color:var(--amber);border:none">$</i>Vendor</span>
+      <span><i style="background:transparent;color:var(--cyan);border:none">+</i>Cache</span>
+      <span><i style="background:transparent;color:var(--purple);border:none">!</i>Patient Zero</span>
+      <span><i style="background:transparent;color:var(--toxic);border:none">@</i>You</span>
+      <span><i style="background:#0c110b;"></i>Unexplored</span>
+      <span><i style="border-color:var(--amber);"></i>Claimed territory</span>
+    `;
+  }
+
+  function renderLog() {
+    const feed = document.getElementById("logFeed");
+    if (logTick !== lastRenderedLogTick) {
+      const wasAtBottom = feed.scrollTop + feed.clientHeight >= feed.scrollHeight - 10;
+      feed.innerHTML = s.log.map(l => `<div class="log-line ${l.cls}">${l.text}</div>`).join("");
+      if (wasAtBottom || lastRenderedLogTick === -1) feed.scrollTop = feed.scrollHeight;
+      lastRenderedLogTick = logTick;
+    }
+  }
+
+  function renderCombatOverlay() {
+    if (!s.combat) return;
+    const card = document.getElementById("combatCard");
+    card.classList.toggle("boss", !!s.combat.isBoss);
+    card.classList.toggle("safehouse-defense", !!s.combat.isSafehouseDefense);
+    document.getElementById("combatTitle").textContent = s.combat.isBoss ? "PATIENT ZERO" : (s.combat.isSafehouseDefense ? "SAFEHOUSE UNDER ATTACK" : "HOSTILE CONTACT");
+    document.getElementById("crosshairLabel").textContent = s.combat.isBoss ? "0" : "Z";
+    const pct = currentAttackPercent();
+    document.getElementById("combatSub").textContent = `Sector [${s.x},${s.y}] \u2014 ${currentSector().name}`;
+    document.getElementById("queueLine").textContent = s.combat.queue && s.combat.queue.length > 0 ? `${s.combat.queue.length} more in the horde` : "";
+    document.getElementById("zDist").textContent = s.combat.distance;
+    document.getElementById("zSpeed").textContent = s.combat.speed;
+    document.getElementById("zLevel").textContent = s.combat.isBoss ? "BOSS" : s.combat.level;
+    document.getElementById("zHpBar").style.width = Math.max(0, (s.combat.hp / s.combat.maxHp) * 100) + "%";
+    document.getElementById("zHpNum").textContent = `${s.combat.hp} / ${s.combat.maxHp}`;
+
+    const canFire = canFireNow();
+    document.getElementById("accLine").textContent = canFire ? `HIT CHANCE: ${pct}%` : "OUT OF MELEE RANGE";
+    document.getElementById("btnFire").disabled = !canFire;
+    document.getElementById("fireHint").classList.toggle("hidden", canFire);
+    document.getElementById("btnAdvance").disabled = s.combat.distance <= 0;
+
+    const companion = activeCompanion();
+    const companionRow = document.getElementById("companionRow");
+    if (companion) {
+      companionRow.classList.remove("hidden");
+      document.getElementById("cHpBar").style.width = Math.max(0, (companion.hp / companion.maxHp) * 100) + "%";
+      document.getElementById("cHpNum").textContent = `${companion.hp} / ${companion.maxHp}`;
+    } else companionRow.classList.add("hidden");
+
+    const clog = document.getElementById("combatLog");
+    if (combatLogTick !== lastRenderedCombatLogTick) {
+      clog.innerHTML = s.combat.log.map(t => `<div class="log-line">${t}</div>`).join("");
+      clog.scrollTop = clog.scrollHeight;
+      lastRenderedCombatLogTick = combatLogTick;
+    }
+
+    ["subtabWeapon", "subtabAid", "subtabThrow"].forEach(id => {
+      document.getElementById(id).classList.toggle("active",
+        (id === "subtabWeapon" && combatSubTab === "weapon") ||
+        (id === "subtabAid" && combatSubTab === "aid") ||
+        (id === "subtabThrow" && combatSubTab === "throw"));
+    });
+    renderCombatSubpanel();
+  }
+
+  function renderCombatSubpanel() {
+    const panel = document.getElementById("combatSubpanel");
+    if (!combatSubTab || !s.combat) { panel.classList.add("hidden"); panel.innerHTML = ""; return; }
+    panel.classList.remove("hidden");
+    const companion = activeCompanion();
+
+    if (combatSubTab === "weapon") {
+      const weapons = Object.entries(s.inventory).filter(([n]) => CATALOG[n] && CATALOG[n].category === "Weapons");
+      if (weapons.length === 0) { panel.innerHTML = `<div class="empty-note">No other weapons carried.</div>`; return; }
+      panel.innerHTML = weapons.map(([n, count]) => {
+        const equipped = s.equippedWeapon === n;
+        const w = CATALOG[n];
+        return `<div class="subrow"><span>${n} (${w.kind}, ${count}&times;)</span><button data-switch="${n}" ${equipped ? "disabled" : ""}>${equipped ? "equipped" : "switch"}</button></div>`;
+      }).join("");
+      panel.querySelectorAll("[data-switch]").forEach(b => b.addEventListener("click", () => switchWeaponInCombat(b.getAttribute("data-switch"))));
+    } else if (combatSubTab === "aid") {
+      const aids = Object.entries(s.inventory).filter(([n]) => CATALOG[n] && CATALOG[n].category === "Aid");
+      if (aids.length === 0) { panel.innerHTML = `<div class="empty-note">No aid items carried.</div>`; return; }
+      panel.innerHTML = aids.map(([n, count]) => {
+        const heal = Math.round(CATALOG[n].heal * computeDerived().healMult);
+        let row = `<div class="subrow"><span>${n} (+${heal} HP, ${count}&times;)</span><span>
+          <button data-healself="${n}">self</button>`;
+        if (companion) row += ` <button data-healcompanion="${n}" ${companion.hp >= companion.maxHp ? "disabled" : ""}>${companion.name}</button>`;
+        row += `</span></div>`;
+        return row;
+      }).join("");
+      panel.querySelectorAll("[data-healself]").forEach(b => b.addEventListener("click", () => useAidItem(b.getAttribute("data-healself"), "self")));
+      panel.querySelectorAll("[data-healcompanion]").forEach(b => b.addEventListener("click", () => useAidItem(b.getAttribute("data-healcompanion"), "companion")));
+    } else if (combatSubTab === "throw") {
+      const thrown = Object.entries(s.inventory).filter(([n]) => CATALOG[n] && CATALOG[n].category === "Weapons" && CATALOG[n].kind === "thrown");
+      if (thrown.length === 0) { panel.innerHTML = `<div class="empty-note">No thrown weapons carried. Craft a Molotov Cocktail.</div>`; return; }
+      panel.innerHTML = thrown.map(([n, count]) => `<div class="subrow"><span>${n} (${CATALOG[n].damage} DMG, ${count}&times;)</span><button data-throw="${n}">throw</button></div>`).join("");
+      panel.querySelectorAll("[data-throw]").forEach(b => b.addEventListener("click", () => throwWeaponInCombat(b.getAttribute("data-throw"))));
+    }
+  }
+
+  function slotStatLine(item) {
+    const bits = [];
+    if (item.defense) bits.push(`${item.defense} DEF`);
+    if (item.hp) bits.push(`+${item.hp} HP`);
+    if (item.accuracy) bits.push(`${item.accuracy >= 0 ? "+" : ""}${item.accuracy} ACC`);
+    if (item.attrBonus) Object.entries(item.attrBonus).forEach(([k, v]) => bits.push(`+${v} ${ATTR_INFO[k].label}`));
+    return bits.join(" &middot; ");
+  }
+
+  function renderInventoryTab(derived) {
+    const cats = ["All", "Weapons", "Armor", "Clothing", "Aid", "Ammo", "Other"];
+    const catTabs = document.getElementById("catTabs");
+    catTabs.innerHTML = cats.map(c => `<button data-cat="${c}" class="${c === activeCat ? "active" : ""}">${c}</button>`).join("");
+    catTabs.querySelectorAll("button").forEach(b => b.addEventListener("click", () => { activeCat = b.getAttribute("data-cat"); render(); }));
+
+    const grid = document.getElementById("invGrid");
+    const entries = Object.entries(s.inventory).filter(([name]) => {
+      const item = CATALOG[name]; const cat = item ? item.category : "Other";
+      return activeCat === "All" || cat === activeCat;
+    });
+    if (entries.length === 0) { grid.innerHTML = `<div class="empty-note">Nothing here.</div>`; return; }
+
+    grid.innerHTML = "";
+    entries.forEach(([name, count]) => {
+      const item = CATALOG[name] || { category: "Other" };
+      const card = document.createElement("div");
+      card.className = "inv-card";
+      let statLine = "";
+      if (item.category === "Weapons") {
+        const meleeMult = item.kind === "melee" ? derived.meleeDamageMult : 1;
+        const dmg = Math.round((item.damage || 0) * derived.weaponDmgMult * meleeMult);
+        statLine = `${item.kind} &middot; ${dmg} DMG &middot; ${item.accuracy >= 0 ? "+" : ""}${item.accuracy} ACC`;
+      } else if (item.category === "Armor" || item.category === "Clothing") {
+        statLine = `${SLOT_LABELS[item.slot] || ""} &middot; ${slotStatLine(item)}`;
+      } else if (item.category === "Aid") {
+        statLine = item.stamina ? `+${item.stamina} Stamina` : `+${Math.round((item.heal || 0) * derived.healMult)} HP`;
+      } else if (item.sellValue) {
+        statLine = `sells for $${item.sellValue}`;
+      } else if (name === "Research Fragment") {
+        statLine = `Cure Protocol component (${count}/3)`;
+      }
+
+      let btns = "";
+      if (item.category === "Weapons") {
+        const equipped = s.equippedWeapon === name;
+        btns += `<button class="mini-btn" data-equip="${name}" ${equipped ? "disabled" : ""}>${equipped ? "equipped" : "equip"}</button>`;
+      } else if (item.category === "Armor" || item.category === "Clothing") {
+        const equipped = item.slot && s.equipment[item.slot] === name;
+        btns += `<button class="mini-btn" data-equip="${name}">${equipped ? "unequip" : "equip"}</button>`;
+      } else if (item.category === "Aid") {
+        const useDisabled = item.stamina && s.stamina >= derived.maxStamina;
+        btns += `<button class="mini-btn" data-aid="${name}" ${useDisabled ? "disabled" : ""}>use</button>`;
+        if (!item.stamina) {
+          const companion = activeCompanion();
+          if (companion) btns += `<button class="mini-btn" data-aidcompanion="${name}" ${companion.hp >= companion.maxHp ? "disabled" : ""}>heal ${companion.name}</button>`;
+        }
+      }
+      if (item.sellValue) btns += `<button class="mini-btn sell" data-sell="${name}">sell</button>`;
+      const scrapVal = getScrapValue(name);
+      if (scrapVal > 0 && name !== "Scrap Metal") btns += `<button class="mini-btn scrap" data-scrap="${name}">scrap (+${scrapVal})</button>`;
+
+      card.innerHTML = `
+        <div><span class="name">${name}</span><span class="count">${count}&times;</span></div>
+        ${statLine ? `<div class="stats">${statLine}</div>` : ""}
+        <div class="row-btns">${btns}</div>
+      `;
+      grid.appendChild(card);
+    });
+
+    grid.querySelectorAll("[data-equip]").forEach(b => b.addEventListener("click", () => equip(b.getAttribute("data-equip"))));
+    grid.querySelectorAll("[data-aid]").forEach(b => b.addEventListener("click", () => useAidItem(b.getAttribute("data-aid"))));
+    grid.querySelectorAll("[data-aidcompanion]").forEach(b => b.addEventListener("click", () => useAidItem(b.getAttribute("data-aidcompanion"), "companion")));
+    grid.querySelectorAll("[data-sell]").forEach(b => b.addEventListener("click", () => sellItem(b.getAttribute("data-sell"))));
+    grid.querySelectorAll("[data-scrap]").forEach(b => b.addEventListener("click", () => scrapItem(b.getAttribute("data-scrap"))));
+  }
+
+  function renderCraftingTab(derived) {
+    const list = document.getElementById("craftList");
+    list.innerHTML = "";
+    RECIPES.forEach(recipe => {
+      const card = document.createElement("div");
+      card.className = "recipe-card";
+      const reqBits = Object.entries(recipe.inputs).map(([item, qty]) => {
+        const have = s.inventory[item] || 0;
+        const cls = have >= qty ? "ok" : "short";
+        return `<span class="${cls}">${item} ${have}/${qty}</span>`;
+      }).join(" &middot; ");
+      const isCraftingThis = s.craftQueue && s.craftQueue.recipeId === recipe.id;
+      const queueBusy = !!s.craftQueue;
+      const canAfford = Object.entries(recipe.inputs).every(([item, qty]) => (s.inventory[item] || 0) >= qty);
+      let progressHtml = "";
+      if (isCraftingThis) {
+        const total = Math.round(recipe.timeMs * derived.craftTimeMult);
+        const remaining = Math.max(0, s.craftQueue.finishAt - Date.now());
+        const pct = Math.max(0, Math.min(100, 100 - (remaining / total) * 100));
+        progressHtml = `<div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">${Math.ceil(remaining / 1000)}s remaining</div>`;
+      }
+      card.innerHTML = `
+        <div class="title">${recipe.name}${s.craftedRecipes.has(recipe.id) ? " \u2713" : ""}</div>
+        <div class="req-list">${reqBits}</div>
+        <button class="mini-btn" data-craft="${recipe.id}" ${(!canAfford || queueBusy) ? "disabled" : ""}>${isCraftingThis ? "crafting..." : "craft"}</button>
+        ${progressHtml}
+      `;
+      list.appendChild(card);
+    });
+    list.querySelectorAll("[data-craft]").forEach(b => b.addEventListener("click", () => startCraft(b.getAttribute("data-craft"))));
+  }
+
+  function renderTrainingCard(list, kind, roomId, title, statName, tiers, currentLevel, startFn) {
+    if (!s.builtRooms.has(roomId)) return;
+    const card = document.createElement("div");
+    card.className = "quest-card";
+    card.style.borderColor = "var(--toxic)";
+    const training = s.buildQueue && s.buildQueue.kind === kind;
+    const nextLevel = currentLevel + 1;
+    const totalPossible = tiers.reduce((a, t) => a + t.bonus, 0);
+    let html = `<div class="title" style="color:var(--toxic);">${title}: Tier ${currentLevel}/${tiers.length}</div>
+      <div class="desc">Each tier grants +${tiers[0].bonus} ${statName}, permanently. Total possible: +${totalPossible} ${statName}.</div>`;
+    if (currentLevel < tiers.length) {
+      const tier = tiers[currentLevel];
+      const canAfford = getScrap() >= tier.cost.scrap && s.cash >= tier.cost.cash;
+      const disabled = !!s.buildQueue || !canAfford || s.x !== 0 || s.y !== 0;
+      html += `<div class="req-list">Next: Tier ${nextLevel} &mdash; Cost: ${tier.cost.scrap} Scrap Metal, $${tier.cost.cash} &mdash; ${Math.round(tier.timeMs / 1000)}s</div>
+        <button class="mini-btn" id="btn-train-${kind}" ${disabled ? "disabled" : ""}>${training ? "training..." : "train"}</button>`;
+      if (training) {
+        const remaining = Math.max(0, s.buildQueue.finishAt - Date.now());
+        const pct = Math.max(0, Math.min(100, 100 - (remaining / tier.timeMs) * 100));
+        html += `<div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">${Math.ceil(remaining / 1000)}s remaining</div>`;
+      }
+    } else {
+      html += `<div class="req-list">${title} fully maxed.</div>`;
+    }
+    card.innerHTML = html;
+    list.appendChild(card);
+    const btn = document.getElementById(`btn-train-${kind}`);
+    if (btn) btn.addEventListener("click", startFn);
+  }
+
+  function renderSafehouseTab() {
+    const activeEl = document.activeElement;
+    if (activeEl && activeEl.hasAttribute("data-post-select")) return;
+    const derived = computeDerived();
+    const list = document.getElementById("roomList");
+    list.innerHTML = "";
+    if (s.x !== 0 || s.y !== 0) {
+      const notice = document.createElement("div");
+      notice.className = "empty-note"; notice.style.marginBottom = "10px";
+      notice.textContent = "You must be at Sector [0,0] to start construction.";
+      list.appendChild(notice);
+    }
+
+    const defenseCard = document.createElement("div");
+    defenseCard.className = "quest-card";
+    defenseCard.style.borderColor = "var(--cyan)";
+    const building = s.buildQueue && s.buildQueue.kind === "barricade";
+    const nextLevel = s.barricadeLevel + 1;
+    const guards = guardingCompanions();
+    let barricadeBody = `<div class="title" style="color:var(--cyan);">SAFEHOUSE DEFENSE: ${derived.safehouseDefense}</div>
+      <div class="desc">Barricade Level ${s.barricadeLevel}/5${s.builtRooms.has("armory") ? " &middot; +5 from Armory" : ""}${guards.length > 0 ? ` &middot; guarded by ${guards.map(c => c.name).join(", ")}` : ""}</div>`;
+    if (s.barricadeLevel < BARRICADE_TIERS.length) {
+      const tier = BARRICADE_TIERS[s.barricadeLevel];
+      const canAfford = getScrap() >= tier.cost.scrap && s.cash >= tier.cost.cash;
+      const disabled = !!s.buildQueue || !canAfford || s.x !== 0 || s.y !== 0;
+      barricadeBody += `<div class="req-list">Next: Level ${nextLevel} &mdash; Cost: ${tier.cost.scrap} Scrap Metal, $${tier.cost.cash}</div>
+        <button class="mini-btn" id="btnBarricade" ${disabled ? "disabled" : ""}>${building ? "reinforcing..." : "reinforce barricade"}</button>`;
+      if (building) {
+        const remaining = Math.max(0, s.buildQueue.finishAt - Date.now());
+        const pct = Math.max(0, Math.min(100, 100 - (remaining / tier.timeMs) * 100));
+        barricadeBody += `<div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">${Math.ceil(remaining / 1000)}s remaining</div>`;
+      }
+    } else {
+      barricadeBody += `<div class="req-list">Barricade fully reinforced.</div>`;
+    }
+    defenseCard.innerHTML = barricadeBody;
+    list.appendChild(defenseCard);
+    const barricadeBtn = document.getElementById("btnBarricade");
+    if (barricadeBtn) barricadeBtn.addEventListener("click", startBarricadeUpgrade);
+
+    const repairCard = document.createElement("div");
+    repairCard.className = "quest-card";
+    repairCard.style.borderColor = s.safehouseIntegrity < MAX_SAFEHOUSE_INTEGRITY ? "var(--blood)" : "var(--toxic)";
+    const repairing = s.buildQueue && s.buildQueue.kind === "repair";
+    const repairCost = safehouseRepairCost();
+    const integrityPct = Math.round((s.safehouseIntegrity / MAX_SAFEHOUSE_INTEGRITY) * 100);
+    let repairBody = `<div class="title" style="color:${s.safehouseIntegrity < MAX_SAFEHOUSE_INTEGRITY ? "var(--blood)" : "var(--toxic)"};">STRUCTURAL INTEGRITY: ${integrityPct}%</div>
+      <div class="desc">Damaged during unrepelled horde attacks. Below full integrity, Safehouse Defense is reduced. Guarding companions slowly repair it passively; you can also repair manually here.</div>`;
+    if (s.safehouseIntegrity < MAX_SAFEHOUSE_INTEGRITY) {
+      const canAfford = getScrap() >= repairCost.scrap;
+      const disabled = !!s.buildQueue || !canAfford || s.x !== 0 || s.y !== 0;
+      repairBody += `<div class="req-list">Repair cost: ${repairCost.scrap} Scrap Metal &mdash; ${Math.round(repairCost.timeMs / 1000)}s</div>
+        <button class="mini-btn" id="btnRepairSafehouse" ${disabled ? "disabled" : ""}>${repairing ? "repairing..." : "repair"}</button>`;
+      if (repairing) {
+        const remaining = Math.max(0, s.buildQueue.finishAt - Date.now());
+        const pct = Math.max(0, Math.min(100, 100 - (remaining / repairCost.timeMs) * 100));
+        repairBody += `<div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">${Math.ceil(remaining / 1000)}s remaining</div>`;
+      }
+    } else {
+      repairBody += `<div class="req-list">Structure fully intact.</div>`;
+    }
+    repairCard.innerHTML = repairBody;
+    list.appendChild(repairCard);
+    const repairBtn = document.getElementById("btnRepairSafehouse");
+    if (repairBtn) repairBtn.addEventListener("click", startSafehouseRepair);
+
+    const compoundCard = document.createElement("div");
+    compoundCard.className = "quest-card";
+    compoundCard.style.borderColor = "var(--amber)";
+    const claimingNow = s.buildQueue && s.buildQueue.kind === "claim";
+    const nClaimed = claimedCount();
+    let compoundHtml = `<div class="title" style="color:var(--amber);">COMPOUND EXPANSION: ${nClaimed}/${MAX_CLAIMED_BLOCKS} blocks</div>
+      <div class="desc">Claim adjacent, scouted, low-danger sectors to grow your compound. Each block adds +${CLAIM_DEFENSE_BONUS} Defense and a slow Scrap Metal trickle, and can be staffed by a guarding roster member.</div>`;
+
+    if (nClaimed > 0) {
+      compoundHtml += `<div class="req-list" style="margin-top:6px;margin-bottom:2px;">CLAIMED BLOCKS:</div>`;
+      Object.keys(s.claimedBlocks).forEach(key => {
+        const [bx, by] = key.split(",").map(Number);
+        const sec = sectorAt(bx, by);
+        const block = s.claimedBlocks[key];
+        const postedComp = block.postedCompanionId ? s.roster.find(c => c.id === block.postedCompanionId) : null;
+        const eligibleGuards = guardingCompanions();
+        compoundHtml += `<div class="gear-slot-card" style="margin-bottom:6px;">
+          <div class="itemname">[${key}] ${sec.name}</div>
+          <div class="stats">${sec.type} &middot; Danger ${sec.danger} &middot; ${postedComp ? `posted: ${postedComp.name}` : "unmanned"}</div>
+          <div class="row-btns" style="margin-top:4px;">
+            <select data-post-select="${key}">
+              <option value="">-- no post --</option>
+              ${eligibleGuards.map(c => `<option value="${c.id}" ${block.postedCompanionId === c.id ? "selected" : ""}>${c.name}</option>`).join("")}
+            </select>
+            <button class="mini-btn" data-post-assign="${key}">assign</button>
+          </div>
+        </div>`;
+      });
+    }
+
+    const claimable = getClaimableNeighbors();
+    if (nClaimed >= MAX_CLAIMED_BLOCKS) {
+      compoundHtml += `<div class="req-list" style="margin-top:6px;">Compound fully expanded.</div>`;
+    } else if (claimable.length === 0) {
+      compoundHtml += `<div class="req-list" style="margin-top:6px;">No eligible sectors yet &mdash; scout a low-danger (Residential/Commercial) block adjacent to your compound.</div>`;
+    } else {
+      const cost = claimCost();
+      compoundHtml += `<div class="req-list" style="margin-top:6px;margin-bottom:2px;">CLAIMABLE (cost: ${cost.scrap} Scrap Metal, $${cost.cash}):</div>`;
+      claimable.forEach(c => {
+        const key = `${c.x},${c.y}`;
+        const isThisClaiming = claimingNow && s.buildQueue.x === c.x && s.buildQueue.y === c.y;
+        const canAfford = getScrap() >= cost.scrap && s.cash >= cost.cash;
+        const disabled = !!s.buildQueue || !canAfford || s.x !== 0 || s.y !== 0;
+        compoundHtml += `<div class="gear-slot-card" style="margin-bottom:6px;">
+          <div class="itemname">[${key}] ${c.sector.name}</div>
+          <div class="stats">${c.sector.type} &middot; Danger ${c.sector.danger}</div>
+          <button class="mini-btn" data-claim="${key}" ${disabled ? "disabled" : ""}>${isThisClaiming ? "claiming..." : "claim"}</button>
+          ${isThisClaiming ? (() => {
+            const remaining = Math.max(0, s.buildQueue.finishAt - Date.now());
+            const pct = Math.max(0, Math.min(100, 100 - (remaining / cost.timeMs) * 100));
+            return `<div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div><div style="font-size:10px;color:var(--text-dim);margin-top:4px;">${Math.ceil(remaining / 1000)}s remaining</div>`;
+          })() : ""}
+        </div>`;
+      });
+    }
+    compoundCard.innerHTML = compoundHtml;
+    list.appendChild(compoundCard);
+    compoundCard.querySelectorAll("[data-claim]").forEach(b => {
+      b.addEventListener("click", () => {
+        const [x, y] = b.getAttribute("data-claim").split(",").map(Number);
+        startClaim(x, y);
+      });
+    });
+    compoundCard.querySelectorAll("[data-post-assign]").forEach(b => {
+      b.addEventListener("click", () => {
+        const key = b.getAttribute("data-post-assign");
+        const select = compoundCard.querySelector(`[data-post-select="${key}"]`);
+        const val = select ? select.value : "";
+        if (select) select.blur();
+        postCompanionAtBlock(key, val ? Number(val) : null);
+      });
+    });
+
+    ROOMS.forEach(room => {
+      const built = s.builtRooms.has(room.id);
+      const building2 = s.buildQueue && s.buildQueue.kind === "room" && s.buildQueue.roomId === room.id;
+      const card = document.createElement("div");
+      card.className = "room-card" + (built ? " built" : "");
+      let progressHtml = "";
+      if (building2) {
+        const remaining = Math.max(0, s.buildQueue.finishAt - Date.now());
+        const pct = Math.max(0, Math.min(100, 100 - (remaining / room.timeMs) * 100));
+        progressHtml = `<div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">${Math.ceil(remaining / 1000)}s remaining</div>`;
+      }
+      const canAfford = getScrap() >= room.cost.scrap && s.cash >= room.cost.cash;
+      const disabled = built || !!s.buildQueue || !canAfford || s.x !== 0 || s.y !== 0;
+      card.innerHTML = `
+        <div class="title">${room.name}${built ? " (built)" : ""}</div>
+        <div class="desc">${room.desc}</div>
+        <div class="req-list">Cost: ${room.cost.scrap} Scrap Metal, $${room.cost.cash}</div>
+        ${!built ? `<button class="mini-btn" data-build="${room.id}" ${disabled ? "disabled" : ""}>${building2 ? "building..." : "build"}</button>` : ""}
+        ${progressHtml}
+      `;
+      list.appendChild(card);
+    });
+    list.querySelectorAll("[data-build]").forEach(b => b.addEventListener("click", () => startBuild(b.getAttribute("data-build"))));
+
+    renderTrainingCard(list, "fitness", "gym", "FITNESS TRAINING", "Max Stamina", FITNESS_TIERS, s.fitnessLevel, startFitnessTraining);
+    renderTrainingCard(list, "marksmanship", "range", "MARKSMANSHIP TRAINING", "Ranged Accuracy", MARKSMANSHIP_TIERS, s.marksmanshipLevel, startMarksmanshipTraining);
+
+    if (s.builtRooms.has("lab")) {
+      const fragCount = s.inventory["Research Fragment"] || 0;
+      const quest = document.createElement("div");
+      quest.className = "quest-card";
+      let body = "";
+      if (s.questStage === "none") {
+        body = `<div class="title">CURE PROTOCOL</div>
+          <div class="desc">Research Fragments recovered: ${fragCount}/3. Found rarely from zombies in Military or Wasteland sectors.</div>
+          <button class="mini-btn" id="btnDecode" ${fragCount >= 3 ? "" : "disabled"}>DECODE FRAGMENTS</button>`;
+      } else if (s.questStage === "located") {
+        body = `<div class="title">CURE PROTOCOL &mdash; LOCATED</div>
+          <div class="desc">Patient Zero's signal traces to Sector [${s.patientZeroCoords.x},${s.patientZeroCoords.y}]. Travel there and finish it.</div>`;
+      } else {
+        body = `<div class="title">CURE PROTOCOL &mdash; COMPLETE</div><div class="desc">Patient Zero has been neutralized. The wasteland remembers.</div>`;
+      }
+      quest.innerHTML = body;
+      list.appendChild(quest);
+      if (s.questStage === "none") document.getElementById("btnDecode").addEventListener("click", decodeFragments);
+    }
+  }
+
+  function renderShopTab() {
+    const sector = currentSector();
+    document.getElementById("shopLabel").textContent = sector.hasShop ? `VENDOR \u2014 ${sector.shopName}` : "VENDOR";
+    const wrap = document.getElementById("shopContent");
+    if (!sector.hasShop) {
+      wrap.innerHTML = `<div class="empty-note">No vendor in this sector. Explore nearby blocks (look for $ on the minimap), or return to the Safehouse Supply Locker at [0,0].</div>`;
+      return;
+    }
+    const key = `${s.x},${s.y}`;
+    const rep = getVendorRep(key);
+    const discMult = vendorDiscountMult(key);
+    const bonusMult = vendorSellBonusMult(key);
+    const vendorSeed = hash(s.x + 9000, s.y + 9000, s.seed);
+    const greeting = VENDOR_GREETINGS[vendorSeed % VENDOR_GREETINGS.length];
+    let html = `<div class="vendor-header">
+        <div class="portrait-frame">${renderPortraitSVGSmall(vendorSeed)}</div>
+        <div class="greeting">&ldquo;${greeting}&rdquo;<br><span style="font-size:10px;color:var(--cyan);">Reputation: ${rep}/${VENDOR_REP_CAP}${rep > 0 ? ` (${Math.round((discMult && (1 - discMult)) * 100)}% buy discount, ${Math.round((bonusMult - 1) * 100)}% sell bonus)` : ""}</span></div>
+      </div>`;
+
+    const quest = s.vendorQuests[key];
+    if (quest && quest.status === "offered") {
+      html += `<div class="quest-card" style="border-color:var(--amber);">
+        <div class="title" style="color:var(--amber);">JOB AVAILABLE</div>
+        <div class="desc">${describeVendorQuest(quest)}. Reward: +${quest.rewardXp} XP, +$${quest.rewardCash}, reputation gain.</div>
+        <div class="row-btns">
+          <button class="mini-btn" id="btnAcceptQuest">accept</button>
+          <button class="mini-btn danger2" id="btnDeclineQuest">decline</button>
+        </div>
+      </div>`;
+    } else if (quest && quest.status === "active") {
+      const satisfied = quest.type === "fetch" ? fetchQuestSatisfied(quest) : quest.progress >= quest.countNeeded;
+      const progressText = quest.type === "fetch"
+        ? `${Math.min(quest.qtyNeeded, s.inventory[quest.itemName] || 0)}/${quest.qtyNeeded} ${quest.itemName} carried`
+        : `${quest.progress}/${quest.countNeeded} level ${quest.zombieLevelMin}+ zombies killed`;
+      html += `<div class="quest-card" style="border-color:var(--cyan);">
+        <div class="title" style="color:var(--cyan);">ACTIVE JOB: ${describeVendorQuest(quest)}</div>
+        <div class="desc">${progressText}</div>
+        <button class="mini-btn" id="btnTurnInQuest" ${satisfied ? "" : "disabled"}>${satisfied ? "turn in" : "not ready"}</button>
+      </div>`;
+    }
+
+    html += `<div class="desc" style="margin-bottom:10px;color:var(--text-dim);font-size:11px;">BUY</div><div class="shop-grid">`;
+    sector.shopStock.forEach(entry => {
+      const minLevel = entry.minLevel || 1;
+      const locked = s.level < minLevel;
+      const finalPrice = Math.max(1, Math.round(entry.price * discMult));
+      const affordable = s.cash >= finalPrice;
+      html += `<div class="shop-card ${locked ? "locked" : ""}">
+        <div class="title">${entry.name}${entry.qty && entry.qty > 1 ? ` x${entry.qty}` : ""}</div>
+        ${locked ? `<div class="lockline">UNLOCKS AT LEVEL ${minLevel}</div>` : ""}
+        <div class="req-list">${rep > 0 && !locked ? `<span style="text-decoration:line-through;color:var(--text-dim);">$${entry.price}</span> ` : ""}$${finalPrice}</div>
+        <button class="mini-btn" data-buy="${entry.name}" data-price="${finalPrice}" data-qty="${entry.qty || 1}" ${(affordable && !locked) ? "" : "disabled"}>${locked ? "locked" : "buy"}</button>
+      </div>`;
+    });
+    html += `</div><div class="desc" style="margin-bottom:10px;color:var(--text-dim);font-size:11px;">SELL YOUR GEAR</div><div class="shop-grid" id="shopSellGrid"></div>`;
+    wrap.innerHTML = html;
+    wrap.querySelectorAll("[data-buy]").forEach(b => b.addEventListener("click", () => buyItem(b.getAttribute("data-buy"), parseInt(b.getAttribute("data-price"), 10), parseInt(b.getAttribute("data-qty"), 10))));
+    const acceptBtn = document.getElementById("btnAcceptQuest");
+    if (acceptBtn) acceptBtn.addEventListener("click", () => acceptVendorQuest(key));
+    const declineBtn = document.getElementById("btnDeclineQuest");
+    if (declineBtn) declineBtn.addEventListener("click", () => declineVendorQuest(key));
+    const turnInBtn = document.getElementById("btnTurnInQuest");
+    if (turnInBtn) turnInBtn.addEventListener("click", () => turnInVendorQuest(key));
+
+    const sellGrid = document.getElementById("shopSellGrid");
+    const invEntries = Object.entries(s.inventory).filter(([name]) => name !== "Research Fragment");
+    if (invEntries.length === 0) sellGrid.innerHTML = `<div class="empty-note">Nothing to sell.</div>`;
+    else {
+      sellGrid.innerHTML = invEntries.map(([name, count]) => {
+        const price = Math.max(1, Math.round(shopSellPrice(name) * bonusMult));
+        return `<div class="shop-card"><div class="title">${name} <span style="color:var(--amber);float:right;">${count}&times;</span></div><div class="req-list">$${price} each</div><button class="mini-btn sell" data-shopsell="${name}">sell 1</button></div>`;
+      }).join("");
+      sellGrid.querySelectorAll("[data-shopsell]").forEach(b => b.addEventListener("click", () => sellAtShop(b.getAttribute("data-shopsell"))));
+    }
+  }
+
+  function renderCharacterTab(derived) {
+    const wrap = document.getElementById("characterContent");
+    const attr = s.attributes;
+    const rows = Object.entries(ATTR_INFO).map(([key, info]) => {
+      const val = attr[key];
+      const eff = derived.effAttr[key];
+      const canSpend = s.unspentPoints > 0 && val < MAX_ATTR;
+      return `<div class="attr-row"><span class="aname">${info.full}</span>
+        <span class="aval">${eff}${eff !== val ? ` (${val}+${eff - val})` : ""}</span>
+        <button class="attr-btn" data-spend="${key}" ${canSpend ? "" : "disabled"}>+</button>
+        <span class="adesc">${info.desc}</span></div>`;
+    }).join("");
+
+    const gearSlots = EQUIP_SLOTS.map(slot => {
+      const name = s.equipment[slot];
+      const item = name ? CATALOG[name] : null;
+      return `<div class="gear-slot-card">
+        <div class="slotname">${SLOT_LABELS[slot]}</div>
+        <div class="itemname ${item ? "" : "empty"}">${item ? name : "empty"}</div>
+        <div class="stats">${item ? slotStatLine(item) : "&mdash;"}</div>
+      </div>`;
+    }).join("");
+
+    const isCapped = s.level >= PLAYER_LEVEL_CAP;
+    const tier = currentTitleTier();
+    const frameStyle = isCapped ? `border-color:${tier.color};box-shadow:0 0 8px ${tier.color}55;` : "";
+    let levelLine = `Level ${s.level} Survivor &middot; ${s.kills} kills &middot; ${s.turns} turns survived${s.locationTheme ? ` &middot; ${s.locationTheme}` : ""}`;
+    if (isCapped) {
+      const tierIdx = TITLE_TIERS.findIndex(t => t.title === tier.title);
+      const nextTier = TITLE_TIERS[tierIdx + 1];
+      const progressLine = nextTier
+        ? `${s.postCapXp} / ${nextTier.threshold} XP to "${nextTier.title}"`
+        : `Maximum title reached.`;
+      levelLine = `Level ${s.level}/${PLAYER_LEVEL_CAP} (MAX) &mdash; <span style="color:${tier.color};">"${tier.title}"</span> &middot; ${s.kills} kills &middot; ${s.turns} turns survived<br>
+        <span style="font-size:10px;">${progressLine}</span>`;
+    }
+
+    wrap.innerHTML = `
+      <div class="creation-row">
+        <div class="portrait-frame" style="${frameStyle}">${renderPortraitSVG(s.portraitSeed)}</div>
+        <div class="creation-col">
+          <div style="font-size:14px;color:var(--amber);margin-bottom:4px;">${s.name}</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;">${levelLine}</div>
+          ${s.unspentPoints > 0 ? `<div class="points-left">Unspent points: ${s.unspentPoints}</div>` : ""}
+          ${rows}
+          <div class="req-list" style="margin-top:6px;">Effective values include gear and achievement bonuses.</div>
+        </div>
+      </div>
+      <div class="panel-label" style="margin-top:4px;">EQUIPMENT SLOTS</div>
+      <div class="gear-slot-grid">${gearSlots}</div>
+      <div class="req-list" style="margin-top:10px;">
+        Derived: ${Math.round((derived.meleeDamageMult - 1) * 100)}% melee dmg &middot; +${Math.round(derived.perceptionAccuracy + derived.marksmanshipAccuracy)} ranged acc &middot;
+        +${Math.round(derived.fleeBonus)} flee chance &middot; ${Math.round(derived.critChance)}% crit &middot; +${Math.round(derived.lootLuck)}% bonus loot chance &middot; DEF ${derived.defenseTotal} &middot; Max HP ${derived.maxHp}
+      </div>
+    `;
+    wrap.querySelectorAll("[data-spend]").forEach(b => b.addEventListener("click", () => spendAttrPoint(b.getAttribute("data-spend"))));
+  }
+
+  function eligibleWeaponOptions() {
+    return Object.keys(s.inventory).filter(n => CATALOG[n] && CATALOG[n].category === "Weapons" && CATALOG[n].kind !== "thrown");
+  }
+  function eligibleArmorOptions() {
+    return Object.keys(s.inventory).filter(n => CATALOG[n] && (CATALOG[n].category === "Armor" || CATALOG[n].category === "Clothing"));
+  }
+
+  function renderRosterTab() {
+    const activeEl = document.activeElement;
+    if (activeEl && (activeEl.hasAttribute("data-give-weapon-select") || activeEl.hasAttribute("data-give-armor-select"))) return;
+    document.getElementById("rosterCountLabel").textContent = `(${s.roster.length}/${MAX_ROSTER})`;
+    const toggleBtn = document.getElementById("btnToggleAutoHeal");
+    toggleBtn.textContent = `auto-heal: ${s.autoHealCompanions ? "ON" : "OFF"}`;
+    const wrap = document.getElementById("rosterContent");
+    if (s.roster.length === 0) { wrap.innerHTML = `<div class="empty-note">No survivors recruited yet. Meet one while exploring the field.</div>`; return; }
+
+    const weaponOpts = eligibleWeaponOptions();
+    const armorOpts = eligibleArmorOptions();
+
+    wrap.innerHTML = s.roster.map(c => {
+      const atk = computeCompanionAttack(c);
+      const compDef = computeCompanionDefense(c);
+      const isTraveler = c.mode === "travel";
+      const weaponSelect = weaponOpts.length > 0
+        ? `<select data-give-weapon-select="${c.id}">${weaponOpts.map(n => `<option value="${n}">${n}</option>`).join("")}</select><button class="mini-btn" data-give-weapon="${c.id}">give</button>`
+        : `<span class="empty-note">no spare weapons</span>`;
+      const armorSelect = armorOpts.length > 0
+        ? `<select data-give-armor-select="${c.id}">${armorOpts.map(n => `<option value="${n}">${n}</option>`).join("")}</select><button class="mini-btn" data-give-armor="${c.id}">give</button>`
+        : `<span class="empty-note">no spare armor</span>`;
+
+      return `<div class="roster-card ${isTraveler ? "active-traveler" : ""}">
+        <div class="rhead">
+          <div class="portrait-frame">${renderPortraitSVGSmall(c.portraitSeed)}</div>
+          <div>
+            <div class="rname">${c.name}${isTraveler ? " (traveling with you)" : ""}</div>
+            <div class="rstatus">HP ${c.hp}/${c.maxHp} &middot; Level ${c.level || 1}/${COMPANION_LEVEL_CAP}${(c.level || 1) < COMPANION_LEVEL_CAP ? ` (${c.xp || 0}/${COMPANION_XP_PER_LEVEL} XP)` : " (MAX)"} &middot; ${isTraveler ? "active traveler" : "guarding Safehouse"}</div>
+          </div>
+          <button class="mini-btn" data-heal-companion="${c.id}" ${c.hp >= c.maxHp ? "disabled" : ""}>heal</button>
+        </div>
+        <div class="req-list">Weapon: ${c.equipment.weapon || "none"} (${atk.damage} DMG)${c.equipment.weapon ? ` <button class="mini-btn danger2" data-take-weapon="${c.id}">take back</button>` : ""}</div>
+        <div class="gearline">${weaponSelect}</div>
+        <div class="req-list">Armor: ${c.equipment.armor || "none"} (${compDef} DEF)${c.equipment.armor ? ` <button class="mini-btn danger2" data-take-armor="${c.id}">take back</button>` : ""}</div>
+        <div class="gearline">${armorSelect}</div>
+        <div class="row-btns" style="margin-top:6px;">
+          <button class="mini-btn" data-set-mode="${c.id}" data-mode="${isTraveler ? "guard" : "travel"}">${isTraveler ? "leave to guard Safehouse" : "bring on the road"}</button>
+          <button class="mini-btn danger2" data-dismiss="${c.id}">dismiss</button>
+        </div>
+      </div>`;
+    }).join("");
+
+    wrap.querySelectorAll("[data-heal-companion]").forEach(b => b.addEventListener("click", () => healRosterCompanionWithBestItem(Number(b.getAttribute("data-heal-companion")))));
+    wrap.querySelectorAll("[data-set-mode]").forEach(b => b.addEventListener("click", () => setCompanionMode(Number(b.getAttribute("data-set-mode")), b.getAttribute("data-mode"))));
+    wrap.querySelectorAll("[data-dismiss]").forEach(b => b.addEventListener("click", () => dismissCompanionById(Number(b.getAttribute("data-dismiss")))));
+    wrap.querySelectorAll("[data-take-weapon]").forEach(b => b.addEventListener("click", () => takeGearFromCompanionId(Number(b.getAttribute("data-take-weapon")), "weapon")));
+    wrap.querySelectorAll("[data-take-armor]").forEach(b => b.addEventListener("click", () => takeGearFromCompanionId(Number(b.getAttribute("data-take-armor")), "armor")));
+    wrap.querySelectorAll("[data-give-weapon]").forEach(b => {
+      b.addEventListener("click", () => {
+        const id = Number(b.getAttribute("data-give-weapon"));
+        const select = wrap.querySelector(`[data-give-weapon-select="${id}"]`);
+        const val = select ? select.value : "";
+        if (select) select.blur();
+        if (val) giveGearToCompanionId(id, val);
+      });
+    });
+    wrap.querySelectorAll("[data-give-armor]").forEach(b => {
+      b.addEventListener("click", () => {
+        const id = Number(b.getAttribute("data-give-armor"));
+        const select = wrap.querySelector(`[data-give-armor-select="${id}"]`);
+        const val = select ? select.value : "";
+        if (select) select.blur();
+        if (val) giveGearToCompanionId(id, val);
+      });
+    });
+  }
+
+  function renderAchievementsTab() {
+    const grid = document.getElementById("achvGrid");
+    grid.innerHTML = ACHIEVEMENTS.map(a => {
+      const unlocked = s.achievements.has(a.id);
+      return `<div class="achv-card ${unlocked ? "unlocked" : "locked"}">
+        <div class="title">${unlocked ? "\u2713 " : ""}${a.name}</div>
+        <div class="desc">${a.desc}</div>
+        <div class="bonus">${unlocked ? "\u2713 " : ""}Reward: ${a.bonus}</div>
+      </div>`;
+    }).join("");
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll(".tabbtn").forEach(b => b.classList.toggle("active", b.getAttribute("data-tab") === tab));
+    document.querySelectorAll(".tabpanel").forEach(p => p.classList.toggle("active", p.id === "tab-" + tab));
+    if (tab === "worldmap") { mapPanX = 0; mapPanY = 0; mapSelected = null; render(); }
+  }
+
+  // --- CHARACTER CREATION SCREEN ---
+  let draft = null;
+
+  function newDraft() {
+    return {
+      name: "Survivor", portraitSeed: Math.floor(Math.random() * 4294967295),
+      attrs: { str: 1, agi: 1, end: 1, per: 1, lck: 1 }, pointsLeft: CREATION_POOL,
+      location: null, severity: "Medium", infection: "Normal", armedPct: "Medium"
+    };
+  }
+
+  function populateSelect(id, options, current) {
+    const el = document.getElementById(id);
+    el.innerHTML = options.map(o => `<option value="${o}" ${o === current ? "selected" : ""}>${o}</option>`).join("");
+  }
+
+  function renderCreation() {
+    document.getElementById("portraitPreview").innerHTML = renderPortraitSVG(draft.portraitSeed);
+    document.getElementById("pointsLeft").textContent = `Points remaining: ${draft.pointsLeft}`;
+    const rowsWrap = document.getElementById("attrRows");
+    rowsWrap.innerHTML = Object.entries(ATTR_INFO).map(([key, info]) => {
+      const val = draft.attrs[key];
+      const canMinus = val > MIN_ATTR;
+      const canPlus = draft.pointsLeft > 0 && val < MAX_ATTR;
+      return `<div class="attr-row"><span class="aname">${info.full}</span>
+        <button class="attr-btn" data-dminus="${key}" ${canMinus ? "" : "disabled"}>-</button>
+        <span class="aval">${val}</span>
+        <button class="attr-btn" data-dplus="${key}" ${canPlus ? "" : "disabled"}>+</button>
+        <span class="adesc">${info.desc}</span></div>`;
+    }).join("");
+    rowsWrap.querySelectorAll("[data-dplus]").forEach(b => b.addEventListener("click", () => {
+      const k = b.getAttribute("data-dplus");
+      if (draft.pointsLeft > 0 && draft.attrs[k] < MAX_ATTR) { draft.attrs[k] += 1; draft.pointsLeft -= 1; renderCreation(); }
+    }));
+    rowsWrap.querySelectorAll("[data-dminus]").forEach(b => b.addEventListener("click", () => {
+      const k = b.getAttribute("data-dminus");
+      if (draft.attrs[k] > MIN_ATTR) { draft.attrs[k] -= 1; draft.pointsLeft += 1; renderCreation(); }
+    }));
+    const nameVal = document.getElementById("nameInput").value.trim();
+    document.getElementById("btnStart").disabled = !(nameVal.length > 0 && draft.pointsLeft === 0);
+  }
+
+  function beginGameFromDraft() {
+    s = newGame();
+    s.name = document.getElementById("nameInput").value.trim() || "Survivor";
+    s.portraitSeed = draft.portraitSeed;
+    s.attributes = Object.assign({}, draft.attrs);
+    const locVal = document.getElementById("locationSelect").value;
+    s.locationTheme = (locVal && LOCATION_THEMES[locVal]) ? locVal : null;
+    s.settings = {
+      severity: document.getElementById("severitySelect").value,
+      infection: document.getElementById("infectionSelect").value,
+      armedPct: document.getElementById("armedSelect").value
+    };
+    const derived = computeDerived();
+    s.hp = derived.maxHp;
+    logTick = 0; combatLogTick = 0; lastRenderedLogTick = -1; lastRenderedCombatLogTick = -1;
+    s.log = [];
+    addLog(`Terminal online. Welcome to the wasteland, ${s.name}.`, "system");
+    gameStarted = true;
+    document.getElementById("creationOverlay").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    render();
+  }
+
+  async function initCreationScreen() {
+    draft = newDraft();
+    document.getElementById("nameInput").value = "Survivor";
+    populateSelect("locationSelect", LOCATION_OPTIONS, LOCATION_OPTIONS[0]);
+    populateSelect("severitySelect", SEVERITY_OPTIONS, "Medium");
+    populateSelect("infectionSelect", INFECTION_OPTIONS, "Normal");
+    populateSelect("armedSelect", ARMED_OPTIONS, "Medium");
+    renderCreation();
+
+    const continueBlock = document.getElementById("continueBlock");
+    continueBlock.innerHTML = "";
+    const autosaveData = await tryLoadAutosave();
+    if (autosaveData) {
+      continueBlock.innerHTML = `<div class="continue-note">Autosave found: ${autosaveData.name || "Survivor"}, level ${autosaveData.level || 1}.</div>
+        <button class="start-btn" id="btnContinueAutosave" style="margin-bottom:16px;">CONTINUE THIS SURVIVOR</button>`;
+      document.getElementById("btnContinueAutosave").addEventListener("click", () => applySaveData(autosaveData));
+    }
+  }
+
+  // --- WIRING ---
+  document.getElementById("btnN").addEventListener("click", () => move("n"));
+  document.getElementById("btnS").addEventListener("click", () => move("s"));
+  document.getElementById("btnE").addEventListener("click", () => move("e"));
+  document.getElementById("btnW").addEventListener("click", () => move("w"));
+  document.getElementById("btnF").addEventListener("click", scavenge);
+  document.getElementById("btnH").addEventListener("click", useDefaultAid);
+  document.getElementById("btnR").addEventListener("click", rest);
+  document.getElementById("btnFire").addEventListener("click", () => fireAttack());
+  document.getElementById("btnFlee").addEventListener("click", attemptFlee);
+  document.getElementById("btnAdvance").addEventListener("click", advanceOnEnemy);
+  document.getElementById("btnRetreat").addEventListener("click", retreatFromEnemy);
+  document.getElementById("subtabWeapon").addEventListener("click", () => { combatSubTab = combatSubTab === "weapon" ? null : "weapon"; render(); });
+  document.getElementById("subtabAid").addEventListener("click", () => { combatSubTab = combatSubTab === "aid" ? null : "aid"; render(); });
+  document.getElementById("subtabThrow").addEventListener("click", () => { combatSubTab = combatSubTab === "throw" ? null : "throw"; render(); });
+  document.getElementById("btnRespawn").addEventListener("click", respawnAtSafehouse);
+  document.getElementById("btnContinuePlaying").addEventListener("click", () => { document.getElementById("curedOverlay").classList.add("hidden"); render(); });
+  document.getElementById("btnSave").addEventListener("click", downloadSave);
+  document.getElementById("btnNewChar").addEventListener("click", restartToCreation);
+  document.getElementById("btnToggleAutoHeal").addEventListener("click", toggleAutoHealCompanions);
+  document.getElementById("loadFileInput").addEventListener("change", (e) => handleLoadFile(e.target.files[0]));
+  document.getElementById("wmapPanN").addEventListener("click", () => panMap(0, 1));
+  document.getElementById("wmapPanS").addEventListener("click", () => panMap(0, -1));
+  document.getElementById("wmapPanE").addEventListener("click", () => panMap(1, 0));
+  document.getElementById("wmapPanW").addEventListener("click", () => panMap(-1, 0));
+  document.getElementById("wmapRecenter").addEventListener("click", recenterMap);
+  document.getElementById("wmapJumpBtn").addEventListener("click", () => {
+    const x = parseInt(document.getElementById("wmapJumpX").value, 10);
+    const y = parseInt(document.getElementById("wmapJumpY").value, 10);
+    jumpToMapCoords(x, y);
+  });
+
+  (function setupMapDrag() {
+    const viewport = document.getElementById("wmapViewport");
+    let dragging = false, startX = 0, startY = 0, startPanX = 0, startPanY = 0, cellPx = 30;
+    function pointerDown(clientX, clientY) {
+      dragging = true; startX = clientX; startY = clientY; startPanX = mapPanX; startPanY = mapPanY;
+      const grid = document.getElementById("wmapGrid");
+      const firstCell = grid.querySelector(".wmap-cell");
+      if (firstCell) cellPx = firstCell.getBoundingClientRect().width + 2;
+      viewport.classList.add("dragging");
+    }
+    function pointerMove(clientX, clientY) {
+      if (!dragging) return;
+      const dx = clientX - startX, dy = clientY - startY;
+      const cellDx = Math.round(dx / cellPx);
+      const cellDy = Math.round(dy / cellPx);
+      const newPanX = startPanX - cellDx;
+      const newPanY = startPanY + cellDy;
+      if (newPanX !== mapPanX || newPanY !== mapPanY) { mapPanX = newPanX; mapPanY = newPanY; render(); }
+    }
+    function pointerUp() { dragging = false; viewport.classList.remove("dragging"); }
+    viewport.addEventListener("mousedown", (e) => pointerDown(e.clientX, e.clientY));
+    window.addEventListener("mousemove", (e) => pointerMove(e.clientX, e.clientY));
+    window.addEventListener("mouseup", pointerUp);
+    viewport.addEventListener("touchstart", (e) => { if (e.touches[0]) pointerDown(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    viewport.addEventListener("touchmove", (e) => { if (e.touches[0]) pointerMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    viewport.addEventListener("touchend", pointerUp);
+  })();
+  document.getElementById("creationLoadInput").addEventListener("change", (e) => handleLoadFile(e.target.files[0]));
+  document.getElementById("btnReroll").addEventListener("click", () => { draft.portraitSeed = Math.floor(Math.random() * 4294967295); renderCreation(); });
+  document.getElementById("nameInput").addEventListener("input", renderCreation);
+  document.getElementById("btnStart").addEventListener("click", beginGameFromDraft);
+
+  document.querySelectorAll(".tabbtn").forEach(b => b.addEventListener("click", () => switchTab(b.getAttribute("data-tab"))));
+
+  window.addEventListener("keydown", (e) => {
+    if (!gameStarted) return;
+    const k = e.key.toLowerCase();
+    if (s.combat) {
+      if (k === "f" || k === "enter" || k === " ") { e.preventDefault(); fireAttack(); }
+      else if (k === "x" || k === "r") { attemptFlee(); }
+      return;
+    }
+    if (k === "n" || k === "arrowup") move("n");
+    else if (k === "s" || k === "arrowdown") move("s");
+    else if (k === "e" || k === "arrowright") move("e");
+    else if (k === "w" || k === "arrowleft") move("w");
+    else if (k === "f") scavenge();
+    else if (k === "h") useDefaultAid();
+    else if (k === "r") rest();
+    else if (k === "1") switchTab("field");
+    else if (k === "2") switchTab("inventory");
+    else if (k === "3") switchTab("crafting");
+    else if (k === "4") switchTab("safehouse");
+    else if (k === "5") switchTab("shop");
+    else if (k === "6") switchTab("character");
+    else if (k === "7") switchTab("achievements");
+    else if (k === "8") switchTab("worldmap");
+  });
+
+  setInterval(() => { if (gameStarted) render(); }, 1000);
+  setInterval(tryAutosave, 15000);
+  initCreationScreen();
+})();
+</script>
+</body>
+</html>

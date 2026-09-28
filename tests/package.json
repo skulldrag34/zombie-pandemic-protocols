@@ -1,0 +1,8 @@
+{
+  "name": "zombie-pandemic-protocols-tests",
+  "private": true,
+  "scripts": {
+    "test": "node regression_core.js && node persistence_test.js && node offline_credit_test.js"
+  },
+  "dependencies": { "jsdom": "^26.0.0" }
+}
