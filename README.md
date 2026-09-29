@@ -9,7 +9,8 @@ Explore an endless wasteland, scavenge, fight, recruit survivors, and build up a
 ## Playing on phone or computer
 
 - Works in any modern browser. On Android (Chrome): menu → **Add to Home screen** for an app-style shortcut.
-- **Save your game.** There is no automatic cloud save. Use **SAVE GAME** to download a `.json` file and **LOAD GAME** to restore it. To move between devices, keep the save file in a cloud drive.
+- **Autosave (per device).** The game saves to this browser every 15 seconds and whenever you switch away or close the tab. The title screen offers **CONTINUE THIS SURVIVOR**. Clearing browser data erases it, and each device/browser keeps its own save.
+- **Moving between devices.** Use **SAVE GAME** to download a `.json` file and **LOAD GAME** on the other device. Keep the file in a cloud drive.
 - Time away counts: crafting and construction keep running while you're gone, and stamina, Garden and outpost income are credited for up to 8 hours.
 
 ## Controls

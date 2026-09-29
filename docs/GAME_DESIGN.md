@@ -24,7 +24,7 @@ Originality rule: all code, names, text and visuals are original. Only generic g
 - **Rendering:** `render()` runs every 1s (`setInterval`) and after every action. It calls `tickRegen()` first, then every tab renderer. Tabs are rebuilt with `innerHTML`.
 - **Dropdown rule:** any tab containing `<select>` must skip its rebuild while one of its selects is focused (`renderRosterTab` for gear selects, `renderSafehouseTab` for post selects). Action buttons must `blur()` the select before running the action so the next render isn't suppressed.
 - **Time systems** compare `Date.now()` timestamps inside `tickRegen()`.
-- **Autosave:** attempted every 15s through `window.storage` (only exists in the Claude artifact environment). Manual save/load is a `.json` download/upload.
+- **Autosave:** every 15s and on tab hide/close (`visibilitychange`, `pagehide`) to `localStorage` key `zp_autosave` (per device/browser), plus `window.storage` when running as a Claude artifact. Never written from the title screen. Title screen shows CONTINUE when an autosave exists. Manual save/load is a `.json` download/upload (the cross-device path).
 - **Determinism:** world layout is a pure function of `(x, y, worldSeed)` via `hash()` and `mulberry32()`. Vendor identity, stock, caches and sector names never change for a given seed.
 
 ### Time and persistence behavior (important)
@@ -184,7 +184,7 @@ Defined by the `ACHIEVEMENTS` array (with `check(s)`) and the `ACHIEVEMENT_ATTR_
 
 - Hosted as a static site (GitHub Pages) from `index.html`; works offline once loaded only if cached by the browser (no service worker yet).
 - `<meta name="viewport">` is required for phone play and is checked by the regression suite. The layout is responsive by CSS only and has **not** been visually verified on a real phone.
-- `window.storage` (autosave) only exists inside the Claude artifact environment. On a normal website there is **no automatic save** yet — the player must use SAVE GAME / LOAD GAME (`.json`). See ROADMAP D3.
+- On a normal website the autosave lives in `localStorage`: clearing browser data erases it, and each device/browser has its own. Storage errors (quota, private mode) are swallowed so the game never breaks.
 
 ## 11. Testing (see `tests/README.md`)
 

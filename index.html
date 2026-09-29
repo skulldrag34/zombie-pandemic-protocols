@@ -2435,19 +2435,37 @@
     reader.readAsText(file);
   }
 
+  // Autosave: Claude artifact storage when present, otherwise this browser's localStorage
+  // (per device/browser; manual .json export remains the cross-device path).
+  const AUTOSAVE_KEY = "zp_autosave";
+  function localStore() {
+    try { return window.localStorage || null; } catch (e) { return null; }
+  }
+  function saveLocalNow() {
+    if (!gameStarted) return;
+    const ls = localStore();
+    if (!ls) return;
+    try { ls.setItem(AUTOSAVE_KEY, JSON.stringify(serialize())); } catch (e) { /* quota/private mode: best-effort */ }
+  }
   async function tryAutosave() {
     if (!gameStarted) return;
-    try { if (window.storage && typeof window.storage.set === "function") await window.storage.set("zp_autosave", JSON.stringify(serialize()), false); }
+    saveLocalNow();
+    try { if (window.storage && typeof window.storage.set === "function") await window.storage.set(AUTOSAVE_KEY, JSON.stringify(serialize()), false); }
     catch (e) { /* best-effort only */ }
   }
 
   async function tryLoadAutosave() {
     try {
       if (window.storage && typeof window.storage.get === "function") {
-        const result = await window.storage.get("zp_autosave", false);
+        const result = await window.storage.get(AUTOSAVE_KEY, false);
         if (result && result.value) return JSON.parse(result.value);
       }
-    } catch (e) { /* no autosave available */ }
+    } catch (e) { /* fall through to localStorage */ }
+    try {
+      const ls = localStore();
+      const raw = ls && ls.getItem(AUTOSAVE_KEY);
+      if (raw) { const d = JSON.parse(raw); if (d && typeof d === "object" && d.name !== undefined) return d; }
+    } catch (e) { /* corrupt or unavailable: ignore */ }
     return null;
   }
 
@@ -3565,6 +3583,9 @@
 
   setInterval(() => { if (gameStarted) render(); }, 1000);
   setInterval(tryAutosave, 15000);
+  // Save immediately when the tab is hidden or closed (phones kill background tabs without warning).
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") saveLocalNow(); });
+  window.addEventListener("pagehide", saveLocalNow);
   initCreationScreen();
 })();
 </script>

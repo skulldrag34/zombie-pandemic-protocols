@@ -8,7 +8,7 @@ Process reminder: propose design → get go-ahead on anything large → back up 
 
 ## 1. Shipped so far
 
-Roster (5, one traveler) · World Map · Compound Expansion (8 blocks) · Fitness/Marksmanship training · Energy Drink · crafting/building XP · bigger caches · vendor density scaling · player level cap 25 + reputation titles · companion leveling (cap 10) · Vendor Quests + reputation · companion manual & auto-heal · combat balance pass (faster zombies, danger ceiling 10, hordes up to 5, faster boss) · 32-name NPC pool · Safehouse structural integrity + repair · dropdown re-render fix · offline persistence of craft/build queues · **capped (8h) offline credit for stamina, Garden and outposts · mobile viewport meta (latest)**.
+Roster (5, one traveler) · World Map · Compound Expansion (8 blocks) · Fitness/Marksmanship training · Energy Drink · crafting/building XP · bigger caches · vendor density scaling · player level cap 25 + reputation titles · companion leveling (cap 10) · Vendor Quests + reputation · companion manual & auto-heal · combat balance pass (faster zombies, danger ceiling 10, hordes up to 5, faster boss) · 32-name NPC pool · Safehouse structural integrity + repair · dropdown re-render fix · offline persistence of craft/build queues · capped (8h) offline credit for stamina, Garden and outposts · mobile viewport meta · **per-device localStorage autosave (latest)**.
 
 ---
 
@@ -30,7 +30,10 @@ Roster (5, one traveler) · World Map · Compound Expansion (8 blocks) · Fitnes
 ### D1 — Offline credit for passive systems — **DONE**
 Implemented as option B: stamina regen, Garden and outposts are credited for time away, capped at 8 hours. Auto-heal and passive repair remain online-only by design.
 
-### D3 — Saving on phone and computer (recommended next)
+### D3 — Saving on phone and computer — **DONE (option B)**
+Built: autosave to `localStorage` every 15s plus on tab hide/close (`visibilitychange`, `pagehide`); Continue on the title screen; artifact `window.storage` still used when present. Manual `.json` stays the cross-device path.
+
+Original options:
 Hosted on a normal website there is **no autosave** (the artifact-only `window.storage` is absent), so closing the tab loses unsaved progress. Options:
 - **A. Manual only** (current) — save/load `.json` files; cross-device via a cloud drive.
 - **B. Per-device autosave to `localStorage`** (recommended): saves every ~15s and on tab close, offers "Continue" on the title screen. Manual `.json` export/import remains the cross-device path.
@@ -81,6 +84,6 @@ Open sub-questions for Phase 1: what triggers emergence, how much stronger Alpha
 
 ## 7. Engineering notes
 
-- **Test suites:** the earlier ~17 per-feature suites were lost when the working sandbox reset. They were replaced by `tests/regression_core.js` (31 checks across the major systems + a 250-action playthrough and save round-trip) `tests/persistence_test.js` (26 checks) and `tests/offline_credit_test.js` (15 checks). Coverage is narrower than the old suites in places (e.g. no statistical vendor-density sampling, no world-map interaction tests, no achievement-unlock tests beyond formulas). **Keep test files in project knowledge or a repo — the sandbox is not durable.**
+- **Test suites:** the earlier ~17 per-feature suites were lost when the working sandbox reset. They were replaced by `tests/regression_core.js` (31 checks across the major systems + a 250-action playthrough and save round-trip) `tests/persistence_test.js` (26 checks) `tests/offline_credit_test.js` (15 checks) and `tests/autosave_test.js` (13 checks). Coverage is narrower than the old suites in places (e.g. no statistical vendor-density sampling, no world-map interaction tests, no achievement-unlock tests beyond formulas). **Keep test files in project knowledge or a repo — the sandbox is not durable.**
 - Always back up the game file before edits (`*.vN.bak.html`) and keep the last-known-good copy in outputs until the new build passes.
 - Prefer targeted edits; the file is large enough that full rewrites risk silent regressions.
