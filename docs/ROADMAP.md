@@ -8,7 +8,7 @@ Process reminder: propose design → get go-ahead on anything large → back up 
 
 ## 1. Shipped so far
 
-Roster (5, one traveler) · World Map · Compound Expansion (8 blocks) · Fitness/Marksmanship training · Energy Drink · crafting/building XP · bigger caches · vendor density scaling · player level cap 25 + reputation titles · companion leveling (cap 10) · Vendor Quests + reputation · companion manual & auto-heal · combat balance pass (faster zombies, danger ceiling 10, hordes up to 5, faster boss) · 32-name NPC pool · Safehouse structural integrity + repair · dropdown re-render fix · offline persistence of craft/build queues · capped (8h) offline credit for stamina, Garden and outposts · mobile viewport meta · **per-device localStorage autosave (latest)**.
+Roster (5, one traveler) · World Map · Compound Expansion (8 blocks) · Fitness/Marksmanship training · Energy Drink · crafting/building XP · bigger caches · vendor density scaling · player level cap 25 + reputation titles · companion leveling (cap 10) · Vendor Quests + reputation · companion manual & auto-heal · combat balance pass (faster zombies, danger ceiling 10, hordes up to 5, faster boss) · 32-name NPC pool · Safehouse structural integrity + repair · dropdown re-render fix · offline persistence of craft/build queues · capped (8h) offline credit for stamina, Garden and outposts · mobile viewport meta · per-device localStorage autosave · **phone layout pass (compact map, actions above the log, bigger tap targets, empty quest chip fixed) · **Alpha Phase 1: emergence (latest)**.
 
 ---
 
@@ -49,7 +49,8 @@ Ranged combat is now riskier (faster zombies) but the player still acts before a
 
 Concept: a smart, very strong zombie with goals. It is a **separate threat from Patient Zero** (independently evolved), so **curing the pandemic does not stop it**. Curing instead grants a **modest permanent reduction to general zombie difficulty** (not yet built).
 
-**Phase 1 — Emergence.** After a milestone (trigger TBD; suggest a player level or first claimed block), a narrative beat announces the Alpha. Safehouse hordes become Alpha-directed: stronger and re-flavored (log text, escalating). Reuses the existing Safehouse attack system — cheapest phase.
+**Phase 1 — Emergence. DONE.** Trigger: first claimed block completes (retroactive for older saves; one-time flag). Seeded name ("The <Adjective> <Title>", 12x12 original words). Overlay + log + Safehouse status card. 10-minute *play-time* quiet period, then Safehouse hordes become Alpha-directed: attack chance x1.25, level +1/+1/+2 by escalation (1 + at 4 blocks + at 8 blocks), **no horde-size bump** (Option B, chosen after simulation: the originally approved size bump dropped a maxed 8-block Medium base to 14% repel), x1.5 salvage when repelled, escalating flavor text. No World Map marker yet.
+Simulated Medium repel rates with Option B: 4 blocks/barricade 3/2 guards 45%; 8 blocks/barricade 5/4 guards 88%; no overruns on Medium at 4+ blocks.
 
 **Phase 2 — Turned NPCs.** Some field recruits are secretly working for the Alpha. Requirements for fairness:
 - A **tell shown at recruitment** (subtle flavor line) so an attentive player can catch it.
@@ -60,13 +61,13 @@ Concept: a smart, very strong zombie with goals. It is a **separate threat from 
 
 **Phase 3 — The Alpha fight.** Track and fight it (fightable boss with its own stats). Defeating it ends the current escalation, drops a unique reward. After a quiet cooldown a **new Alpha emerges tougher**, with a freshly seeded name/portrait (reuse the seeded portrait system) — a recurring cycle, not a one-time finale.
 
-Open sub-questions for Phase 1: what triggers emergence, how much stronger Alpha hordes are, and whether the Alpha's existence shows anywhere on the World Map.
+Noted during Phase 1 balancing (not Alpha-related): a fresh 1-block Medium base repels only ~14% of ordinary attacks. Worth a look in a later balance pass.
 
 ---
 
 ## 5. Backlog / ideas (unscoped)
 
-- Verify and polish the phone layout (real-device screenshots, tap-target sizes, combat overlay height).
+- Phone layout, remaining: combat overlay, Safehouse/Shop/Character tabs on a real device (Field tab done).
 - Optional PWA (manifest + service worker) for an installable, offline-capable app.
 
 - Vendor quest type: retrieve an item from a specific location (needs a spatial marker system).
@@ -84,6 +85,6 @@ Open sub-questions for Phase 1: what triggers emergence, how much stronger Alpha
 
 ## 7. Engineering notes
 
-- **Test suites:** the earlier ~17 per-feature suites were lost when the working sandbox reset. They were replaced by `tests/regression_core.js` (31 checks across the major systems + a 250-action playthrough and save round-trip) `tests/persistence_test.js` (26 checks) `tests/offline_credit_test.js` (15 checks) and `tests/autosave_test.js` (13 checks). Coverage is narrower than the old suites in places (e.g. no statistical vendor-density sampling, no world-map interaction tests, no achievement-unlock tests beyond formulas). **Keep test files in project knowledge or a repo — the sandbox is not durable.**
+- **Test suites:** the earlier ~17 per-feature suites were lost when the working sandbox reset. They were replaced by `tests/regression_core.js` (31 checks across the major systems + a 250-action playthrough and save round-trip) `tests/persistence_test.js` (26 checks) `tests/offline_credit_test.js` (15 checks) and `tests/autosave_test.js` (13 checks) and `tests/layout_test.js` (6 checks) and `tests/alpha_test.js` (24 checks). Coverage is narrower than the old suites in places (e.g. no statistical vendor-density sampling, no world-map interaction tests, no achievement-unlock tests beyond formulas). **Keep test files in project knowledge or a repo — the sandbox is not durable.**
 - Always back up the game file before edits (`*.vN.bak.html`) and keep the last-known-good copy in outputs until the new build passes.
 - Prefer targeted edits; the file is large enough that full rewrites risk silent regressions.

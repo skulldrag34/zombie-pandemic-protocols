@@ -57,6 +57,19 @@
   .tabbtn.active { color: var(--toxic); border-color: var(--toxic-dim); background: #16220f; }
   .tabbtn:hover { color: var(--toxic); }
   .tabpanel { display: none; } .tabpanel.active { display: block; }
+  .chip.hidden { display: none; }
+  /* Phone layout: compact map, actions directly under it, log last. Desktop unchanged. */
+  @media (max-width: 639px) {
+    #tab-field.active { display: flex; flex-direction: column; }
+    #tab-field .grid-2col { display: contents; }
+    #tab-field .panel-map { order: 1; }
+    #tab-field .panel-actions { order: 2; }
+    #tab-field .panel-log { order: 3; }
+    #tab-field .minimap { max-width: 190px; margin: 0 auto; }
+    #tab-field .dpad { grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(3, 48px); }
+    #tab-field .action-list .act { min-height: 48px; }
+    #tab-field .log-feed { max-height: 220px; }
+  }
 
   .grid-2col { display: grid; grid-template-columns: 1fr; gap: 12px; }
   @media (min-width: 640px) { .grid-2col { grid-template-columns: 190px 1fr; } }
@@ -312,17 +325,17 @@
     <div id="npcCardWrap"></div>
     <div id="cacheCardWrap"></div>
     <div class="grid-2col">
-      <div class="panel">
+      <div class="panel panel-map">
         <div class="panel-label">SCOUTED SECTORS</div>
         <div class="minimap" id="minimap"></div>
         <div class="legend" id="mapLegend"></div>
       </div>
-      <div class="panel">
+      <div class="panel panel-log">
         <div class="panel-label">MISSION LOG</div>
         <div class="log-feed" id="logFeed"></div>
       </div>
     </div>
-    <div class="panel">
+    <div class="panel panel-actions">
       <div class="panel-label">ACTIONS</div>
       <div class="controls">
         <div class="dpad">
@@ -432,6 +445,16 @@
     <p>Zombies put down: <span id="cKills"></span></p>
     <p>Turns survived: <span id="cTurns"></span></p>
     <button id="btnContinuePlaying">CONTINUE PLAYING</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="alphaOverlay">
+  <div class="cured-card">
+    <h2>ALPHA EMERGENCE</h2>
+    <p>Something out there is thinking. The pack that circled your new perimeter moved in formation, and the survivors on the radio have a name for what's leading it.</p>
+    <p style="font-size:1.2em;letter-spacing:2px;"><span id="alphaName" style="color:var(--blood);"></span></p>
+    <p>Its packs will start hitting the compound soon. They grow bolder as your territory grows.</p>
+    <button id="btnAlphaAck">UNDERSTOOD</button>
   </div>
 </div>
 
@@ -705,6 +728,19 @@
 
   const MAX_SAFEHOUSE_INTEGRITY = 100;
   const SAFEHOUSE_DAMAGE_BARELY = [10, 20];
+  // --- ALPHA (Phase 1: emergence) ---
+  const ALPHA_QUIET_MS = 10 * 60 * 1000;          // play time after emergence before Alpha-directed hordes
+  const ALPHA_ATTACK_CHANCE_MULT = 1.25;
+  const ALPHA_LEVEL_BONUS = [0, 1, 1, 2];          // indexed by escalation 1..3
+  const ALPHA_SCRAP_MULT = 1.5;
+  const ALPHA_ADJECTIVES = ["Hollow", "Ashen", "Silent", "Pale", "Iron", "Grinning", "Rotted", "Hungry", "Veiled", "Crooked", "Sallow", "Gutted"];
+  const ALPHA_TITLES = ["Warden", "Shepherd", "Marshal", "Deacon", "Foreman", "Choirmaster", "Quartermaster", "Surveyor", "Ferryman", "Matron", "Bishop", "Herald"];
+  const ALPHA_FLAVOR = [
+    null,
+    ["moved in a loose wedge, testing the weakest wall", "circled twice before committing, as if counting guards", "hit the gate at the same moment the lights flickered"],
+    ["split into two groups and struck from opposite sides", "dragged debris to the wall to climb it", "ignored the bait and went straight for the storeroom"],
+    ["came in waves timed to your patrol gaps", "carried markings scratched into their skin: the same sigil, every one", "stopped at the wire, waited in silence, then charged together"]
+  ];
   const SAFEHOUSE_DAMAGE_OVERRUN = [25, 40];
   const SAFEHOUSE_REPAIR_SCRAP_PER_POINT = 0.5;
   const SAFEHOUSE_REPAIR_TIME_PER_POINT_MS = 500;
@@ -972,6 +1008,7 @@
       lastCompanionHealTick: Date.now(),
       safehouseIntegrity: MAX_SAFEHOUSE_INTEGRITY,
       lastSafehouseRepairTick: Date.now(),
+      alpha: null, lastAlphaTick: Date.now(),
       kills: 0, turns: 0, dead: false, deathCount: 0,
       combat: null,
       roster: [], companionEverRecruited: false,
@@ -1242,7 +1279,40 @@
       s.lastSafehouseRepairTick = now;
     }
 
+    tickAlpha(now);
     checkSafehouseEvent(now);
+  }
+
+  function sanitizeAlpha(a) {
+    if (!a || typeof a !== "object" || typeof a.name !== "string" || !a.name) return null;
+    const q = Number(a.quietMs);
+    return { name: a.name.slice(0, 40), quietMs: Number.isFinite(q) ? Math.max(0, Math.min(ALPHA_QUIET_MS, q)) : 0 };
+  }
+  function alphaNameForSeed(seed) {
+    const rng = mulberry32(hash(7, 7, seed) ^ 0x0a1fa);
+    return `The ${ALPHA_ADJECTIVES[Math.floor(rng() * ALPHA_ADJECTIVES.length)]} ${ALPHA_TITLES[Math.floor(rng() * ALPHA_TITLES.length)]}`;
+  }
+  function alphaEscalation() { const n = claimedCount(); return 1 + (n >= 4 ? 1 : 0) + (n >= 8 ? 1 : 0); }
+  function alphaActive() { return !!(s.alpha && s.alpha.quietMs <= 0); }
+
+  function tickAlpha(now) {
+    const dt = Math.max(0, Math.min(5000, now - (s.lastAlphaTick || now)));  // play time only; big gaps (load, sleep) don't count
+    s.lastAlphaTick = now;
+    if (!s.alpha) {
+      if (claimedCount() >= 1) emergeAlpha();
+      return;
+    }
+    if (s.alpha.quietMs > 0) {
+      s.alpha.quietMs = Math.max(0, s.alpha.quietMs - dt);
+      if (s.alpha.quietMs === 0) addLog(`The silence breaks. ${s.alpha.name}'s packs are moving on your compound.`, "combat");
+    }
+  }
+
+  function emergeAlpha() {
+    s.alpha = { name: alphaNameForSeed(s.seed), quietMs: ALPHA_QUIET_MS };
+    addLog(`ALPHA EMERGENCE: something out there is thinking. They call it ${s.alpha.name.toUpperCase()}.`, "combat");
+    document.getElementById("alphaName").textContent = s.alpha.name.toUpperCase();
+    document.getElementById("alphaOverlay").classList.remove("hidden");
   }
 
   function checkSafehouseEvent(now) {
@@ -1251,28 +1321,41 @@
     const elapsed = now - s.lastSafehouseCheck;
     if (elapsed < SAFEHOUSE_EVENT_CHECK_MS) return;
     s.lastSafehouseCheck = now;
-    const chance = SEVERITY_SAFEHOUSE_CHANCE[s.settings.severity] || 0.1;
+    const alpha = alphaActive();
+    const chance = (SEVERITY_SAFEHOUSE_CHANCE[s.settings.severity] || 0.1) * (alpha ? ALPHA_ATTACK_CHANCE_MULT : 1);
     if (Math.random() >= chance) return;
-
-    const range = SEVERITY_SAFEHOUSE_LEVEL_RANGE[s.settings.severity] || [2, 3];
-    const level = range[0] + Math.floor(Math.random() * (range[1] - range[0] + 1));
-    const baseCount = SEVERITY_SAFEHOUSE_COUNT[s.settings.severity] || 2;
-    const count = Math.max(1, baseCount + (Math.random() < 0.3 ? 1 : 0) - (Math.random() < 0.2 ? 1 : 0));
-
-    if (s.x === 0 && s.y === 0) startSafehouseDefenseCombat(level, count);
-    else autoResolveSafehouseEvent(level, count);
+    const hz = rollSafehouseHorde(alpha);
+    if (s.x === 0 && s.y === 0) startSafehouseDefenseCombat(hz.level, hz.count, hz.alpha);
+    else autoResolveSafehouseEvent(hz.level, hz.count, hz.alpha);
   }
 
-  function startSafehouseDefenseCombat(level, count) {
+  // Level/size of a Safehouse horde. Alpha-directed hordes gain levels by escalation (Option B: +1/+1/+2, no size bump).
+  function rollSafehouseHorde(alpha) {
+    const range = SEVERITY_SAFEHOUSE_LEVEL_RANGE[s.settings.severity] || [2, 3];
+    let level = range[0] + Math.floor(Math.random() * (range[1] - range[0] + 1));
+    const baseCount = SEVERITY_SAFEHOUSE_COUNT[s.settings.severity] || 2;
+    const count = Math.max(1, baseCount + (Math.random() < 0.3 ? 1 : 0) - (Math.random() < 0.2 ? 1 : 0));
+    if (alpha) level += ALPHA_LEVEL_BONUS[alphaEscalation()];
+    return { level, count, alpha };
+  }
+
+  function alphaFlavor() {
+    const lines = ALPHA_FLAVOR[alphaEscalation()];
+    return lines[Math.floor(Math.random() * lines.length)];
+  }
+
+  function startSafehouseDefenseCombat(level, count, alpha) {
     combatSubTab = null;
     const queue = [];
     for (let i = 1; i < count; i++) queue.push({ level });
     const first = spawnZombie(level);
     s.combat = Object.assign({ queue, startX: s.x, startY: s.y, log: [], isBoss: false, isSafehouseDefense: true }, first);
-    combatLog(`SAFEHOUSE UNDER ATTACK! A level ${level} horde (${count}) breaches the barricade.`);
+    s.combat.isAlpha = !!alpha;
+    if (alpha) combatLog(`SAFEHOUSE UNDER ATTACK! ${s.alpha.name}'s pack (level ${level}, ${count}) ${alphaFlavor()}.`);
+    else combatLog(`SAFEHOUSE UNDER ATTACK! A level ${level} horde (${count}) breaches the barricade.`);
   }
 
-  function autoResolveSafehouseEvent(level, count) {
+  function autoResolveSafehouseEvent(level, count, alpha) {
     const derived = computeDerived();
     const defense = derived.safehouseDefense;
     const threat = level * 10 * count;
@@ -1282,9 +1365,10 @@
 
     const guards = guardingCompanions();
     if (outcome === "repelled") {
-      const reward = 5 + Math.floor(Math.random() * 10);
+      const reward = Math.round((5 + Math.floor(Math.random() * 10)) * (alpha ? ALPHA_SCRAP_MULT : 1));
       addScrap(reward);
-      addLog(`Safehouse alert: a level ${level} horde (${count}) probed the perimeter while you were out and was repelled. Salvaged ${reward} Scrap Metal from the wreckage.`, "build");
+      if (alpha) addLog(`Safehouse alert: ${s.alpha.name}'s pack (level ${level}, ${count}) ${alphaFlavor()} &mdash; and was repelled. Salvaged ${reward} Scrap Metal from the wreckage.`, "build");
+      else addLog(`Safehouse alert: a level ${level} horde (${count}) probed the perimeter while you were out and was repelled. Salvaged ${reward} Scrap Metal from the wreckage.`, "build");
       guards.forEach(c => gainCompanionXp(c, level * 4));
     } else {
       const lossPct = outcome === "overrun" ? 0.35 : 0.15;
@@ -1295,7 +1379,8 @@
       const dmgRange = outcome === "overrun" ? SAFEHOUSE_DAMAGE_OVERRUN : SAFEHOUSE_DAMAGE_BARELY;
       const structDmg = dmgRange[0] + Math.floor(Math.random() * (dmgRange[1] - dmgRange[0] + 1));
       s.safehouseIntegrity = Math.max(0, s.safehouseIntegrity - structDmg);
-      addLog(`Safehouse alert: a level ${level} horde (${count}) ${outcome === "overrun" ? "overran" : "breached"} the barricade while you were away. Lost ${scrapLoss} Scrap Metal, $${cashLoss}, and ${structDmg} structural integrity.`, "combat");
+      const who = alpha ? `${s.alpha.name}'s pack (level ${level}, ${count}) ${alphaFlavor()}, then` : `a level ${level} horde (${count})`;
+      addLog(`Safehouse alert: ${who} ${outcome === "overrun" ? "overran" : "breached"} the barricade while you were away. Lost ${scrapLoss} Scrap Metal, $${cashLoss}, and ${structDmg} structural integrity.`, "combat");
       if (guards.length > 0) {
         const victim = guards[Math.floor(Math.random() * guards.length)];
         const dmg = outcome === "overrun" ? 20 + Math.floor(Math.random() * 20) : 8 + Math.floor(Math.random() * 10);
@@ -2237,6 +2322,7 @@
     document.getElementById("deathOverlay").classList.add("hidden");
     document.getElementById("combatOverlay").classList.add("hidden");
     document.getElementById("curedOverlay").classList.add("hidden");
+    document.getElementById("alphaOverlay").classList.add("hidden");
     document.getElementById("creationOverlay").classList.remove("hidden");
     gameStarted = false;
     initCreationScreen();
@@ -2262,6 +2348,7 @@
       vendorQuests: s.vendorQuests, vendorRep: s.vendorRep, totalVendorQuestsCompleted: s.totalVendorQuestsCompleted,
       autoHealCompanions: s.autoHealCompanions,
       safehouseIntegrity: s.safehouseIntegrity,
+      alpha: s.alpha,
       craftQueue: s.craftQueue, buildQueue: s.buildQueue,
       kills: s.kills, turns: s.turns, deathCount: s.deathCount,
       roster: s.roster, companionEverRecruited: s.companionEverRecruited,
@@ -2398,6 +2485,8 @@
     fresh.buildQueue = sanitizeBuildQueue(data.buildQueue, Object.keys(fresh.claimedBlocks || {}));
     fresh.lastApRegen = Date.now(); fresh.lastGardenTick = Date.now(); fresh.lastSafehouseCheck = Date.now(); fresh.lastClaimTick = Date.now(); fresh.lastCompanionHealTick = Date.now(); fresh.lastSafehouseRepairTick = Date.now();
     fresh.claimedBlocks = data.claimedBlocks || {};
+    fresh.alpha = sanitizeAlpha(data.alpha);
+    fresh.lastAlphaTick = Date.now();
     fresh.log = [];
     s = fresh;
     logTick = 0; combatLogTick = 0; lastRenderedLogTick = -1; lastRenderedCombatLogTick = -1;
@@ -2410,6 +2499,7 @@
     document.getElementById("deathOverlay").classList.add("hidden");
     document.getElementById("combatOverlay").classList.add("hidden");
     document.getElementById("curedOverlay").classList.add("hidden");
+    document.getElementById("alphaOverlay").classList.add("hidden");
     render();
   }
 
@@ -3002,6 +3092,15 @@
       list.appendChild(notice);
     }
 
+    if (s.alpha) {
+      const alphaCard = document.createElement("div");
+      alphaCard.className = "quest-card";
+      alphaCard.style.borderColor = "var(--blood)";
+      const quiet = s.alpha.quietMs > 0 ? ` &middot; quiet for ~${Math.ceil(s.alpha.quietMs / 60000)}m` : "";
+      alphaCard.innerHTML = `<div class="title" style="color:var(--blood);">ALPHA ACTIVE: ${s.alpha.name} &middot; Escalation ${alphaEscalation()}${quiet}</div>
+        <div class="desc">Its packs raid the compound (level +${ALPHA_LEVEL_BONUS[alphaEscalation()]}, more often, 1.5&times; salvage when repelled). Escalation rises at 4 and 8 claimed blocks.</div>`;
+      list.appendChild(alphaCard);
+    }
     const defenseCard = document.createElement("div");
     defenseCard.className = "quest-card";
     defenseCard.style.borderColor = "var(--cyan)";
@@ -3506,6 +3605,7 @@
   document.getElementById("subtabAid").addEventListener("click", () => { combatSubTab = combatSubTab === "aid" ? null : "aid"; render(); });
   document.getElementById("subtabThrow").addEventListener("click", () => { combatSubTab = combatSubTab === "throw" ? null : "throw"; render(); });
   document.getElementById("btnRespawn").addEventListener("click", respawnAtSafehouse);
+  document.getElementById("btnAlphaAck").addEventListener("click", () => { document.getElementById("alphaOverlay").classList.add("hidden"); render(); });
   document.getElementById("btnContinuePlaying").addEventListener("click", () => { document.getElementById("curedOverlay").classList.add("hidden"); render(); });
   document.getElementById("btnSave").addEventListener("click", downloadSave);
   document.getElementById("btnNewChar").addEventListener("click", restartToCreation);

@@ -196,3 +196,10 @@ Harness lessons that cost time before:
 - Guard the "someone else's tile" case: the player's own world-map tile has no click handler.
 - `smoketest`-style playthroughs and combat tests can flake on RNG; rerun before treating as a regression.
 - Test bugs and game bugs look alike. Distinguish them before changing the game.
+
+
+## Alpha (Phase 1: emergence)
+- Emerges once, when the first claimed block completes (or on the first tick after loading a save that already has one). State: `s.alpha = { name, quietMs }` or `null`; saved as `alpha`, sanitized on load.
+- Name: `The <ADJ> <TITLE>` from `ALPHA_ADJECTIVES` x `ALPHA_TITLES`, seeded by `hash(7,7,seed)`.
+- Quiet period `ALPHA_QUIET_MS` = 10 min of play time (tick gaps capped at 5s, so time away does not count).
+- Escalation = 1 + (claimed >= 4) + (claimed >= 8). Active Alpha: attack chance x`ALPHA_ATTACK_CHANCE_MULT` (1.25), level + `ALPHA_LEVEL_BONUS[esc]` ([_,1,1,2]), horde size unchanged, repelled salvage x`ALPHA_SCRAP_MULT` (1.5). Flavor lines per escalation in `ALPHA_FLAVOR`.

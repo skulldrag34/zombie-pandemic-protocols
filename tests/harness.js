@@ -87,7 +87,8 @@ function baseSave(overrides) {
     postCapXp: 0, battleHardenedEverReached: false,
     vendorQuests: {}, vendorRep: {}, totalVendorQuestsCompleted: 0,
     autoHealCompanions: true, lastCompanionHealTick: Date.now(),
-    safehouseIntegrity: 100, lastSafehouseRepairTick: Date.now()
+    safehouseIntegrity: 100, lastSafehouseRepairTick: Date.now(),
+    alpha: null
   }, overrides || {});
 }
 
