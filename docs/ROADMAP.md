@@ -8,7 +8,7 @@ Process reminder: propose design → get go-ahead on anything large → back up 
 
 ## 1. Shipped so far
 
-Roster (5, one traveler) · World Map · Compound Expansion (8 blocks) · Fitness/Marksmanship training · Energy Drink · crafting/building XP · bigger caches · vendor density scaling · player level cap 25 + reputation titles · companion leveling (cap 10) · Vendor Quests + reputation · companion manual & auto-heal · combat balance pass (faster zombies, danger ceiling 10, hordes up to 5, faster boss) · 32-name NPC pool · Safehouse structural integrity + repair · dropdown re-render fix · offline persistence of craft/build queues · capped (8h) offline credit for stamina, Garden and outposts · mobile viewport meta · per-device localStorage autosave · **phone layout pass (compact map, actions above the log, bigger tap targets, empty quest chip fixed) · **Alpha Phase 1: emergence (latest)**.
+Roster (5, one traveler) · World Map · Compound Expansion (8 blocks) · Fitness/Marksmanship training · Energy Drink · crafting/building XP · bigger caches · vendor density scaling · player level cap 25 + reputation titles · companion leveling (cap 10) · Vendor Quests + reputation · companion manual & auto-heal · combat balance pass (faster zombies, danger ceiling 10, hordes up to 5, faster boss) · 32-name NPC pool · Safehouse structural integrity + repair · dropdown re-render fix · offline persistence of craft/build queues · capped (8h) offline credit for stamina, Garden and outposts · mobile viewport meta · per-device localStorage autosave · **phone layout pass (compact map, actions above the log, bigger tap targets, empty quest chip fixed) · **Alpha Phase 1: emergence** · **Audio Phase A: procedural Web Audio sound effects (20 SFX, settings panel, mute/M key, prefs in save) (latest)** · repair XP.
 
 ---
 
@@ -17,10 +17,10 @@ Roster (5, one traveler) · World Map · Compound Expansion (8 blocks) · Fitnes
 | # | Issue | Status | Notes |
 |---|---|---|---|
 | 1 | **"No more Safehouse upgrades" after a defense upgrade + repair** (player report) | **OPEN** | Could not reproduce in any sequence tested: barricade→barricade, repair→barricade, barricade→repair, all followed by checks of every other build option. **Need the player's save file from the moment it happens** (SAVE GAME button). Two by-design behaviors can look like it: only one project runs at a time, and each barricade tier costs more. Note: the new queue validation removes one plausible cause (a malformed/clock-skewed queue) but is not a confirmed fix for this report. |
-| 2 | Repairs grant no XP | OPEN (trivial) | Every other construction type does. Suggest `max(5, ms/1500)` like the rest. |
+| 2 | Repairs grant no XP | **DONE** | Repairs now grant `max(5, round(ms/1500))` like every other build (7-33 XP). The repair queue stores its duration; older saves without it get the 10s minimum. Covered by `quickwins_test.js`. |
 | 3 | Interactive (player-present) Safehouse defense never damages integrity | OPEN (design) | Only auto-resolved attacks do. Decide whether winning at home should cost a small amount. |
 | 4 | Safehouse attack levels (max 5) don't scale to the danger ceiling of 10 | OPEN (design) | Late-game bases are only ever attacked by levels 1–5. Needs a rule tied to something (claimed blocks? barricade level? days survived?). |
-| 5 | Guard XP from defense events verified by code review only | OPEN (test) | No way to force an attack event in tests. Add a debug hook or extract the resolver so it can be called directly. |
+| 5 | Guard XP from defense events verified by code review only | **DONE** | Now tested deterministically (pin `Math.random`, fast-forward past the 90s check): repelled +level x4, overrun victim +level x3, others +level x2, fallen guard removed. `quickwins_test.js`. |
 | 6 | Quest reward "premium item" is a flat 25% per turn-in | OPEN (tuning) | Watch in playtesting; consider pity timer. |
 
 ---
@@ -75,7 +75,7 @@ Noted during Phase 1 balancing (not Alpha-related): a fresh 1-block Medium base 
 - Room upgrade tiers so the seven rooms keep mattering late-game.
 - More endgame sinks for cash/scrap once caps are reached.
 - Additional world events (weather, night, scavenger rivals).
-- Sound design (WebAudio, no external assets).
+- Sound design: **Phase A DONE** (SFX). Remaining: **Phase B** adaptive music + ambience layered by distance/danger from the Safehouse (music/ambience buses already exist, unused); **Phase C** visual feedback (danger vignette, damage numbers, screen shake honoring `prefers-reduced-motion`, low-HP state, level-up banner).
 
 ## 6. Parked
 
@@ -85,6 +85,6 @@ Noted during Phase 1 balancing (not Alpha-related): a fresh 1-block Medium base 
 
 ## 7. Engineering notes
 
-- **Test suites:** the earlier ~17 per-feature suites were lost when the working sandbox reset. They were replaced by `tests/regression_core.js` (31 checks across the major systems + a 250-action playthrough and save round-trip) `tests/persistence_test.js` (26 checks) `tests/offline_credit_test.js` (15 checks) and `tests/autosave_test.js` (13 checks) and `tests/layout_test.js` (6 checks) and `tests/alpha_test.js` (24 checks). Coverage is narrower than the old suites in places (e.g. no statistical vendor-density sampling, no world-map interaction tests, no achievement-unlock tests beyond formulas). **Keep test files in project knowledge or a repo — the sandbox is not durable.**
+- **Test suites:** the earlier ~17 per-feature suites were lost when the working sandbox reset. They were replaced by `tests/regression_core.js` (31 checks across the major systems + a 250-action playthrough and save round-trip) `tests/persistence_test.js` (26 checks) `tests/offline_credit_test.js` (15 checks) and `tests/autosave_test.js` (13 checks) and `tests/layout_test.js` (6 checks) and `tests/alpha_test.js` (24 checks) and `tests/audio_test.js` (65 checks, strict Web Audio stub) and `tests/quickwins_test.js` (16 checks), plus `tests/browser_smoke_audio.js` (real Chromium via Playwright, optional). `harness.js` resolves `index.html` first. Coverage is narrower than the old suites in places (e.g. no statistical vendor-density sampling, no world-map interaction tests, no achievement-unlock tests beyond formulas). **Keep test files in project knowledge or a repo — the sandbox is not durable.**
 - Always back up the game file before edits (`*.vN.bak.html`) and keep the last-known-good copy in outputs until the new build passes.
 - Prefer targeted edits; the file is large enough that full rewrites risk silent regressions.

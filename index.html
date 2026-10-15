@@ -1428,7 +1428,9 @@
         checkAchievements();
       } else if (s.buildQueue.kind === "repair") {
         s.safehouseIntegrity = MAX_SAFEHOUSE_INTEGRITY;
-        addLog(`Safehouse structural repairs complete. Integrity restored to 100%.`, "build");
+        const buildXp = Math.max(5, Math.round((s.buildQueue.timeMs || SAFEHOUSE_REPAIR_MIN_TIME_MS) / 1500));
+        gainXp(buildXp);
+        addLog(`Safehouse structural repairs complete. Integrity restored to 100%. +${buildXp} XP.`, "build");
       } else {
         const room = ROOMS.find(r => r.id === s.buildQueue.roomId);
         if (room) {
@@ -2433,7 +2435,7 @@
     if (cost.missing <= 0) return;
     if (getScrap() < cost.scrap) return;
     spendScrap(cost.scrap);
-    s.buildQueue = { kind: "repair", finishAt: Date.now() + cost.timeMs };
+    s.buildQueue = { kind: "repair", finishAt: Date.now() + cost.timeMs, timeMs: cost.timeMs };
     addLog(`Repair work started on the Safehouse structure.`, "build");
     render();
   }
@@ -2658,8 +2660,12 @@
       case "marksmanship":
         if (!validLevel(q.targetLevel, MARKSMANSHIP_TIERS)) return null;
         return { kind: "marksmanship", targetLevel: q.targetLevel, finishAt };
-      case "repair":
-        return { kind: "repair", finishAt };
+      case "repair": {
+        // timeMs drives completion XP; saves from before repair XP lack it and get the minimum.
+        const t = Number(q.timeMs);
+        const timeMs = Number.isFinite(t) ? Math.max(SAFEHOUSE_REPAIR_MIN_TIME_MS, Math.min(MAX_SAFEHOUSE_INTEGRITY * SAFEHOUSE_REPAIR_TIME_PER_POINT_MS, t)) : SAFEHOUSE_REPAIR_MIN_TIME_MS;
+        return { kind: "repair", finishAt, timeMs };
+      }
       case "claim":
         if (!Number.isInteger(q.x) || !Number.isInteger(q.y)) return null;
         if (claimedKeys.length >= MAX_CLAIMED_BLOCKS || claimedKeys.includes(`${q.x},${q.y}`)) return null;
