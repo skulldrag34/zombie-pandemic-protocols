@@ -217,3 +217,10 @@ All timers are play time (accumulated in `tickAlpha`, paused during combat), sto
 - **Load validation:** no Alpha -> all spy flags cleared; at most one double agent; turned beats double agent; sabotage clamped 0..2; counters non-negative ints.
 - Tests: `tests/alpha2_test.js` (66 checks).
 
+## Audio (all procedural Web Audio; no asset files)
+- **Engine:** one AudioContext created on the first user gesture; master (with soft limiter) -> sfx / music / ambience buses. Prefs `settings.audio` = master 0.6, sfx 0.7, music 0.35, ambience 0.5, muted, uiSounds; sanitized on load; older saves keep the session's prefs. Headless (no AudioContext) = silent no-op. Background tab suspends the context.
+- **Phase A, SFX:** 20 effects (`SFX_DEFS`) wired to combat, damage, death, flee, progression, construction, crafting, aid, trade, Safehouse/Alpha events. 12-voice cap, ±8% pitch / ±10% gain variation (melodic stings exempt), 40ms same-sound dedupe.
+- **Phase B, music:** mood from situation, never level: `haven` (Safehouse, 60bpm), `haven_alpha` (+ low pulse while the Alpha is active), `outskirts` (danger 1-2, 72), `hostile` (3-5, 84), `deadzone` (6+, 96), `combat` (120), `boss` (Patient Zero and traitor fights, 108), `fallen` (death: one fading tone, then silence), none on the creation screen. `render()` sets the target mood; a 25ms timer schedules 8th-note steps 120ms ahead on the audio clock (stall > 0.5s resyncs instead of bursting). Crossfade 2s, 0.5s into combat/boss. Key root (A1-E2), scale (aeolian/phrygian/harmonic minor/dorian) and 8-step motifs seeded from the world seed; per-session variation via random ornaments.
+- **Phase B, ambience:** looped wind (bandpass noise), level 0.012 at the Safehouse, else `min(0.09, 0.02 + 0.008 x danger)`; Safehouse crackle; distant groans from danger 3 (12% / 22% at 6+ per 0.8-2.4s event window).
+- Tests: `audio_test.js` (65), `music_test.js` (42), `browser_smoke_audio.js` (real Chromium, optional).
+
