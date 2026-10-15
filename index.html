@@ -770,6 +770,14 @@
   const DOUBLE_AGENT_FLIP_CHANCE = 0.10;
   const DOUBLE_AGENT_LEVEL_REDUCTION = 1;               // Alpha attacks are one level weaker while a double agent guards
   const ALPHA_LEAK_CAP = 5;
+  const TURNED_TELL_CHANCE = 0.5;                       // a turned recruit shows one of these on joining; loyal ones never do
+  const TURNED_TELLS = [
+    "keeps glancing back the way they came, like someone might be following.",
+    "asks how many people sleep at the Safehouse, then changes the subject.",
+    "has fresh scratches on their arms and no story for them.",
+    "studies your barricades a little too carefully.",
+    "flinches at a distant howl &mdash; then almost seems to listen to it."
+  ];
   const ALPHA_ADJECTIVES = ["Hollow", "Ashen", "Silent", "Pale", "Iron", "Grinning", "Rotted", "Hungry", "Veiled", "Crooked", "Sallow", "Gutted"];
   const ALPHA_TITLES = ["Warden", "Shepherd", "Marshal", "Deacon", "Foreman", "Choirmaster", "Quartermaster", "Surveyor", "Ferryman", "Matron", "Bishop", "Herald"];
   const ALPHA_FLAVOR = [
@@ -2008,6 +2016,10 @@
     s.roster.push(companion);
     s.companionEverRecruited = true;
     addLog(`${companion.name} joins you${gift ? `, grateful for the ${gift.toLowerCase()}` : ""}${companion.mode === "guard" ? " and heads to the Safehouse to guard" : ""}.`, "story");
+    // Partial tell: about half of turned recruits give themselves away; loyal recruits never do.
+    if (companion.turned && Math.random() < TURNED_TELL_CHANCE) {
+      addLog(`${companion.name} ${TURNED_TELLS[Math.floor(Math.random() * TURNED_TELLS.length)]}`, "system");
+    }
     s.pendingNpc = null;
     render();
   }
@@ -2094,6 +2106,7 @@
     if (!comp) return;
     const name = comp.equipment[slotKind];
     if (!name) return;
+    if (comp.suspicious) { addLog(`${comp.name} won't hand over the ${name}. Not now, not to you.`, "combat"); render(); return; }
     s.inventory[name] = (s.inventory[name] || 0) + 1;
     comp.equipment[slotKind] = null;
     addLog(`Took the ${name} back from ${comp.name}.`, "system");
@@ -3942,9 +3955,9 @@
           <button class="mini-btn" data-heal-companion="${c.id}" ${c.hp >= c.maxHp ? "disabled" : ""}>heal</button>
         </div>
         ${spyHtml}
-        <div class="req-list">Weapon: ${c.equipment.weapon || "none"} (${atk.damage} DMG)${c.equipment.weapon ? ` <button class="mini-btn danger2" data-take-weapon="${c.id}">take back</button>` : ""}</div>
+        <div class="req-list">Weapon: ${c.equipment.weapon || "none"} (${atk.damage} DMG)${c.equipment.weapon ? ` <button class="mini-btn danger2" data-take-weapon="${c.id}" ${c.suspicious ? 'disabled title="A suspect will not hand over their gear"' : ""}>${c.suspicious ? "refuses" : "take back"}</button>` : ""}</div>
         <div class="gearline">${weaponSelect}</div>
-        <div class="req-list">Armor: ${c.equipment.armor || "none"} (${compDef} DEF)${c.equipment.armor ? ` <button class="mini-btn danger2" data-take-armor="${c.id}">take back</button>` : ""}</div>
+        <div class="req-list">Armor: ${c.equipment.armor || "none"} (${compDef} DEF)${c.equipment.armor ? ` <button class="mini-btn danger2" data-take-armor="${c.id}" ${c.suspicious ? 'disabled title="A suspect will not hand over their gear"' : ""}>${c.suspicious ? "refuses" : "take back"}</button>` : ""}</div>
         <div class="gearline">${armorSelect}</div>
         <div class="row-btns" style="margin-top:6px;">
           <button class="mini-btn" data-set-mode="${c.id}" data-mode="${isTraveler ? "guard" : "travel"}">${isTraveler ? "leave to guard Safehouse" : "bring on the road"}</button>

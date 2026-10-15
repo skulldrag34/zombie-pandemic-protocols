@@ -70,6 +70,42 @@ async function session(saveObj) {
     sv = await captureSave(s.window);
     c.ok(sv.roster[0].turned === false, 'before the Alpha emerges, no recruit is ever turned');
     done(s);
+
+    // Partial tell at recruitment. Rolls inside recruit: turn, then tell (< 50%), then which line.
+    const TELL = /keeps glancing back|asks how many people sleep|fresh scratches|studies your barricades|flinches at a distant howl/;
+    s = await meetSurvivor(alphaSave());
+    pin(s.window, 0.09); clickEl(s.window, q(s.window, '#btnRecruit'));
+    c.ok(TELL.test(logText(s.window)) && /keeps glancing back the way they came/.test(logText(s.window)), 'a turned recruit can show a tell on joining (roll 9% < 50%)');
+    done(s);
+    s = await meetSurvivor(alphaSave());
+    script(s.window, [0.09, 0.51], 0.01); clickEl(s.window, q(s.window, '#btnRecruit'));
+    sv = await captureSave(s.window);
+    c.ok(sv.roster[0].turned === true && !TELL.test(logText(s.window)), 'about half show nothing (tell roll 51% >= 50%)');
+    done(s);
+    s = await meetSurvivor(alphaSave());
+    pin(s.window, 0.3); clickEl(s.window, q(s.window, '#btnRecruit'));
+    sv = await captureSave(s.window);
+    c.ok(sv.roster[0].turned === false && !TELL.test(logText(s.window)), 'a loyal recruit never shows a tell, even on a roll that would pass');
+    done(s);
+  }
+
+  // ---------- A2: suspects keep their gear ----------
+  console.log('A2) Suspects refuse to hand gear back');
+  {
+    let s = await session(alphaSave({ roster: [comp(1, 'Rook', { turned: true, suspicious: true, equipment: { weapon: 'Crowbar', armor: 'Padded Vest' } })] }));
+    tab(s.window, 'character');
+    const wb = q(s.window, '[data-take-weapon="1"]'), ab = q(s.window, '[data-take-armor="1"]');
+    c.ok(wb.disabled && ab.disabled && wb.textContent === 'refuses' && ab.textContent === 'refuses', 'take-back buttons show "refuses" and are disabled on a suspect');
+    wb.disabled = false; wb.dispatchEvent(new s.window.Event('click'));   // bypass the UI: the game itself must refuse
+    let sv = await captureSave(s.window);
+    c.ok(!sv.inventory['Crowbar'] && sv.roster[0].equipment.weapon === 'Crowbar' && /won't hand over the Crowbar/.test(logText(s.window)), 'the game refuses even if the button is forced');
+    done(s);
+
+    s = await session(alphaSave({ roster: [comp(1, 'Rook', { turned: true })] }));
+    tab(s.window, 'character'); clickEl(s.window, q(s.window, '[data-take-weapon="1"]'));
+    sv = await captureSave(s.window);
+    c.ok(sv.inventory['Crowbar'] === 1, 'an undetected traitor hands gear back normally (no tell)');
+    done(s);
   }
 
   // ---------- B: detection ----------

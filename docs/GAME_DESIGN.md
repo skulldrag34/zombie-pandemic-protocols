@@ -206,14 +206,14 @@ Harness lessons that cost time before:
 
 ## Alpha (Phase 2: turned recruits and double agents)
 All timers are play time (accumulated in `tickAlpha`, paused during combat), stored on `s.alpha` so they survive save/load.
-- **Turning:** only recruits made after emergence. Hidden `c.turned` set at recruit with `TURNED_CHANCE[esc]` = 10/15/20%. Existing roster members are never turned retroactively. No tell at recruitment yet (open decision).
+- **Turning:** only recruits made after emergence. Hidden `c.turned` set at recruit with `TURNED_CHANCE[esc]` = 10/15/20%. Existing roster members are never turned retroactively. **Partial tell:** 50% (`TURNED_TELL_CHANCE`) of turned recruits log one of `TURNED_TELLS` on joining; loyal recruits never do.
 - **Detection:** every 3 min (`TRAITOR_DETECT_MS`), each hidden traitor rolls `min(50%, 4% + 3% x effective PER)` (7% at PER 1, 34% at PER 10). Success sets `c.suspicious`, logs "Something's off about <name>", shows SUSPICIOUS + Confront/Interrogate. No false positives: only turned companions can become suspicious.
 - **Sabotage:** while the Alpha is active, every 5 min each turned companion has 25% to sabotage. Guard: 50/50 steal 10% scrap (min 1) or -5..10 integrity (always integrity if no scrap). Traveler: `c.hesitating` -> in the next fight they neither assist nor take hits ("hangs back"). After the 3rd sabotage they defect (leave with gear, leak +1). Every event names them.
-- **Confront (suspect):** 70% hostile fight, 30% flee (gear kept by them, leak +1). **Dismiss (suspect):** same as flee. Dismissing an undetected traitor is a normal dismiss (no tell).
+- **Confront (suspect):** 70% hostile fight, 30% flee (gear kept by them, leak +1). **Dismiss (suspect):** same as flee. Dismissing an undetected traitor is a normal dismiss (no tell). **Suspects refuse to hand gear back** (card shows "refuses"; `takeGearFromCompanionId` enforces it); undetected traitors hand it back normally.
 - **Traitor fight:** companion leaves the roster at once; enemy level `clamp(compLevel + esc, 1, 10)`, HP = their max HP, distance 3, speed 2. Win: their gear back, XP `level x 15`, `traitorsDefeated++` (not a zombie kill: no kill count, loot or fragments). Flee or death: they escape with gear, leak +1.
 - **Interrogate (suspect):** success `min(70%, 25% + 5% x compLevel)` -> **double agent** (`c.doubleAgent`, flags cleared, `doubleAgentsTurned++`); failure -> traitor fight (no flee outcome). Only one double agent at a time.
 - **Double agent:** while guarding, Alpha attacks are -1 level (`DOUBLE_AGENT_LEVEL_REDUCTION`, min 1). Every 5 min: +1 `s.alpha.intel` (spent in Phase 3), then 10% flip-back: leaves with gear, leak +2. **Release** (dismiss) is safe: gear back, no leak.
 - **Leaks:** `s.alpha.leak` (cap 5) adds to the next Alpha-directed attack's level, then resets to 0.
 - **Load validation:** no Alpha -> all spy flags cleared; at most one double agent; turned beats double agent; sabotage clamped 0..2; counters non-negative ints.
-- Tests: `tests/alpha2_test.js` (60 checks).
+- Tests: `tests/alpha2_test.js` (66 checks).
 
