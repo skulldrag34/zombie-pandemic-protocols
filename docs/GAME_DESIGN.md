@@ -172,9 +172,9 @@ Bandage (2 Cloth Strips, 15s) · Molotov (Bottle + Cloth + Scrap, 25s) · Improv
 
 ---
 
-## 9. Achievements (27)
+## 9. Achievements (29)
 
-Each grants a permanent attribute bonus applied in every derived-stat calculation: First Blood, Exterminator, Zombie Slayer (kills) · Apocalypse Veteran (100 kills, +2 STR) · Scout, Explorer, Pathfinder (sectors) · Survivor (lv 5), Wasteland Legend (lv 10, +2 END), Nine Lives · Close Call, Critical Thinker, Ghost, Entrepreneur · Home Improvement, Renaissance Survivor, Made a Friend · Fortress (barricade 5), Compound Builder (8 blocks), Iron Body (fitness max), Dead Eye (marksmanship max) · Peak Condition (lv 25), Battle-Hardened, Quest Runner (5 quests), Trusted Trader (max vendor rep) · **Living Legend** and **Patient Zero** (+1 to all attributes).
+Each grants a permanent attribute bonus applied in every derived-stat calculation: First Blood, Exterminator, Zombie Slayer (kills) · Apocalypse Veteran (100 kills, +2 STR) · Scout, Explorer, Pathfinder (sectors) · Survivor (lv 5), Wasteland Legend (lv 10, +2 END), Nine Lives · Close Call, Critical Thinker, Ghost, Entrepreneur · Home Improvement, Renaissance Survivor, Made a Friend · Fortress (barricade 5), Compound Builder (8 blocks), Iron Body (fitness max), Dead Eye (marksmanship max) · Peak Condition (lv 25), Battle-Hardened, Quest Runner (5 quests), Trusted Trader (max vendor rep) · **Living Legend** and **Patient Zero** (+1 to all attributes) · Trust No One (defeat a turned companion, +1 PER) · Turncoat (make a double agent, +1 LCK).
 
 Defined by the `ACHIEVEMENTS` array (with `check(s)`) and the `ACHIEVEMENT_ATTR_BONUS` map. Add to both.
 
@@ -199,7 +199,21 @@ Harness lessons that cost time before:
 
 
 ## Alpha (Phase 1: emergence)
-- Emerges once, when the first claimed block completes (or on the first tick after loading a save that already has one). State: `s.alpha = { name, quietMs }` or `null`; saved as `alpha`, sanitized on load.
+- Emerges once, when the first claimed block completes (or on the first tick after loading a save that already has one). State: `s.alpha = { name, quietMs, intel, leak, detectMs, sabotageMs, agentMs }` or `null`; saved as `alpha`, sanitized and clamped on load.
 - Name: `The <ADJ> <TITLE>` from `ALPHA_ADJECTIVES` x `ALPHA_TITLES`, seeded by `hash(7,7,seed)`.
 - Quiet period `ALPHA_QUIET_MS` = 10 min of play time (tick gaps capped at 5s, so time away does not count).
 - Escalation = 1 + (claimed >= 4) + (claimed >= 8). Active Alpha: attack chance x`ALPHA_ATTACK_CHANCE_MULT` (1.25), level + `ALPHA_LEVEL_BONUS[esc]` ([_,1,1,2]), horde size unchanged, repelled salvage x`ALPHA_SCRAP_MULT` (1.5). Flavor lines per escalation in `ALPHA_FLAVOR`.
+
+## Alpha (Phase 2: turned recruits and double agents)
+All timers are play time (accumulated in `tickAlpha`, paused during combat), stored on `s.alpha` so they survive save/load.
+- **Turning:** only recruits made after emergence. Hidden `c.turned` set at recruit with `TURNED_CHANCE[esc]` = 10/15/20%. Existing roster members are never turned retroactively. No tell at recruitment yet (open decision).
+- **Detection:** every 3 min (`TRAITOR_DETECT_MS`), each hidden traitor rolls `min(50%, 4% + 3% x effective PER)` (7% at PER 1, 34% at PER 10). Success sets `c.suspicious`, logs "Something's off about <name>", shows SUSPICIOUS + Confront/Interrogate. No false positives: only turned companions can become suspicious.
+- **Sabotage:** while the Alpha is active, every 5 min each turned companion has 25% to sabotage. Guard: 50/50 steal 10% scrap (min 1) or -5..10 integrity (always integrity if no scrap). Traveler: `c.hesitating` -> in the next fight they neither assist nor take hits ("hangs back"). After the 3rd sabotage they defect (leave with gear, leak +1). Every event names them.
+- **Confront (suspect):** 70% hostile fight, 30% flee (gear kept by them, leak +1). **Dismiss (suspect):** same as flee. Dismissing an undetected traitor is a normal dismiss (no tell).
+- **Traitor fight:** companion leaves the roster at once; enemy level `clamp(compLevel + esc, 1, 10)`, HP = their max HP, distance 3, speed 2. Win: their gear back, XP `level x 15`, `traitorsDefeated++` (not a zombie kill: no kill count, loot or fragments). Flee or death: they escape with gear, leak +1.
+- **Interrogate (suspect):** success `min(70%, 25% + 5% x compLevel)` -> **double agent** (`c.doubleAgent`, flags cleared, `doubleAgentsTurned++`); failure -> traitor fight (no flee outcome). Only one double agent at a time.
+- **Double agent:** while guarding, Alpha attacks are -1 level (`DOUBLE_AGENT_LEVEL_REDUCTION`, min 1). Every 5 min: +1 `s.alpha.intel` (spent in Phase 3), then 10% flip-back: leaves with gear, leak +2. **Release** (dismiss) is safe: gear back, no leak.
+- **Leaks:** `s.alpha.leak` (cap 5) adds to the next Alpha-directed attack's level, then resets to 0.
+- **Load validation:** no Alpha -> all spy flags cleared; at most one double agent; turned beats double agent; sabotage clamped 0..2; counters non-negative ints.
+- Tests: `tests/alpha2_test.js` (60 checks).
+

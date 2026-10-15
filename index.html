@@ -274,6 +274,14 @@
   .audio-row input[type=range] { width: 100%; accent-color: var(--toxic); }
   .audio-row input[type=checkbox] { justify-self: start; accent-color: var(--toxic); width: 16px; height: 16px; }
   .audio-val { color: var(--amber); text-align: right; font-size: 11px; }
+  .roster-card.suspect { border-color: var(--blood); }
+  .roster-card.agent { border-color: var(--purple); }
+  .spy-tag { font-size: 9.5px; letter-spacing: 1px; padding: 1px 5px; border-radius: 2px; border: 1px solid; vertical-align: middle; }
+  .spy-tag.suspect { color: var(--blood); border-color: var(--blood); }
+  .spy-tag.agent { color: var(--purple); border-color: var(--purple); }
+  .spy-note { font-size: 10.5px; margin: 0 0 6px; line-height: 1.5; }
+  .spy-note.suspect { color: var(--blood); }
+  .spy-note.agent { color: var(--purple); }
 </style>
 </head>
 <body>
@@ -748,6 +756,20 @@
   const ALPHA_ATTACK_CHANCE_MULT = 1.25;
   const ALPHA_LEVEL_BONUS = [0, 1, 1, 2];          // indexed by escalation 1..3
   const ALPHA_SCRAP_MULT = 1.5;
+  // Alpha Phase 2: turned recruits and double agents. All timers count play time only (tickAlpha dt).
+  const TURNED_CHANCE = [0, 0.10, 0.15, 0.20];          // indexed by escalation 1..3; only recruits made after emergence
+  const TRAITOR_DETECT_MS = 180000;                     // one detection roll per hidden traitor per 3 min of play
+  const TRAITOR_DETECT_BASE = 0.04;                     // + 3% per effective PER: 7% at PER 1, 34% at PER 10
+  const TRAITOR_DETECT_PER_PER = 0.03;
+  const TRAITOR_SABOTAGE_MS = 300000;                   // sabotage roll per turned companion per 5 min (Alpha active only)
+  const TRAITOR_SABOTAGE_CHANCE = 0.25;
+  const TRAITOR_DEFECT_AFTER = 3;                       // the third sabotage is followed by defection
+  const CONFRONT_HOSTILE_CHANCE = 0.70;                 // otherwise they flee with gear and leak intel
+  const INTERROGATE_BASE = 0.25, INTERROGATE_PER_LEVEL = 0.05, INTERROGATE_CAP = 0.70;
+  const DOUBLE_AGENT_MS = 300000;                       // intel gain and flip-back roll every 5 min of play
+  const DOUBLE_AGENT_FLIP_CHANCE = 0.10;
+  const DOUBLE_AGENT_LEVEL_REDUCTION = 1;               // Alpha attacks are one level weaker while a double agent guards
+  const ALPHA_LEAK_CAP = 5;
   const ALPHA_ADJECTIVES = ["Hollow", "Ashen", "Silent", "Pale", "Iron", "Grinning", "Rotted", "Hungry", "Veiled", "Crooked", "Sallow", "Gutted"];
   const ALPHA_TITLES = ["Warden", "Shepherd", "Marshal", "Deacon", "Foreman", "Choirmaster", "Quartermaster", "Surveyor", "Ferryman", "Matron", "Bishop", "Herald"];
   const ALPHA_FLAVOR = [
@@ -870,7 +892,8 @@
     peak_condition: { end: 1 }, battle_hardened: { str: 1 },
     quest_runner: { lck: 1 }, trusted_trader: { per: 1 },
     living_legend: { str: 1, agi: 1, end: 1, per: 1, lck: 1 },
-    patient_zero: { str: 1, agi: 1, end: 1, per: 1, lck: 1 }
+    patient_zero: { str: 1, agi: 1, end: 1, per: 1, lck: 1 },
+    trust_no_one: { per: 1 }, turncoat: { lck: 1 }
   };
 
   const ACHIEVEMENTS = [
@@ -900,7 +923,9 @@
     { id: "quest_runner", name: "Quest Runner", desc: "Complete 5 vendor quests.", bonus: "+1 LCK", check: s => s.totalVendorQuestsCompleted >= 5 },
     { id: "trusted_trader", name: "Trusted Trader", desc: "Reach maximum reputation with any single vendor.", bonus: "+1 PER", check: s => Object.values(s.vendorRep).some(v => v.rep >= VENDOR_REP_CAP) },
     { id: "living_legend", name: "Living Legend", desc: "Earn the top reputation title through post-cap experience.", bonus: "+1 all attributes", check: s => currentTitleTier().title === "Living Legend" },
-    { id: "patient_zero", name: "Patient Zero", desc: "Cure the pandemic.", bonus: "+1 all attributes", check: s => s.questStage === "cured" }
+    { id: "patient_zero", name: "Patient Zero", desc: "Cure the pandemic.", bonus: "+1 all attributes", check: s => s.questStage === "cured" },
+    { id: "trust_no_one", name: "Trust No One", desc: "Defeat a companion who turned on you.", bonus: "+1 PER", check: s => s.traitorsDefeated >= 1 },
+    { id: "turncoat", name: "Turncoat", desc: "Turn one of the Alpha's spies into a double agent.", bonus: "+1 LCK", check: s => s.doubleAgentsTurned >= 1 }
   ];
 
   // --- AUDIO (Web Audio API, fully procedural, no asset files) ---
@@ -1208,6 +1233,7 @@
       vendorRep: {},
       totalVendorQuestsCompleted: 0,
       autoHealCompanions: true,
+      traitorsDefeated: 0, doubleAgentsTurned: 0,
       lastCompanionHealTick: Date.now(),
       safehouseIntegrity: MAX_SAFEHOUSE_INTEGRITY,
       lastSafehouseRepairTick: Date.now(),
@@ -1493,7 +1519,16 @@
   function sanitizeAlpha(a) {
     if (!a || typeof a !== "object" || typeof a.name !== "string" || !a.name) return null;
     const q = Number(a.quietMs);
-    return { name: a.name.slice(0, 40), quietMs: Number.isFinite(q) ? Math.max(0, Math.min(ALPHA_QUIET_MS, q)) : 0 };
+    const int = (v, lo, hi) => { const n = Math.floor(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : lo; };
+    return {
+      name: a.name.slice(0, 40),
+      quietMs: Number.isFinite(q) ? Math.max(0, Math.min(ALPHA_QUIET_MS, q)) : 0,
+      intel: int(a.intel, 0, 9999),                       // earned by double agents; spent in Phase 3
+      leak: int(a.leak, 0, ALPHA_LEAK_CAP),               // pending +levels on the next Alpha attack
+      detectMs: int(a.detectMs, 0, TRAITOR_DETECT_MS - 1),
+      sabotageMs: int(a.sabotageMs, 0, TRAITOR_SABOTAGE_MS - 1),
+      agentMs: int(a.agentMs, 0, DOUBLE_AGENT_MS - 1)
+    };
   }
   function alphaNameForSeed(seed) {
     const rng = mulberry32(hash(7, 7, seed) ^ 0x0a1fa);
@@ -1501,6 +1536,165 @@
   }
   function alphaEscalation() { const n = claimedCount(); return 1 + (n >= 4 ? 1 : 0) + (n >= 8 ? 1 : 0); }
   function alphaActive() { return !!(s.alpha && s.alpha.quietMs <= 0); }
+
+  // --- ALPHA PHASE 2: TURNED RECRUITS & DOUBLE AGENTS ---
+  // Recruits made after emergence may secretly work for the Alpha (c.turned, hidden). Perception
+  // surfaces them (c.suspicious). Unconfronted traitors sabotage and eventually defect. A suspect can be
+  // confronted (fight or flee), interrogated (double agent or fight), or dismissed (flee outcome).
+  function doubleAgent() { return s.roster.find(c => c.doubleAgent) || null; }
+  function interrogateChance(c) { return Math.min(INTERROGATE_CAP, INTERROGATE_BASE + INTERROGATE_PER_LEVEL * (c.level || 1)); }
+  function traitorDetectChance() { return Math.min(0.5, TRAITOR_DETECT_BASE + TRAITOR_DETECT_PER_PER * computeDerived().effAttr.per); }
+
+  function maybeTurnRecruit(companion) {
+    if (!s.alpha) return;
+    if (Math.random() < TURNED_CHANCE[alphaEscalation()]) companion.turned = true;
+  }
+
+  function addAlphaLeak(n) {
+    if (!s.alpha) return;
+    s.alpha.leak = Math.min(ALPHA_LEAK_CAP, (s.alpha.leak || 0) + n);
+  }
+
+  // A turned (or flipped) companion walks out with their equipped gear; it is lost to you.
+  function traitorLeaves(c, leak, msg) {
+    clearPostForCompanion(c.id);
+    s.roster = s.roster.filter(x => x.id !== c.id);
+    addAlphaLeak(leak);
+    addLog(msg, "combat");
+    playSfx("zombie_alert");
+  }
+
+  function sabotage(c) {
+    c.sabotage = (c.sabotage || 0) + 1;
+    if (c.mode === "travel") {
+      c.hesitating = true;
+      addLog(`${c.name} has gone quiet on the road, eyes always on the treeline. They may not have your back in the next fight.`, "combat");
+    } else {
+      const scrap = getScrap();
+      if (scrap > 0 && Math.random() >= 0.5) {
+        const stolen = Math.min(scrap, Math.max(1, Math.round(scrap * 0.10)));
+        spendScrap(stolen);
+        addLog(`${stolen} Scrap Metal is missing from the Safehouse stores. ${c.name} had the key.`, "combat");
+      } else {
+        const dmg = 5 + Math.floor(Math.random() * 6);
+        s.safehouseIntegrity = Math.max(0, s.safehouseIntegrity - dmg);
+        addLog(`Sabotage at the Safehouse: a barricade brace was cut on ${c.name}'s watch. -${dmg} structural integrity.`, "combat");
+      }
+    }
+    if (c.sabotage >= TRAITOR_DEFECT_AFTER) {
+      traitorLeaves(c, 1, `${c.name} defects to ${s.alpha.name}, taking their gear and what they know about your compound. The next Alpha attack will be stronger.`);
+    }
+  }
+
+  function tickTraitors(dt) {
+    if (!s.alpha || s.dead || s.combat) return;
+    const a = s.alpha;
+    a.detectMs += dt;
+    while (a.detectMs >= TRAITOR_DETECT_MS) {
+      a.detectMs -= TRAITOR_DETECT_MS;
+      const chance = traitorDetectChance();
+      s.roster.filter(c => c.turned && !c.suspicious).forEach(c => {
+        if (Math.random() < chance) {
+          c.suspicious = true;
+          addLog(`Something's off about ${c.name}. Their stories don't line up &mdash; check the roster.`, "story");
+          playSfx("boss_alert");
+        }
+      });
+    }
+    if (alphaActive()) {
+      a.sabotageMs += dt;
+      while (a.sabotageMs >= TRAITOR_SABOTAGE_MS) {
+        a.sabotageMs -= TRAITOR_SABOTAGE_MS;
+        s.roster.filter(c => c.turned).forEach(c => { if (Math.random() < TRAITOR_SABOTAGE_CHANCE) sabotage(c); });
+      }
+    } else a.sabotageMs = 0;
+    if (doubleAgent()) {
+      a.agentMs += dt;
+      while (a.agentMs >= DOUBLE_AGENT_MS && doubleAgent()) {
+        a.agentMs -= DOUBLE_AGENT_MS;
+        const da = doubleAgent();
+        a.intel += 1;
+        addLog(`${da.name} slips you a report on ${a.name}. Alpha intel: ${a.intel}.`, "story");
+        if (Math.random() < DOUBLE_AGENT_FLIP_CHANCE) {
+          traitorLeaves(da, 2, `${da.name} was never really yours. They vanish with their gear and everything they learned here. ${a.name}'s next attack will be much stronger.`);
+        }
+      }
+    } else a.agentMs = 0;
+  }
+
+  function startTraitorCombat(c, line) {
+    combatSubTab = null;
+    const level = Math.max(1, Math.min(10, (c.level || 1) + alphaEscalation()));
+    clearPostForCompanion(c.id);
+    s.roster = s.roster.filter(x => x.id !== c.id);
+    s.combat = { level, hp: c.maxHp, maxHp: c.maxHp, distance: 3, speed: 2, startX: s.x, startY: s.y, log: [], isBoss: false, queue: [],
+      isTraitor: true, traitor: { id: c.id, name: c.name, equipment: Object.assign({ weapon: null, armor: null }, c.equipment) } };
+    combatLog(line);
+    playSfx("zombie_alert");
+  }
+
+  // The traitor got away (you fled or fell): their gear goes with them and the Alpha learns more.
+  function traitorEscapes() {
+    if (!s.combat || !s.combat.isTraitor) return;
+    addAlphaLeak(1);
+    addLog(`${s.combat.traitor.name} escapes to ${s.alpha ? s.alpha.name : "the Alpha"} with their gear and your secrets.`, "combat");
+  }
+
+  function winTraitorFight() {
+    const t = s.combat.traitor;
+    const xp = s.combat.level * 15;
+    const recovered = ["weapon", "armor"].map(k => t.equipment[k]).filter(Boolean);
+    recovered.forEach(n => { s.inventory[n] = (s.inventory[n] || 0) + 1; });
+    s.traitorsDefeated = (s.traitorsDefeated || 0) + 1;
+    s.combat = null;
+    gainXp(xp);
+    addLog(`${t.name} is down. The Alpha has one less pair of eyes in your camp${recovered.length ? `. Recovered: ${recovered.join(", ")}` : ""}. +${xp} XP.`, "combat");
+    checkAchievements();
+    render();
+  }
+
+  function applyHesitation() {
+    const t = activeCompanion();
+    if (s.combat && t && t.hesitating) {
+      t.hesitating = false;
+      s.combat.hesitantId = t.id;
+      combatLog(`${t.name} hangs back and won't commit to the fight.`);
+    }
+  }
+
+  function findSuspect(id) {
+    const c = s.roster.find(x => x.id === id);
+    return (c && c.suspicious && !s.combat && !s.dead) ? c : null;
+  }
+
+  function confrontCompanion(id) {
+    const c = findSuspect(id);
+    if (!c) return;
+    if (Math.random() < CONFRONT_HOSTILE_CHANCE) startTraitorCombat(c, `${c.name} drops the act and comes at you.`);
+    else traitorLeaves(c, 1, `${c.name} bolts before you finish the question, taking their gear &mdash; and your secrets &mdash; to ${s.alpha ? s.alpha.name : "the Alpha"}.`);
+    render();
+  }
+
+  function interrogateCompanion(id) {
+    const c = findSuspect(id);
+    if (!c || doubleAgent() || !s.alpha) return;
+    if (Math.random() < interrogateChance(c)) {
+      c.turned = false; c.suspicious = false; c.sabotage = 0; c.hesitating = false; c.doubleAgent = true;
+      s.doubleAgentsTurned = (s.doubleAgentsTurned || 0) + 1;
+      s.alpha.agentMs = 0;
+      addLog(`${c.name} breaks. They'll keep reporting to ${s.alpha.name} &mdash; but now they report what you want. Double agent recruited.`, "story");
+      playSfx("achievement");
+      checkAchievements();
+    } else {
+      startTraitorCombat(c, `${c.name} won't talk. The interrogation turns violent.`);
+    }
+    render();
+  }
+
+  function dismissSuspect(c) {
+    traitorLeaves(c, 1, `You send ${c.name} away. They take their gear &mdash; and everything they saw here &mdash; to ${s.alpha ? s.alpha.name : "the Alpha"}.`);
+    render();
+  }
 
   function tickAlpha(now) {
     const dt = Math.max(0, Math.min(5000, now - (s.lastAlphaTick || now)));  // play time only; big gaps (load, sleep) don't count
@@ -1513,10 +1707,11 @@
       s.alpha.quietMs = Math.max(0, s.alpha.quietMs - dt);
       if (s.alpha.quietMs === 0) addLog(`The silence breaks. ${s.alpha.name}'s packs are moving on your compound.`, "combat");
     }
+    tickTraitors(dt);
   }
 
   function emergeAlpha() {
-    s.alpha = { name: alphaNameForSeed(s.seed), quietMs: ALPHA_QUIET_MS };
+    s.alpha = sanitizeAlpha({ name: alphaNameForSeed(s.seed), quietMs: ALPHA_QUIET_MS });
     addLog(`ALPHA EMERGENCE: something out there is thinking. They call it ${s.alpha.name.toUpperCase()}.`, "combat");
     document.getElementById("alphaName").textContent = s.alpha.name.toUpperCase();
     document.getElementById("alphaOverlay").classList.remove("hidden");
@@ -1543,7 +1738,19 @@
     let level = range[0] + Math.floor(Math.random() * (range[1] - range[0] + 1));
     const baseCount = SEVERITY_SAFEHOUSE_COUNT[s.settings.severity] || 2;
     const count = Math.max(1, baseCount + (Math.random() < 0.3 ? 1 : 0) - (Math.random() < 0.2 ? 1 : 0));
-    if (alpha) level += ALPHA_LEVEL_BONUS[alphaEscalation()];
+    if (alpha) {
+      level += ALPHA_LEVEL_BONUS[alphaEscalation()];
+      if (s.alpha.leak > 0) {
+        level += s.alpha.leak;
+        addLog(`Leaked intel guides ${s.alpha.name}'s pack straight to your weak points (+${s.alpha.leak} level${s.alpha.leak > 1 ? "s" : ""}).`, "combat");
+        s.alpha.leak = 0;
+      }
+      const da = doubleAgent();
+      if (da && da.mode === "guard") {
+        level = Math.max(1, level - DOUBLE_AGENT_LEVEL_REDUCTION);
+        addLog(`${da.name}'s false reports send part of the pack the wrong way (-${DOUBLE_AGENT_LEVEL_REDUCTION} level).`, "build");
+      }
+    }
     return { level, count, alpha };
   }
 
@@ -1559,6 +1766,7 @@
     const first = spawnZombie(level);
     s.combat = Object.assign({ queue, startX: s.x, startY: s.y, log: [], isBoss: false, isSafehouseDefense: true }, first);
     s.combat.isAlpha = !!alpha;
+    applyHesitation();
     if (alpha) combatLog(`SAFEHOUSE UNDER ATTACK! ${s.alpha.name}'s pack (level ${level}, ${count}) ${alphaFlavor()}.`);
     else combatLog(`SAFEHOUSE UNDER ATTACK! A level ${level} horde (${count}) breaches the barricade.`);
     playSfx("safehouse_alarm");
@@ -1793,8 +2001,10 @@
       id: s.pendingNpc.portraitSeed, name: s.pendingNpc.name, portraitSeed: s.pendingNpc.portraitSeed,
       hp: s.pendingNpc.maxHp, maxHp: s.pendingNpc.maxHp, mode: noTraveler ? "travel" : "guard",
       level: 1, xp: 0,
-      equipment: { weapon: s.pendingNpc.startingWeapon, armor: null }
+      equipment: { weapon: s.pendingNpc.startingWeapon, armor: null },
+      turned: false, suspicious: false, sabotage: 0, doubleAgent: false
     };
+    maybeTurnRecruit(companion);
     s.roster.push(companion);
     s.companionEverRecruited = true;
     addLog(`${companion.name} joins you${gift ? `, grateful for the ${gift.toLowerCase()}` : ""}${companion.mode === "guard" ? " and heads to the Safehouse to guard" : ""}.`, "story");
@@ -1816,6 +2026,7 @@
   function dismissCompanionById(id) {
     const comp = s.roster.find(c => c.id === id);
     if (!comp) return;
+    if (comp.suspicious) { dismissSuspect(comp); return; }
     const returned = [];
     if (comp.equipment.weapon) { s.inventory[comp.equipment.weapon] = (s.inventory[comp.equipment.weapon] || 0) + 1; returned.push(comp.equipment.weapon); }
     if (comp.equipment.armor) { s.inventory[comp.equipment.armor] = (s.inventory[comp.equipment.armor] || 0) + 1; returned.push(comp.equipment.armor); }
@@ -1911,6 +2122,7 @@
     if (hordeSize > 1) combatLog(`AMBUSH! A horde of ${hordeSize} shamblers pours out of the ${currentSector().name.toLowerCase()}.`);
     else combatLog(`Contact! A level ${danger} shambler emerges from the ${currentSector().name.toLowerCase()}.`);
     playSfx("zombie_alert");
+    applyHesitation();
   }
 
   function startBossCombat() {
@@ -1918,6 +2130,7 @@
     s.combat = { level: "BOSS", hp: 320, maxHp: 320, distance: 10, speed: 6, startX: s.x, startY: s.y, log: [], isBoss: true, queue: [] };
     combatLog("PATIENT ZERO. The origin strain, still standing after everything. This ends here.");
     playSfx("boss_alert");
+    applyHesitation();
   }
 
   function combatLog(text) {
@@ -1940,7 +2153,7 @@
     if (s.combat.distance <= 0) {
       const rawDmg = Math.round(zLvl * 8 * (0.8 + Math.random() * 0.4) * derived.sev.dmg);
       let dmgTaken = Math.max(1, rawDmg - derived.defenseTotal);
-      if (companion && computeCompanionAttack(companion).hasWeapon && Math.random() < 0.25) {
+      if (companion && s.combat.hesitantId !== companion.id && computeCompanionAttack(companion).hasWeapon && Math.random() < 0.25) {
         const compDef = computeCompanionDefense(companion);
         const compDmgTaken = Math.max(1, rawDmg - compDef);
         companion.hp = Math.max(0, companion.hp - compDmgTaken);
@@ -1949,12 +2162,12 @@
         if (companion.hp <= 0) { addLog(`${companion.name} has fallen protecting you.`, "combat"); s.roster = s.roster.filter(c => c.id !== companion.id); }
       } else {
         s.hp = Math.max(0, s.hp - dmgTaken);
-        combatLog(`The zombie claws you for ${dmgTaken} damage!`);
-        if (s.hp <= 0) { s.dead = true; s.deathCount += 1; s.combat = null; addLog("Your vision fades to static...", "combat"); playSfx("player_death"); }
+        combatLog(s.combat.isTraitor ? `${s.combat.traitor.name} hits you for ${dmgTaken} damage!` : `The zombie claws you for ${dmgTaken} damage!`);
+        if (s.hp <= 0) { traitorEscapes(); s.dead = true; s.deathCount += 1; s.combat = null; addLog("Your vision fades to static...", "combat"); playSfx("player_death"); }
         else playSfx("player_hurt");
       }
     } else {
-      combatLog(`The shambler closes in. Distance: ${s.combat.distance}.`);
+      combatLog(s.combat.isTraitor ? `${s.combat.traitor.name} closes in. Distance: ${s.combat.distance}.` : `The shambler closes in. Distance: ${s.combat.distance}.`);
     }
   }
 
@@ -2073,12 +2286,12 @@
       else if (wstats.kind === "melee") playSfx("melee_hit");
       if (shakeEl) { shakeEl.classList.remove("shake"); void shakeEl.offsetWidth; shakeEl.classList.add("shake"); }
     } else {
-      combatLog(`Miss! The shambler shrugs off a wild swing.`);
+      combatLog(s.combat.isTraitor ? `Miss! ${s.combat.traitor.name} sidesteps.` : `Miss! The shambler shrugs off a wild swing.`);
       if (wstats.kind === "melee") playSfx("melee_swing");
     }
 
     const companion = activeCompanion();
-    if (companion && s.combat.hp > 0) {
+    if (companion && s.combat.hp > 0 && s.combat.hesitantId !== companion.id) {
       const atk = computeCompanionAttack(companion);
       const compRoll = Math.random() * 100;
       if (compRoll <= 60) {
@@ -2099,6 +2312,7 @@
 
     if (s.combat.hp <= 0) {
       playSfx("zombie_death");
+      if (s.combat.isTraitor) { winTraitorFight(); return; }
       if (s.combat.isBoss) {
         s.questStage = "cured";
         addLog("Patient Zero has fallen. The source strain is contained.", "story");
@@ -2160,6 +2374,7 @@
     if (roll <= chance) {
       addLog("Broke contact and retreated to safer ground.", "system");
       playSfx("flee");
+      traitorEscapes();
       s.x = s.combat.startX; s.y = s.combat.startY; s.combat = null;
       s.fleeSuccesses += 1;
       checkAchievements();
@@ -2172,7 +2387,7 @@
       const dmgTaken = Math.max(1, rawDmg - derived.defenseTotal);
       s.hp = Math.max(0, s.hp - dmgTaken);
       combatLog(`Caught mid-retreat &mdash; takes ${dmgTaken} damage!`);
-      if (s.hp <= 0) { s.dead = true; s.deathCount += 1; s.combat = null; addLog("Your vision fades to static...", "combat"); playSfx("player_death"); }
+      if (s.hp <= 0) { traitorEscapes(); s.dead = true; s.deathCount += 1; s.combat = null; addLog("Your vision fades to static...", "combat"); playSfx("player_death"); }
       else playSfx("player_hurt");
     }
     render();
@@ -2582,6 +2797,7 @@
       autoHealCompanions: s.autoHealCompanions,
       safehouseIntegrity: s.safehouseIntegrity,
       alpha: s.alpha,
+      traitorsDefeated: s.traitorsDefeated, doubleAgentsTurned: s.doubleAgentsTurned,
       craftQueue: s.craftQueue, buildQueue: s.buildQueue,
       kills: s.kills, turns: s.turns, deathCount: s.deathCount,
       roster: s.roster, companionEverRecruited: s.companionEverRecruited,
@@ -2598,6 +2814,13 @@
     if (!c.mode) c.mode = "travel";
     if (c.level === undefined) c.level = 1;
     if (c.xp === undefined) c.xp = 0;
+    // Alpha Phase 2 flags (absent in older saves). A double agent is never also turned.
+    c.turned = c.turned === true;
+    c.suspicious = c.turned && c.suspicious === true;
+    c.hesitating = c.turned && c.hesitating === true;
+    c.doubleAgent = !c.turned && c.doubleAgent === true;
+    const sab = Math.floor(Number(c.sabotage));
+    c.sabotage = c.turned && Number.isFinite(sab) ? Math.max(0, Math.min(TRAITOR_DEFECT_AFTER - 1, sab)) : 0;
     return c;
   }
 
@@ -2725,6 +2948,15 @@
     fresh.lastApRegen = Date.now(); fresh.lastGardenTick = Date.now(); fresh.lastSafehouseCheck = Date.now(); fresh.lastClaimTick = Date.now(); fresh.lastCompanionHealTick = Date.now(); fresh.lastSafehouseRepairTick = Date.now();
     fresh.claimedBlocks = data.claimedBlocks || {};
     fresh.alpha = sanitizeAlpha(data.alpha);
+    // Phase 2 consistency: no Alpha means no spies; at most one double agent.
+    let agentSeen = false;
+    fresh.roster.forEach(c => {
+      if (!fresh.alpha) { c.turned = false; c.suspicious = false; c.hesitating = false; c.sabotage = 0; c.doubleAgent = false; }
+      if (c.doubleAgent) { if (agentSeen) c.doubleAgent = false; else agentSeen = true; }
+    });
+    const nonNegInt = (v) => { const n = Math.floor(Number(v)); return Number.isFinite(n) && n > 0 ? n : 0; };
+    fresh.traitorsDefeated = nonNegInt(data.traitorsDefeated);
+    fresh.doubleAgentsTurned = nonNegInt(data.doubleAgentsTurned);
     fresh.lastAlphaTick = Date.now();
     fresh.log = [];
     s = fresh;
@@ -3103,8 +3335,8 @@
     const card = document.getElementById("combatCard");
     card.classList.toggle("boss", !!s.combat.isBoss);
     card.classList.toggle("safehouse-defense", !!s.combat.isSafehouseDefense);
-    document.getElementById("combatTitle").textContent = s.combat.isBoss ? "PATIENT ZERO" : (s.combat.isSafehouseDefense ? "SAFEHOUSE UNDER ATTACK" : "HOSTILE CONTACT");
-    document.getElementById("crosshairLabel").textContent = s.combat.isBoss ? "0" : "Z";
+    document.getElementById("combatTitle").textContent = s.combat.isTraitor ? `TRAITOR: ${s.combat.traitor.name.toUpperCase()}` : (s.combat.isBoss ? "PATIENT ZERO" : (s.combat.isSafehouseDefense ? "SAFEHOUSE UNDER ATTACK" : "HOSTILE CONTACT"));
+    document.getElementById("crosshairLabel").textContent = s.combat.isTraitor ? "T" : (s.combat.isBoss ? "0" : "Z");
     const pct = currentAttackPercent();
     document.getElementById("combatSub").textContent = `Sector [${s.x},${s.y}] \u2014 ${currentSector().name}`;
     document.getElementById("queueLine").textContent = s.combat.queue && s.combat.queue.length > 0 ? `${s.combat.queue.length} more in the horde` : "";
@@ -3339,7 +3571,9 @@
       alphaCard.style.borderColor = "var(--blood)";
       const quiet = s.alpha.quietMs > 0 ? ` &middot; quiet for ~${Math.ceil(s.alpha.quietMs / 60000)}m` : "";
       alphaCard.innerHTML = `<div class="title" style="color:var(--blood);">ALPHA ACTIVE: ${s.alpha.name} &middot; Escalation ${alphaEscalation()}${quiet}</div>
-        <div class="desc">Its packs raid the compound (level +${ALPHA_LEVEL_BONUS[alphaEscalation()]}, more often, 1.5&times; salvage when repelled). Escalation rises at 4 and 8 claimed blocks.</div>`;
+        <div class="desc">Its packs raid the compound (level +${ALPHA_LEVEL_BONUS[alphaEscalation()]}, more often, 1.5&times; salvage when repelled). Escalation rises at 4 and 8 claimed blocks.</div>
+        <div class="req-list">Survivors recruited from now on may be its spies (${Math.round(TURNED_CHANCE[alphaEscalation()] * 100)}% at this escalation). Perception helps you spot them.</div>
+        <div class="req-list">Alpha intel: ${s.alpha.intel || 0}${doubleAgent() ? ` &middot; double agent: ${doubleAgent().name}${doubleAgent().mode === "guard" ? " (attacks -1 level)" : " (traveling &mdash; no defense effect)"}` : ""}${s.alpha.leak > 0 ? ` &middot; <span style="color:var(--blood);">leaked intel: next attack +${s.alpha.leak} level${s.alpha.leak > 1 ? "s" : ""}</span>` : ""}</div>`;
       list.appendChild(alphaCard);
     }
     const defenseCard = document.createElement("div");
@@ -3683,22 +3917,38 @@
         ? `<select data-give-armor-select="${c.id}">${armorOpts.map(n => `<option value="${n}">${n}</option>`).join("")}</select><button class="mini-btn" data-give-armor="${c.id}">give</button>`
         : `<span class="empty-note">no spare armor</span>`;
 
-      return `<div class="roster-card ${isTraveler ? "active-traveler" : ""}">
+      // Phase 2: only what the player has learned is shown. A hidden traitor looks like anyone else.
+      let spyHtml = "";
+      if (c.suspicious) {
+        const otherAgent = doubleAgent();
+        const pct = Math.round(interrogateChance(c) * 100);
+        spyHtml = `<div class="spy-note suspect">SUSPICIOUS &mdash; their stories don't add up. Left alone, they will sabotage and eventually defect.</div>
+          <div class="row-btns" style="margin-bottom:6px;">
+            <button class="mini-btn danger2" data-confront="${c.id}" ${s.combat ? "disabled" : ""}>confront (70% fight / 30% they flee)</button>
+            <button class="mini-btn" data-interrogate="${c.id}" ${(s.combat || otherAgent) ? "disabled" : ""}>interrogate (${pct}% double agent, else fight)</button>
+          </div>${otherAgent ? `<div class="req-list">Only one double agent at a time (${otherAgent.name}).</div>` : ""}`;
+      } else if (c.doubleAgent) {
+        spyHtml = `<div class="spy-note agent">DOUBLE AGENT &mdash; feeding ${s.alpha ? s.alpha.name : "the Alpha"} false reports. ${isTraveler ? "Traveling with you, so no defense effect &mdash; leave them guarding the Safehouse to weaken Alpha attacks by 1 level." : "Guarding: Alpha attacks on the Safehouse are 1 level weaker."} Earns 1 intel per 5 min. 10% chance per 5 min they flip back.</div>`;
+      }
+      const dismissLabel = c.suspicious ? "dismiss (they keep gear and talk)" : (c.doubleAgent ? "release (safe, returns gear)" : "dismiss");
+
+      return `<div class="roster-card ${isTraveler ? "active-traveler" : ""}${c.suspicious ? " suspect" : ""}${c.doubleAgent ? " agent" : ""}">
         <div class="rhead">
           <div class="portrait-frame">${renderPortraitSVGSmall(c.portraitSeed)}</div>
           <div>
-            <div class="rname">${c.name}${isTraveler ? " (traveling with you)" : ""}</div>
+            <div class="rname">${c.name}${isTraveler ? " (traveling with you)" : ""}${c.suspicious ? ' <span class="spy-tag suspect">SUSPICIOUS</span>' : ""}${c.doubleAgent ? ' <span class="spy-tag agent">DOUBLE AGENT</span>' : ""}</div>
             <div class="rstatus">HP ${c.hp}/${c.maxHp} &middot; Level ${c.level || 1}/${COMPANION_LEVEL_CAP}${(c.level || 1) < COMPANION_LEVEL_CAP ? ` (${c.xp || 0}/${COMPANION_XP_PER_LEVEL} XP)` : " (MAX)"} &middot; ${isTraveler ? "active traveler" : "guarding Safehouse"}</div>
           </div>
           <button class="mini-btn" data-heal-companion="${c.id}" ${c.hp >= c.maxHp ? "disabled" : ""}>heal</button>
         </div>
+        ${spyHtml}
         <div class="req-list">Weapon: ${c.equipment.weapon || "none"} (${atk.damage} DMG)${c.equipment.weapon ? ` <button class="mini-btn danger2" data-take-weapon="${c.id}">take back</button>` : ""}</div>
         <div class="gearline">${weaponSelect}</div>
         <div class="req-list">Armor: ${c.equipment.armor || "none"} (${compDef} DEF)${c.equipment.armor ? ` <button class="mini-btn danger2" data-take-armor="${c.id}">take back</button>` : ""}</div>
         <div class="gearline">${armorSelect}</div>
         <div class="row-btns" style="margin-top:6px;">
           <button class="mini-btn" data-set-mode="${c.id}" data-mode="${isTraveler ? "guard" : "travel"}">${isTraveler ? "leave to guard Safehouse" : "bring on the road"}</button>
-          <button class="mini-btn danger2" data-dismiss="${c.id}">dismiss</button>
+          <button class="mini-btn danger2" data-dismiss="${c.id}">${dismissLabel}</button>
         </div>
       </div>`;
     }).join("");
@@ -3706,6 +3956,8 @@
     wrap.querySelectorAll("[data-heal-companion]").forEach(b => b.addEventListener("click", () => healRosterCompanionWithBestItem(Number(b.getAttribute("data-heal-companion")))));
     wrap.querySelectorAll("[data-set-mode]").forEach(b => b.addEventListener("click", () => setCompanionMode(Number(b.getAttribute("data-set-mode")), b.getAttribute("data-mode"))));
     wrap.querySelectorAll("[data-dismiss]").forEach(b => b.addEventListener("click", () => dismissCompanionById(Number(b.getAttribute("data-dismiss")))));
+    wrap.querySelectorAll("[data-confront]").forEach(b => b.addEventListener("click", () => confrontCompanion(Number(b.getAttribute("data-confront")))));
+    wrap.querySelectorAll("[data-interrogate]").forEach(b => b.addEventListener("click", () => interrogateCompanion(Number(b.getAttribute("data-interrogate")))));
     wrap.querySelectorAll("[data-take-weapon]").forEach(b => b.addEventListener("click", () => takeGearFromCompanionId(Number(b.getAttribute("data-take-weapon")), "weapon")));
     wrap.querySelectorAll("[data-take-armor]").forEach(b => b.addEventListener("click", () => takeGearFromCompanionId(Number(b.getAttribute("data-take-armor")), "armor")));
     wrap.querySelectorAll("[data-give-weapon]").forEach(b => {
