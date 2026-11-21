@@ -255,6 +255,14 @@
   .creation-col label { font-size: 10px; color: var(--text-dim); letter-spacing: 1px; display: block; margin-bottom: 5px; }
   .reroll-btn { font-family: var(--font); font-size: 10px; background: var(--panel-raised); border: 1px solid var(--line); color: var(--text-dim); padding: 5px 8px; border-radius: 3px; cursor: pointer; margin-top: 6px; width: 100%; }
   .reroll-btn:hover { color: var(--toxic); border-color: var(--toxic-dim); }
+  .player-portrait { display: block; width: 96px; height: 128px; background: #0c110b center / cover no-repeat; }
+  .portrait-frame.has-photo { filter: none; }
+  .portrait-btns { display: flex; gap: 4px; }
+  .portrait-btns .reroll-btn { flex: 1; }
+  .hud-portrait { display: inline-block; width: 24px; height: 32px; border: 1px solid var(--line); border-radius: 2px; background: #0c110b center / cover no-repeat; align-self: center; }
+  .death-portrait { width: 72px; height: 96px; margin: 0 auto 12px; border: 1px solid var(--blood-dim); background: #0c110b center / cover no-repeat; filter: grayscale(70%) contrast(1.1); }
+  .hud-portrait.hidden, .death-portrait.hidden, .reroll-btn.hidden { display: none; }
+  .portrait-note { font-size: 10px; color: var(--blood); margin-top: 4px; min-height: 0; }
   .attr-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 12px; }
   .attr-row .aname { width: 78px; color: var(--text-dim); }
   .attr-row .aval { width: 20px; text-align: center; color: var(--amber); }
@@ -303,12 +311,14 @@
     <button id="btnSave">SAVE GAME (.json)</button>
     <label for="loadFileInput">LOAD GAME (.json)</label>
     <input type="file" id="loadFileInput" accept="application/json" />
+    <input type="file" id="portraitInput" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden" />
     <button id="btnNewChar">NEW CHARACTER</button>
     <button id="btnMute" title="Toggle sound (M)">SOUND: ON</button>
   </div>
 
   <div class="panel">
     <div class="hud-top">
+      <i class="hud-portrait hidden" id="hudPortrait" role="img" aria-label="Your portrait"></i>
       <div class="chip lvl">LV <span id="lvlNum"></span></div>
       <div class="chip cash">$ <span id="cashNum"></span></div>
       <div class="chip scrap">SCRAP <span id="scrapNum"></span></div>
@@ -459,6 +469,7 @@
 
 <div class="overlay hidden" id="deathOverlay">
   <div class="death-card">
+    <div class="death-portrait hidden" id="dPortrait" role="img" aria-label="Your portrait"></div>
     <h2>YOU DIED</h2>
     <p>Sectors scouted: <span id="dSectors"></span></p>
     <p>Zombies put down: <span id="dKills"></span></p>
@@ -537,6 +548,11 @@
       <div>
         <div class="portrait-frame" id="portraitPreview"></div>
         <button class="reroll-btn" id="btnReroll">REROLL LOOK</button>
+        <div class="portrait-btns">
+          <button class="reroll-btn" id="btnDraftPortrait" title="Use your own picture (cropped to 3:4)">ADD PORTRAIT</button>
+          <button class="reroll-btn hidden" id="btnDraftPortraitRemove" title="Go back to the drawn face">REMOVE</button>
+        </div>
+        <div class="portrait-note" id="draftPortraitNote"></div>
       </div>
       <div class="creation-col">
         <label>SURVIVOR NAME</label>
@@ -1344,6 +1360,84 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     const cls = ITEM_ART_CLASS[name];
     return cls ? `<i class="item-art ${cls}" role="img" aria-label="${name}" data-art="${name}"></i>` : "";
   }
+  // --- PLAYER PORTRAIT (player's own picture, kept in the save) ---
+  // Any image the player picks is centre-cropped to 3:4 and redrawn at 300x400 in the browser, so a save
+  // carries a small WebP/JPEG (~40 KB), never the original file. Shown through one generated stylesheet
+  // (like item art) so the 1s re-render never re-parses image data.
+  const PORTRAIT_W = 300, PORTRAIT_H = 400;
+  const PORTRAIT_MAX_CHARS = 200000;            // ~150 KB of image data; a 300x400 picture is far smaller
+  const PORTRAIT_MAX_FILE = 15 * 1024 * 1024;   // refuse huge source files before decoding them
+  const PORTRAIT_RE = /^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+/=]+$/;
+  function sanitizePortrait(v) {
+    return (typeof v === "string" && v.length <= PORTRAIT_MAX_CHARS && PORTRAIT_RE.test(v)) ? v : null;
+  }
+  let portraitStyleKey = "";
+  function syncPortraitStyle() {
+    const cur = (gameStarted && s && s.portrait) || "";
+    const dr = (draft && draft.portrait) || "";
+    const key = cur.length + ":" + cur.slice(-24) + "|" + dr.length + ":" + dr.slice(-24);
+    if (key === portraitStyleKey) return;
+    portraitStyleKey = key;
+    let el = document.getElementById("zp-player-portrait");
+    if (!el) { el = document.createElement("style"); el.id = "zp-player-portrait"; document.head.appendChild(el); }
+    el.textContent = (cur ? `.pp-cur{background-image:url("${cur}")}\n` : "") + (dr ? `.pp-draft{background-image:url("${dr}")}` : "");
+  }
+  function playerPortraitHtml() {
+    return s.portrait
+      ? `<i class="player-portrait pp-cur" role="img" aria-label="Your portrait" data-portrait="player"></i>`
+      : renderPortraitSVG(s.portraitSeed);
+  }
+  // Decode, centre-crop to 3:4 and re-encode at 300x400. Calls done(dataUrl) or fail(reason).
+  function processPortraitFile(file, done, fail) {
+    if (!file) return fail("No file chosen.");
+    if (!/^image\/(png|jpeg|webp|gif)$/.test(file.type || "")) return fail("That file isn't a PNG, JPEG, WebP or GIF image.");
+    if (file.size > PORTRAIT_MAX_FILE) return fail("That image is over 15 MB. Pick a smaller one.");
+    const reader = new FileReader();
+    reader.onerror = () => fail("Couldn't read that file.");
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => fail("Couldn't open that image.");
+      img.onload = () => {
+        try {
+          const w = img.naturalWidth, h = img.naturalHeight;
+          if (w < 60 || h < 80) return fail("That image is too small (needs at least 60x80).");
+          const scale = Math.max(PORTRAIT_W / w, PORTRAIT_H / h);
+          const sw = PORTRAIT_W / scale, sh = PORTRAIT_H / scale;
+          const sx = (w - sw) / 2, sy = (h - sh) * 0.3;          // keep a little more of the top: heads live there
+          const c = document.createElement("canvas"); c.width = PORTRAIT_W; c.height = PORTRAIT_H;
+          const ctx = c.getContext("2d");
+          if (!ctx) return fail("This browser can't resize images.");
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(img, sx, sy, sw, sh, 0, 0, PORTRAIT_W, PORTRAIT_H);
+          let url = c.toDataURL("image/webp", 0.8);
+          if (!/^data:image\/webp/.test(url)) url = c.toDataURL("image/jpeg", 0.85);  // browsers without WebP encoding
+          const clean = sanitizePortrait(url);
+          clean ? done(clean) : fail("That image couldn't be converted.");
+        } catch (e) { fail("Couldn't process that image."); }
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
+  let portraitTarget = "player";                // which portrait the shared file input fills: "player" or "draft"
+  function setPlayerPortrait(url) {
+    const clean = url === null ? null : sanitizePortrait(url);
+    if (url !== null && !clean) return false;
+    s.portrait = clean;
+    addLog(clean ? "Portrait updated." : "Portrait removed. Back to your drawn face.", "system");
+    render();
+    return true;
+  }
+  function setDraftPortrait(url) {
+    const clean = url === null ? null : sanitizePortrait(url);
+    if (url !== null && !clean) return false;
+    draft.portrait = clean;
+    document.getElementById("draftPortraitNote").textContent = "";
+    renderCreation();
+    return true;
+  }
+  function pickPortrait(target) { portraitTarget = target; const inp = document.getElementById("portraitInput"); inp.value = ""; inp.click(); }
+
   function withItemArt(name, innerHtml) {
     const art = itemArt(name);
     return art ? `<div class="art-row">${art}<div class="art-body">${innerHtml}</div></div>` : innerHtml;
@@ -1434,6 +1528,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     return {
       name: "Survivor",
       portraitSeed: Math.floor(Math.random() * 4294967295),
+      portrait: null,
       seed: Math.floor(Math.random() * 4294967295),
       locationTheme: null,
       settings: { severity: "Medium", infection: "Normal", armedPct: "Medium", audio: Object.assign({}, AUDIO_DEFAULTS) },
@@ -3020,7 +3115,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     return {
       version: 6,
       savedAt: Date.now(),
-      name: s.name, portraitSeed: s.portraitSeed, seed: s.seed, locationTheme: s.locationTheme, settings: Object.assign({}, s.settings, { audio: getAudioPrefs() }),
+      name: s.name, portraitSeed: s.portraitSeed, portrait: s.portrait || null, seed: s.seed, locationTheme: s.locationTheme, settings: Object.assign({}, s.settings, { audio: getAudioPrefs() }),
       attributes: s.attributes, unspentPoints: s.unspentPoints,
       hp: s.hp, baseMaxHp: s.baseMaxHp, stamina: s.stamina, maxStaminaBase: s.maxStaminaBase,
       xp: s.xp, level: s.level, xpToNext: s.xpToNext,
@@ -3140,6 +3235,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
   function applySaveData(data) {
     const fresh = newGame();
     Object.assign(fresh, data);
+    fresh.portrait = sanitizePortrait(data.portrait);   // older saves have none; anything malformed is dropped
     fresh.builtRooms = new Set(data.builtRooms || []);
     fresh.visited = new Set(data.visited || ["0,0"]);
     fresh.collectedCaches = new Set(data.collectedCaches || []);
@@ -3370,6 +3466,10 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
 
     renderCombatOverlay();
     updateMusicTarget();
+    syncPortraitStyle();
+    const hudP = document.getElementById("hudPortrait");
+    hudP.classList.toggle("hidden", !s.portrait);
+    hudP.classList.toggle("pp-cur", !!s.portrait);
 
     const deathOverlay = document.getElementById("deathOverlay");
     const combatOverlay = document.getElementById("combatOverlay");
@@ -3377,6 +3477,8 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
       document.getElementById("dSectors").textContent = s.visited.size;
       document.getElementById("dKills").textContent = s.kills;
       document.getElementById("dTurns").textContent = s.turns;
+      const dp = document.getElementById("dPortrait");
+      dp.classList.toggle("hidden", !s.portrait); dp.classList.toggle("pp-cur", !!s.portrait);
       deathOverlay.classList.remove("hidden");
       combatOverlay.classList.add("hidden");
     } else {
@@ -4069,6 +4171,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     }
   }
 
+  let portraitNote = "";                        // last portrait error, shown under the Character tab portrait
   function renderCharacterTab(derived) {
     const wrap = document.getElementById("characterContent");
     const attr = s.attributes;
@@ -4108,7 +4211,14 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
 
     wrap.innerHTML = `
       <div class="creation-row">
-        <div class="portrait-frame" style="${frameStyle}">${renderPortraitSVG(s.portraitSeed)}</div>
+        <div>
+          <div class="portrait-frame${s.portrait ? " has-photo" : ""}" style="${frameStyle}">${playerPortraitHtml()}</div>
+          <div class="portrait-btns">
+            <button class="reroll-btn" data-portrait-add="1" title="Use your own picture (cropped to 3:4)">${s.portrait ? "CHANGE" : "ADD PORTRAIT"}</button>
+            ${s.portrait ? `<button class="reroll-btn" data-portrait-remove="1" title="Go back to the drawn face">REMOVE</button>` : ""}
+          </div>
+          <div class="portrait-note" id="playerPortraitNote">${portraitNote}</div>
+        </div>
         <div class="creation-col">
           <div style="font-size:14px;color:var(--amber);margin-bottom:4px;">${s.name}</div>
           <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;">${levelLine}</div>
@@ -4125,6 +4235,8 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
       </div>
     `;
     wrap.querySelectorAll("[data-spend]").forEach(b => b.addEventListener("click", () => spendAttrPoint(b.getAttribute("data-spend"))));
+    wrap.querySelectorAll("[data-portrait-add]").forEach(b => b.addEventListener("click", () => pickPortrait("player")));
+    wrap.querySelectorAll("[data-portrait-remove]").forEach(b => b.addEventListener("click", () => { portraitNote = ""; setPlayerPortrait(null); }));
   }
 
   function eligibleWeaponOptions() {
@@ -4270,7 +4382,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
 
   function newDraft() {
     return {
-      name: "Survivor", portraitSeed: Math.floor(Math.random() * 4294967295),
+      name: "Survivor", portraitSeed: Math.floor(Math.random() * 4294967295), portrait: null,
       attrs: { str: 1, agi: 1, end: 1, per: 1, lck: 1 }, pointsLeft: CREATION_POOL,
       location: null, severity: "Medium", infection: "Normal", armedPct: "Medium"
     };
@@ -4282,7 +4394,15 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
   }
 
   function renderCreation() {
-    document.getElementById("portraitPreview").innerHTML = renderPortraitSVG(draft.portraitSeed);
+    syncPortraitStyle();
+    const pv = document.getElementById("portraitPreview");
+    pv.innerHTML = draft.portrait
+      ? `<i class="player-portrait pp-draft" role="img" aria-label="Your portrait" data-portrait="draft"></i>`
+      : renderPortraitSVG(draft.portraitSeed);
+    pv.classList.toggle("has-photo", !!draft.portrait);
+    document.getElementById("btnReroll").classList.toggle("hidden", !!draft.portrait);
+    document.getElementById("btnDraftPortrait").textContent = draft.portrait ? "CHANGE PORTRAIT" : "ADD PORTRAIT";
+    document.getElementById("btnDraftPortraitRemove").classList.toggle("hidden", !draft.portrait);
     document.getElementById("pointsLeft").textContent = `Points remaining: ${draft.pointsLeft}`;
     const rowsWrap = document.getElementById("attrRows");
     rowsWrap.innerHTML = Object.entries(ATTR_INFO).map(([key, info]) => {
@@ -4311,6 +4431,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     s = newGame();
     s.name = document.getElementById("nameInput").value.trim() || "Survivor";
     s.portraitSeed = draft.portraitSeed;
+    s.portrait = sanitizePortrait(draft.portrait);
     s.attributes = Object.assign({}, draft.attrs);
     const locVal = document.getElementById("locationSelect").value;
     s.locationTheme = (locVal && LOCATION_THEMES[locVal]) ? locVal : null;
@@ -4430,6 +4551,20 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     viewport.addEventListener("touchend", pointerUp);
   })();
   document.getElementById("creationLoadInput").addEventListener("change", (e) => handleLoadFile(e.target.files[0]));
+  document.getElementById("btnDraftPortrait").addEventListener("click", () => pickPortrait("draft"));
+  document.getElementById("btnDraftPortraitRemove").addEventListener("click", () => setDraftPortrait(null));
+  document.getElementById("portraitInput").addEventListener("change", (e) => {
+    const target = portraitTarget, file = e.target.files[0];
+    processPortraitFile(file, (url) => {
+      if (target === "draft") setDraftPortrait(url);
+      else { portraitNote = ""; setPlayerPortrait(url); }
+    }, (reason) => {
+      if (target === "draft") document.getElementById("draftPortraitNote").textContent = reason;
+      else { portraitNote = reason; addLog("Portrait not changed: " + reason, "system"); render(); }
+    });
+  });
+  // Test hook: JSDOM has no canvas, so tests hand over an already-processed picture.
+  window.__zpPortrait = { setPlayer: (u) => setPlayerPortrait(u), setDraft: (u) => setDraftPortrait(u), get: () => s && s.portrait, size: [PORTRAIT_W, PORTRAIT_H], maxChars: PORTRAIT_MAX_CHARS };
   document.getElementById("btnReroll").addEventListener("click", () => { draft.portraitSeed = Math.floor(Math.random() * 4294967295); renderCreation(); });
   document.getElementById("nameInput").addEventListener("input", renderCreation);
   document.getElementById("btnStart").addEventListener("click", beginGameFromDraft);

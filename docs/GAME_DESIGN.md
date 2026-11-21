@@ -231,3 +231,11 @@ All timers are play time (accumulated in `tickAlpha`, paused during combat), sto
 - Budget: the whole game file under 3 MB (`art_test.js`). Batch 1 took it from 246 KB to 431 KB.
 - Tests: `tests/art_test.js` (15).
 
+
+## Player portrait
+- **Add portrait** (creation screen and Character tab) lets the player pick their own PNG, JPEG, WebP or GIF. The browser centre-crops it to 3:4 (biased slightly toward the top, where heads are) and re-encodes it at 300x400 WebP (JPEG where WebP encoding is unavailable), about 40-70 KB. The original file is never stored.
+- Shown in the Character tab (96x128), the stats panel (24x32 thumbnail) and the death screen (greyscale). Without one, the generated drawn face is used, as before. CHANGE / REMOVE in both places; REROLL LOOK hides while a picture is set.
+- Saved as `portrait` (data URL or null) in save files and autosave. On load it must be a base64 WebP/JPEG/PNG data URL under 200,000 characters, or it is dropped (older saves have none). SVG and anything else are refused.
+- Refused with a reason: non-image files, files over 15 MB, images under 60x80, undecodable files.
+- Rendered through one generated stylesheet (`#zp-player-portrait`), so the 1s re-render carries only a class name.
+- Player art is never embedded in index.html; each player adds their own.

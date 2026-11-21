@@ -8,7 +8,7 @@ Process reminder: propose design → get go-ahead on anything large → back up 
 
 ## 1. Shipped so far
 
-Roster (5, one traveler) · World Map · Compound Expansion (8 blocks) · Fitness/Marksmanship training · Energy Drink · crafting/building XP · bigger caches · vendor density scaling · player level cap 25 + reputation titles · companion leveling (cap 10) · Vendor Quests + reputation · companion manual & auto-heal · combat balance pass (faster zombies, danger ceiling 10, hordes up to 5, faster boss) · 32-name NPC pool · Safehouse structural integrity + repair · dropdown re-render fix · offline persistence of craft/build queues · capped (8h) offline credit for stamina, Garden and outposts · mobile viewport meta · per-device localStorage autosave · **phone layout pass (compact map, actions above the log, bigger tap targets, empty quest chip fixed) · **Alpha Phase 1: emergence** · **Alpha Phase 2: turned recruits + double agents** · **Audio Phase A: procedural Web Audio sound effects (20 SFX, settings panel, mute/M key, prefs in save)** · **Audio Phase B: adaptive music + ambience** · **Item art batch 1 (18 items, embedded)** · **Item art batch 2 (6 gear items) (latest)** · repair XP.
+Roster (5, one traveler) · World Map · Compound Expansion (8 blocks) · Fitness/Marksmanship training · Energy Drink · crafting/building XP · bigger caches · vendor density scaling · player level cap 25 + reputation titles · companion leveling (cap 10) · Vendor Quests + reputation · companion manual & auto-heal · combat balance pass (faster zombies, danger ceiling 10, hordes up to 5, faster boss) · 32-name NPC pool · Safehouse structural integrity + repair · dropdown re-render fix · offline persistence of craft/build queues · capped (8h) offline credit for stamina, Garden and outposts · mobile viewport meta · per-device localStorage autosave · **phone layout pass (compact map, actions above the log, bigger tap targets, empty quest chip fixed) · **Alpha Phase 1: emergence** · **Alpha Phase 2: turned recruits + double agents** · **Audio Phase A: procedural Web Audio sound effects (20 SFX, settings panel, mute/M key, prefs in save)** · **Audio Phase B: adaptive music + ambience** · **Item art batch 1 (18 items, embedded)** · **Item art batch 2 (6 gear items)** · **Player portrait: add your own picture (latest)** · repair XP.
 
 ---
 
@@ -79,7 +79,7 @@ Designer's Gemini art in a gritty graphic-novel style, **embedded** in index.htm
 - **Batch 1 DONE (18):** Bandage, Ammo, Cloth Strips, Duct Tape, Scrap Metal, Empty Bottle, Painkillers, Energy Drink, Bandana, Work Gloves, Canned Food, Wallet, Watch, Jewelry, Improvised Flamethrower, Machete (grid cell; replace with a single card later), Crowbar, Medkit. Grid B's medkit cell was not used (cross symbol).
 - **Batch 2 DONE (6):** Shotgun, Padded Vest, Riot Armor, Motorcycle Helmet, Reinforced Gauntlets, Padded Leg Guards.
 - **Next shop items (6):** Pistol (image did not arrive in batch 2), Combat Boots, Leather Jacket, Camo Hoodie, Running Shoes, Cargo Pants.
-- Then: Patient Zero zone + portrait, companion portraits, remaining items, rooms, vendors, Alphas, scenes. Portraits and scenes need new slots (not built yet).
+- Then: Patient Zero zone + portrait, companion portraits, remaining items, rooms, vendors, Alphas, scenes. Companion/NPC portraits and scenes need new slots (not built yet); the player portrait frame (300x400) is built and can be reused.
 
 ## 6. Parked
 
