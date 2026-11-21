@@ -126,7 +126,9 @@ const BLOCK = { '1,0': { postedCompanionId: null } };
     c.ok(m.running && m.mood === 'haven' && m.notes > 0, `after a gesture the haven theme starts (${m.notes} notes)`);
     c.ok(m.moods[0].mood === 'haven' && m.moods[0].fade === 2, 'mood changes crossfade over 2s');
     const n0 = m.notes;
-    await advance(s, 4);
+    // 9s: the haven chord repeats every 16 steps (8s at 60 bpm, 0.5s steps) and its melody notes are
+    // random 28% rolls, so a shorter window could legitimately schedule nothing (4s failed ~1 run in 4).
+    await advance(s, 9);
     c.ok(M(s.window).notes > n0, `notes keep being scheduled as the clock moves (${n0} -> ${M(s.window).notes})`);
     // haven = 60bpm -> 0.5s 8th notes; over 30s the step count is ~60, so pads + bells stay sparse.
     const before = M(s.window).notes; await advance(s, 30); const added = M(s.window).notes - before;

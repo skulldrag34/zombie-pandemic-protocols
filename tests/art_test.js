@@ -51,13 +51,14 @@ async function session(saveObj) { const s = H.makeSession(); loadSave(s.window, 
   done(s0);
 
   console.log('B) Cards show art when an item has it');
-  const inv = { 'Bandage': 2, 'Crowbar': 1, 'Pistol': 1, 'Medkit': 1, 'Cloth Strips': 4, 'Bandana': 1 };
+  const inv = { 'Bandage': 2, 'Crowbar': 1, 'Pistol': 1, 'Medkit': 1, 'Cloth Strips': 4, 'Bandana': 1, 'Shotgun': 1, 'Riot Armor': 1, 'Padded Leg Guards': 1 };
   let s = await session(baseSave({ inventory: inv, equippedWeapon: 'Crowbar', equipment: { head: 'Bandana', torso: null, hands: null, pants: null, feet: null } }));
   let w = s.window;
   tab(w, 'inventory');
   const artIn = (root, n) => !!root.querySelector(`[data-art="${n}"]`);
   const grid = $(w, 'invGrid');
   c.ok(artIn(grid, 'Bandage') && artIn(grid, 'Crowbar') && artIn(grid, 'Medkit'), 'inventory: Bandage, Crowbar and Medkit cards show art');
+  c.ok(artIn(grid, 'Shotgun') && artIn(grid, 'Riot Armor') && artIn(grid, 'Padded Leg Guards'), 'inventory: batch 2 gear (Shotgun, Riot Armor, Leg Guards) shows art');
   const pistolCard = [...grid.querySelectorAll('.inv-card')].find(e => /Pistol/.test(e.textContent));
   c.ok(pistolCard && !pistolCard.querySelector('.item-art') && !pistolCard.querySelector('.art-row'), 'an item without art (Pistol) renders exactly as before');
   const bArt = grid.querySelector('[data-art="Bandage"]');
