@@ -8,7 +8,7 @@ Process reminder: propose design → get go-ahead on anything large → back up 
 
 ## 1. Shipped so far
 
-Roster (5, one traveler) · World Map · Compound Expansion (8 blocks) · Fitness/Marksmanship training · Energy Drink · crafting/building XP · bigger caches · vendor density scaling · player level cap 25 + reputation titles · companion leveling (cap 10) · Vendor Quests + reputation · companion manual & auto-heal · combat balance pass (faster zombies, danger ceiling 10, hordes up to 5, faster boss) · 32-name NPC pool · Safehouse structural integrity + repair · dropdown re-render fix · offline persistence of craft/build queues · capped (8h) offline credit for stamina, Garden and outposts · mobile viewport meta · per-device localStorage autosave · **phone layout pass (compact map, actions above the log, bigger tap targets, empty quest chip fixed) · **Alpha Phase 1: emergence** · **Alpha Phase 2: turned recruits + double agents** · **Audio Phase A: procedural Web Audio sound effects (20 SFX, settings panel, mute/M key, prefs in save)** · **Audio Phase B: adaptive music + ambience (latest)** · repair XP.
+Roster (5, one traveler) · World Map · Compound Expansion (8 blocks) · Fitness/Marksmanship training · Energy Drink · crafting/building XP · bigger caches · vendor density scaling · player level cap 25 + reputation titles · companion leveling (cap 10) · Vendor Quests + reputation · companion manual & auto-heal · combat balance pass (faster zombies, danger ceiling 10, hordes up to 5, faster boss) · 32-name NPC pool · Safehouse structural integrity + repair · dropdown re-render fix · offline persistence of craft/build queues · capped (8h) offline credit for stamina, Garden and outposts · mobile viewport meta · per-device localStorage autosave · **phone layout pass (compact map, actions above the log, bigger tap targets, empty quest chip fixed) · **Alpha Phase 1: emergence** · **Alpha Phase 2: turned recruits + double agents** · **Audio Phase A: procedural Web Audio sound effects (20 SFX, settings panel, mute/M key, prefs in save)** · **Audio Phase B: adaptive music + ambience** · **Item art batch 1 (18 items, embedded) (latest)** · repair XP.
 
 ---
 
@@ -73,9 +73,16 @@ Noted during Phase 1 balancing (not Alpha-related): a fresh 1-block Medium base 
 - Additional world events (weather, night, scavenger rivals).
 - Sound design: **Phase A DONE** (SFX), **Phase B DONE** (adaptive music + ambience). Remaining: **Phase C** visual feedback (danger vignette, damage numbers, screen shake honoring `prefers-reduced-motion`, low-HP state, level-up banner). Music tuning (tempo, density, brightness) pending the designer's playtest.
 
+## 5b. Art (in progress)
+
+Designer's Gemini art in a gritty graphic-novel style, **embedded** in index.html (single-file rule kept; designer's call). Prompt pack: the "Art Prompt Pack" doc. Pipeline: originals in `art-src/`, crops in `tools/art_manifest.json`, `python3 tools/build_art.py` writes 256px WebP into the `zp-art` script block. Items without art render as before, so art lands in batches.
+- **Batch 1 DONE (18):** Bandage, Ammo, Cloth Strips, Duct Tape, Scrap Metal, Empty Bottle, Painkillers, Energy Drink, Bandana, Work Gloves, Canned Food, Wallet, Watch, Jewelry, Improvised Flamethrower, Machete (grid cell; replace with a single card later), Crowbar, Medkit. Grid B's medkit cell was not used (cross symbol).
+- **Next shop items (11):** Pistol, Shotgun, Padded Vest, Riot Armor, Leather Jacket, Camo Hoodie, Running Shoes, Motorcycle Helmet, Reinforced Gauntlets, Cargo Pants, Padded Leg Guards, Combat Boots.
+- Then: Patient Zero zone + portrait, companion portraits, remaining items, rooms, vendors, Alphas, scenes. Portraits and scenes need new slots (not built yet).
+
 ## 6. Parked
 
-- **Graphics/blood-and-gore visual pass** — designer will handle art direction later. If revisited: original CSS/SVG only; do not use other games' archived pages as references.
+- **Graphics/blood-and-gore visual pass** — superseded in part by the art track (5b); gore level still the designer's call. If revisited: original CSS/SVG only; do not use other games' archived pages as references.
 
 ---
 

@@ -1,0 +1,25 @@
+{
+  "_comment": "Source art for the game. Each entry: game item name -> source image and crop. Grid cells are [row, col] of an even 3x3 sheet. Rebuild with: python3 tools/build_art.py",
+  "size": 256,
+  "quality": 72,
+  "items": {
+    "Bandage":                 { "src": "grid-A.jpg", "cell": [0, 0] },
+    "Ammo":                    { "src": "grid-A.jpg", "cell": [0, 1] },
+    "Cloth Strips":            { "src": "grid-A.jpg", "cell": [0, 2] },
+    "Duct Tape":               { "src": "grid-A.jpg", "cell": [1, 0] },
+    "Scrap Metal":             { "src": "grid-A.jpg", "cell": [1, 1] },
+    "Empty Bottle":            { "src": "grid-A.jpg", "cell": [1, 2] },
+    "Painkillers":             { "src": "grid-A.jpg", "cell": [2, 0] },
+    "Energy Drink":            { "src": "grid-A.jpg", "cell": [2, 1] },
+    "Bandana":                 { "src": "grid-A.jpg", "cell": [2, 2] },
+    "Work Gloves":             { "src": "grid-B.jpg", "cell": [0, 0] },
+    "Canned Food":             { "src": "grid-B.jpg", "cell": [0, 1] },
+    "Wallet":                  { "src": "grid-B.jpg", "cell": [0, 2] },
+    "Watch":                   { "src": "grid-B.jpg", "cell": [1, 0] },
+    "Jewelry":                 { "src": "grid-B.jpg", "cell": [1, 1] },
+    "Improvised Flamethrower": { "src": "grid-B.jpg", "cell": [1, 2] },
+    "Machete":                 { "src": "grid-B.jpg", "cell": [2, 1] },
+    "Crowbar":                 { "src": "crowbar.jpg" },
+    "Medkit":                  { "src": "medkit.jpg" }
+  }
+}
