@@ -53,6 +53,8 @@ const picInfo = (page) => page.evaluate(() => new Promise((res) => {
   c.ok(info && info.w === 300 && info.h === 400, `stored picture is 300x400 (${info && info.w}x${info && info.h})`);
   c.ok(info && (info.type === 'image/webp' || info.type === 'image/jpeg') && info.len < info.max, `stored as ${info && info.type}, ${info && Math.round(info.len / 1024)} KB of text (cap ${Math.round(info.max / 1024)} KB)`);
   c.ok(info && info.mid[0] > 200 && info.mid[1] < 60 && info.corner[0] < 80, 'cropped from the centre (red marker in the middle, dark corner)');
+  const hb = await page.$eval('#hudPortrait', (e) => { const r = e.getBoundingClientRect(), f = document.getElementById('hudFace').getBoundingClientRect(); return { w: r.width, h: r.height, fw: f.width, fh: f.height }; });
+  c.ok(hb.h >= hb.fh - 3 && hb.w >= hb.fw - 3 && hb.h > 40, `header portrait fills its face box (${Math.round(hb.w)}x${Math.round(hb.h)} in ${Math.round(hb.fw)}x${Math.round(hb.fh)})`);
   c.ok(await page.$eval('#hudPortrait', (e) => !e.classList.contains('hidden') && getComputedStyle(e).backgroundImage.startsWith('url("data:image/')), 'stats panel thumbnail is painted');
 
   await page.click('[data-tab="survivor"]'); await page.waitForTimeout(300);

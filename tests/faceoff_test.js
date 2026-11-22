@@ -108,7 +108,8 @@ const fight = (w) => { pin(w, 0.01); click(w, 'btnE'); pin(w, 0.5); };   // move
   c.ok(live.length === Object.keys(MAN.enemies).length && live.every(k => E(w).types[k]), `every manifest portrait is embedded under a known type (${live.join(', ')})`);
   fight(w);
   const art = $(w, 'faceoff').querySelector('[data-enemy-art]');
-  c.ok(!hidden(w, 'faceoff') && art && ['office', 'courier'].includes(art.getAttribute('data-enemy-art')), `a strip-mall fight shows a real portrait (${art && art.getAttribute('data-enemy-art')})`);
+  const wantStrip = $(w, 'queueLine').textContent !== '' ? ['horde'] : ['office', 'courier'];   // the fight may start as a horde
+  c.ok(!hidden(w, 'faceoff') && art && wantStrip.includes(art.getAttribute('data-enemy-art')), `a strip-mall fight shows a real portrait (${art && art.getAttribute('data-enemy-art')})`);
   c.ok(w.ZP_ART.enemies.horde || E(w).art({ startX: 1, startY: 0, level: 2, queue: [{ level: 2 }] }) !== null, 'no horde art yet: a horde fight still shows the zombie in front of you');
   done(s);
 

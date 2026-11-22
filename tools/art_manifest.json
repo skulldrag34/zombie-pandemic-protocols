@@ -179,6 +179,15 @@
     },
     "resident": {
       "src": "enemies/resident.jpg"
+    },
+    "bloater": {
+      "src": "enemies/bloater.jpg"
+    },
+    "horde": {
+      "src": "enemies/horde.jpg"
+    },
+    "patient_zero": {
+      "src": "enemies/patient_zero.jpg"
     }
   },
   "_enemies_comment": "Zombie portraits for the combat face-off, keyed by type id (see ENEMY_TYPES in index.html): resident, jogger, office, courier, worker, riot, soldier, feral, bloater, horde, patient_zero. Entry: {src, optional box}."

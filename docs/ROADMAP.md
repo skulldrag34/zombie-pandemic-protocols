@@ -84,7 +84,7 @@ Designer's Gemini art in a gritty graphic-novel style, **embedded** in index.htm
 - **Batch 1 DONE (18):** Bandage, Ammo, Cloth Strips, Duct Tape, Scrap Metal, Empty Bottle, Painkillers, Energy Drink, Bandana, Work Gloves, Canned Food, Wallet, Watch, Jewelry, Improvised Flamethrower, Machete (grid cell; replace with a single card later), Crowbar, Medkit. Grid B's medkit cell was not used (cross symbol).
 - **Batch 2 DONE (6):** Shotgun, Padded Vest, Riot Armor, Motorcycle Helmet, Reinforced Gauntlets, Padded Leg Guards.
 - **Batch 3 DONE (4):** Pistol, Combat Boots, Leather Jacket, Camo Hoodie.
-- **Zombie portraits (11, 300x400, prompts in the Art Prompt Pack):** DONE 4: resident, jogger, office, courier. To do 7: worker, riot, soldier, feral, bloater, horde, patient_zero. Residential, Commercial and Industrial fights already show art (pool fallback).
+- **Zombie portraits (11, 300x400, prompts in the Art Prompt Pack):** DONE 7: resident, jogger, office, courier, bloater, horde, patient_zero. To do 4: worker (Site Worker), riot (Riot Husk), soldier (Fallen Guardsman), feral (Feral). Military fights still show no portrait; Wasteland/level 8+ fights show the Bloater for both types until Feral arrives.
 - **Scenes waiting for a slot:** `art-src/scenes-pending/` rooftop-survivors.jpg, street-fight.jpg (16:9). Not embedded until a scene slot is designed.
 - **Held back:** a wide street banner with a zombie lineup and a hand-lettered sign; it resembles another game's site header and carries baked-in text.
 - **Next shop items (2):** Cargo Pants; Running Shoes (batch 3 image held back: it carried a real sportswear brand's swoosh; regenerate with no logos).
