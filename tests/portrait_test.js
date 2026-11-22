@@ -95,7 +95,7 @@ const nextTick = () => sleep(1150);   // let the 1s render pass run
   P(w).setDraft(PIC_A);
   const pv = $(w, 'portraitPreview');
   c.ok(pv.querySelector('[data-portrait="draft"].pp-draft') && pv.classList.contains('has-photo') && styleText(w).includes(PIC_A), 'the preview shows the picture');
-  c.ok(hidden(w, 'btnReroll') && !hidden(w, 'btnDraftPortraitRemove') && /CHANGE/.test($(w, 'btnDraftPortrait').textContent) && $(w, 'draftPortraitNote').textContent === '', 'REROLL hides, CHANGE/REMOVE show, the old error clears');
+  c.ok(hidden(w, 'btnReroll') && !hidden(w, 'btnDraftPortraitRemove') && $(w, 'btnDraftPortrait').textContent === 'CHANGE' && $(w, 'draftPortraitNote').textContent === '', 'REROLL hides, CHANGE/REMOVE show, the old error clears');
   clickEl(w, $(w, 'btnDraftPortraitRemove'));
   c.ok(pv.querySelector('svg') && !hidden(w, 'btnReroll'), 'REMOVE brings back the drawn face and REROLL');
   P(w).setDraft(PIC_B);

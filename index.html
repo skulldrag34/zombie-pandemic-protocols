@@ -255,7 +255,8 @@
   .creation-col label { font-size: 10px; color: var(--text-dim); letter-spacing: 1px; display: block; margin-bottom: 5px; }
   .reroll-btn { font-family: var(--font); font-size: 10px; background: var(--panel-raised); border: 1px solid var(--line); color: var(--text-dim); padding: 5px 8px; border-radius: 3px; cursor: pointer; margin-top: 6px; width: 100%; }
   .reroll-btn:hover { color: var(--toxic); border-color: var(--toxic-dim); }
-  .player-portrait { display: block; width: 96px; height: 128px; background: #0c110b center / cover no-repeat; }
+  .player-portrait { display: block; width: 96px; height: 128px; margin: 0 auto; background: #0c110b center / cover no-repeat; }
+  .portrait-frame > svg { display: block; margin: 0 auto; }
   .portrait-frame.has-photo { filter: none; }
   .portrait-btns { display: flex; gap: 4px; }
   .portrait-btns .reroll-btn { flex: 1; }
@@ -4401,7 +4402,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
       : renderPortraitSVG(draft.portraitSeed);
     pv.classList.toggle("has-photo", !!draft.portrait);
     document.getElementById("btnReroll").classList.toggle("hidden", !!draft.portrait);
-    document.getElementById("btnDraftPortrait").textContent = draft.portrait ? "CHANGE PORTRAIT" : "ADD PORTRAIT";
+    document.getElementById("btnDraftPortrait").textContent = draft.portrait ? "CHANGE" : "ADD PORTRAIT";
     document.getElementById("btnDraftPortraitRemove").classList.toggle("hidden", !draft.portrait);
     document.getElementById("pointsLeft").textContent = `Points remaining: ${draft.pointsLeft}`;
     const rowsWrap = document.getElementById("attrRows");
