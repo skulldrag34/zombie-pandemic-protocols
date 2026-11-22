@@ -21,6 +21,21 @@ function webpSize(buf) {
   return null;
 }
 
+// JPEG size from the first SOF marker.
+function jpegSize(file) {
+  if (!fs.existsSync(file)) return null;
+  const b = fs.readFileSync(file);
+  if (b[0] !== 0xff || b[1] !== 0xd8) return null;
+  let i = 2;
+  while (i < b.length) {
+    if (b[i] !== 0xff) return null;
+    const m = b[i + 1], len = b.readUInt16BE(i + 2);
+    if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) return { h: b.readUInt16BE(i + 5), w: b.readUInt16BE(i + 7) };
+    i += 2 + len;
+  }
+  return null;
+}
+
 async function session(saveObj) { const s = H.makeSession(); loadSave(s.window, saveObj); await sleep(300); return s; }
 
 (async () => {
@@ -81,6 +96,26 @@ async function session(saveObj) { const s = H.makeSession(); loadSave(s.window, 
   tab(w, 'character');
   c.ok(artIn($(w, 'characterContent'), 'Bandana'), 'equipment slot shows art for the worn item');
   done(s);
+
+  console.log('C) Title banner and link preview');
+  s = H.makeSession(); w = s.window; await sleep(300);
+  const title = w.ZP_ART && w.ZP_ART.scenes && w.ZP_ART.scenes.title;
+  const tm = title && /^data:image\/webp;base64,([A-Za-z0-9+/=]+)$/.exec(title);
+  const tsz = tm && webpSize(Buffer.from(tm[1], 'base64'));
+  const TS = MANIFEST.scenes.title;
+  c.ok(tsz && tsz.w === TS.w && tsz.h === TS.h, `title banner is a ${TS.w}x${TS.h} WebP (${tsz ? tsz.w + 'x' + tsz.h : 'missing'})`);
+  const ta = $(w, 'titleArt');
+  c.ok(ta && !ta.classList.contains('hidden') && w.document.getElementById('zp-scene-art'), 'creation screen shows the title banner');
+  c.ok(ta.getAttribute('role') === 'img' && /survivor/.test(ta.getAttribute('aria-label')) && !/data:image/.test(ta.outerHTML), 'banner is labelled and carries no image data in markup');
+  done(s);
+  const meta = (prop) => { const m = new RegExp(`<meta (?:property|name)="${prop}" content="([^"]+)">`).exec(GAME); return m && m[1]; };
+  const ogImg = meta('og:image');
+  c.ok(ogImg === 'https://skulldrag34.github.io/zombie-pandemic-protocols/og-image.jpg' && meta('twitter:image') === ogImg && meta('twitter:card') === 'summary_large_image', 'link-preview tags point at the hosted og-image.jpg (absolute URL)');
+  c.ok(meta('og:title') && meta('og:description') && meta('description'), 'title and descriptions are set');
+  const ROOT = path.join(__dirname, '..');
+  const og = jpegSize(path.join(ROOT, 'og-image.jpg')), gh = jpegSize(path.join(ROOT, 'docs', 'social-preview.jpg'));
+  c.ok(og && og.w === 1200 && og.h === 630 && meta('og:image:width') === '1200' && meta('og:image:height') === '630', `og-image.jpg exists at 1200x630 (${og ? og.w + 'x' + og.h : 'missing'})`);
+  c.ok(gh && gh.w === 1280 && gh.h === 640 && /\(docs\/social-preview\.jpg\)/.test(fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8')), 'GitHub banner exists at 1280x640 and heads the README');
 
   c.done(errors);
 })();

@@ -1,5 +1,7 @@
 # Zombie Pandemic: Protocols
 
+![Zombie Pandemic: Protocols](docs/social-preview.jpg)
+
 A browser-based zombie survival RPG in a single self-contained HTML file. No installs, no accounts, no external assets.
 
 **Play:** https://skulldrag34.github.io/zombie-pandemic-protocols/

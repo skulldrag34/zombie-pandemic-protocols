@@ -239,3 +239,10 @@ All timers are play time (accumulated in `tickAlpha`, paused during combat), sto
 - Refused with a reason: non-image files, files over 15 MB, images under 60x80, undecodable files.
 - Rendered through one generated stylesheet (`#zp-player-portrait`), so the 1s re-render carries only a class name.
 - Player art is never embedded in index.html; each player adds their own.
+
+## Title banner and sharing art
+- The new-character screen opens with a 900x500 WebP banner (`ZP_ART.scenes.title`, built by `tools/build_art.py` from the `scenes` entry in the manifest). The crop sits below the source art's AI lettering; the title is real text. If the art is missing, the banner stays hidden.
+- Link previews (Discord, Slack, texts): Open Graph and Twitter tags in index.html point at `og-image.jpg` (1200x630) in the repo root, an absolute URL on GitHub Pages. The game itself does not need the file.
+- GitHub repo banner: `docs/social-preview.jpg` (1280x640), also the README header. Upload it once in the repo's Settings, Social preview.
+- Both banners render from `tools/banner.html` with `node tools/build_banners.js`.
+- Popup screens (`.overlay`) centre their card with `margin: auto` and scroll from the top when the card is taller than the screen. The old `align-items: center` made the top of the new-character card unreachable on phones.

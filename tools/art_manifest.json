@@ -139,5 +139,20 @@
     "Shotgun": {
       "src": "shotgun.jpg"
     }
+  },
+  "scenes": {
+    "title": {
+      "src": "title-skulldrag.jpg",
+      "box": [
+        0,
+        292,
+        848,
+        763
+      ],
+      "w": 900,
+      "h": 500,
+      "quality": 70,
+      "_note": "Creation-screen banner. Box crops below the AI lettering in the source; the title is real text."
+    }
   }
 }
