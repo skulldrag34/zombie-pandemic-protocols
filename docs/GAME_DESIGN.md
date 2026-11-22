@@ -233,8 +233,8 @@ All timers are play time (accumulated in `tickAlpha`, paused during combat), sto
 
 
 ## Player portrait
-- **Add portrait** (creation screen and Character tab) lets the player pick their own PNG, JPEG, WebP or GIF. The browser centre-crops it to 3:4 (biased slightly toward the top, where heads are) and re-encodes it at 300x400 WebP (JPEG where WebP encoding is unavailable), about 40-70 KB. The original file is never stored.
-- Shown in the Character tab (96x128), the stats panel (24x32 thumbnail) and the death screen (greyscale). Without one, the generated drawn face is used, as before. CHANGE / REMOVE in both places; REROLL LOOK hides while a picture is set.
+- **Add portrait** (creation screen and Survivor tab) lets the player pick their own PNG, JPEG, WebP or GIF. The browser centre-crops it to 3:4 (biased slightly toward the top, where heads are) and re-encodes it at 300x400 WebP (JPEG where WebP encoding is unavailable), about 40-70 KB. The original file is never stored.
+- Shown in the Survivor tab (96x128), the stats panel (24x32 thumbnail) and the death screen (greyscale). Without one, the generated drawn face is used, as before. CHANGE / REMOVE in both places; REROLL LOOK hides while a picture is set.
 - Saved as `portrait` (data URL or null) in save files and autosave. On load it must be a base64 WebP/JPEG/PNG data URL under 200,000 characters, or it is dropped (older saves have none). SVG and anything else are refused.
 - Refused with a reason: non-image files, files over 15 MB, images under 60x80, undecodable files.
 - Rendered through one generated stylesheet (`#zp-player-portrait`), so the 1s re-render carries only a class name.
@@ -265,7 +265,14 @@ All timers are play time (accumulated in `tickAlpha`, paused during combat), sto
 - If a type has no art, its pool partner's art is used; a horde without horde art shows the zombie in front of you; with neither, combat looks exactly as before. Art: `enemies` in `tools/art_manifest.json`, 300x400 WebP in `ZP_ART.enemies`, one generated stylesheet (`#zp-enemy-art`).
 
 ## Character model (Phase A)
-- **ADD CHARACTER MODEL** on the Character tab (next to EQUIPMENT SLOTS): any PNG, JPEG, WebP or GIF. The whole picture is fitted, not cropped, into 2:3 at 400x600 with see-through padding, so a tall full-body figure keeps its head and feet. Saved as WebP, which keeps PNG transparency; browsers that can't encode WebP fall back to JPEG without transparency. Usually 30-100 KB.
-- With a model, the Character tab shows it in the middle with six slots around it: head, torso and hands on the left; weapon, pants and feet on the right. Each slot shows the item's art, its name and its stats. On phones under 520px the body sits on top with the slots two by two below. Without a model, the plain slot list stays.
+- **ADD CHARACTER MODEL** on the Survivor tab (next to EQUIPMENT SLOTS): any PNG, JPEG, WebP or GIF. The whole picture is fitted, not cropped, into 2:3 at 400x600 with see-through padding, so a tall full-body figure keeps its head and feet. Saved as WebP, which keeps PNG transparency; browsers that can't encode WebP fall back to JPEG without transparency. Usually 30-100 KB.
+- With a model, the Survivor tab shows it in the middle with six slots around it: head, torso and hands on the left; weapon, pants and feet on the right. Each slot shows the item's art, its name and its stats. On phones under 520px the body sits on top with the slots two by two below. Without a model, the plain slot list stays.
 - Saved as `bodyModel` (data URL or null), separately from `portrait`. On load it must be a base64 WebP/JPEG/PNG data URL under 400,000 characters, or it is dropped. CHANGE MODEL / REMOVE. Rendered through the `#zp-player-portrait` stylesheet (`.pp-body`).
 - Phase B (not built): true equip/unequip layers on one original mannequin; see the roadmap.
+
+## Tabs: Survivor and Squad
+- Tab bar (keys 1-8): Field, **Survivor**, Crafting, Safehouse, Shop, **Squad**, Achievements, World Map.
+- **Survivor** (was Inventory + Character): survivor record (portrait, name, level, attributes), equipment (slot list, or the character model with slots around it), the inventory with its category filters, and a collapsed AUDIO SETTINGS section.
+- Tap a gear slot to filter the inventory to items that fit it (WEAPON = weapons, not throwables). A "showing HEAD gear / show all" chip appears; tapping the slot again, a category, or "show all" clears it. Filled armor slots have an **unequip** button; the weapon slot has none.
+- **Squad** (was the roster on the Character tab): companions, auto-heal toggle, gear dropdowns, posts and suspects.
+- Layout only: no save or gameplay change.

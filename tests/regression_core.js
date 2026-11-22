@@ -50,7 +50,7 @@ async function fightUntilCombat(win, maxTries) {
       if (!hidden(w, 'deathOverlay')) click(w, 'btnRespawn');
       if (i % 5 === 0) { click(w, 'btnR'); }
     }
-    for (const t of ['field', 'inventory', 'crafting', 'safehouse', 'shop', 'character', 'achievements', 'worldmap']) tab(w, t);
+    for (const t of ['field', 'survivor', 'crafting', 'safehouse', 'shop', 'squad', 'achievements', 'worldmap']) tab(w, t);
     c.ok(fights > 0, `combat occurred during the run (${fights} fights)`);
     const saved = await captureSave(w);
     c.ok(saved.name && saved.level >= 1 && typeof saved.safehouseIntegrity === 'number', 'save file contains core fields');
@@ -76,7 +76,7 @@ async function fightUntilCombat(win, maxTries) {
   {
     const comp = (id, name, mode) => ({ id, name, portraitSeed: id, hp: 40, maxHp: 40, mode, level: 1, xp: 0, equipment: { weapon: null, armor: null } });
     let s = await session(baseSave({ roster: [comp(1, 'Rook', 'travel'), comp(2, 'Sable', 'guard')] }));
-    tab(s.window, 'character');
+    tab(s.window, 'survivor');
     clickEl(s.window, q(s.window, '[data-set-mode="2"]'));
     const g = $(s.window, 'gearLine').innerHTML;
     c.ok(g.includes('TRAVELING WITH: <span>Sable') && g.includes('GUARDING SAFEHOUSE: <span>Rook'), 'promoting one companion to traveler demotes the previous traveler');
@@ -84,7 +84,7 @@ async function fightUntilCombat(win, maxTries) {
     done(s);
 
     s = await session(baseSave({ roster: [1, 2, 3, 4, 5, 6].map(i => comp(i, 'N' + i, 'guard')) }));
-    tab(s.window, 'character');
+    tab(s.window, 'survivor');
     c.ok($(s.window, 'rosterCountLabel').textContent.trim() === '(5/5)', 'oversized roster in a save is clamped to 5');
     done(s);
 
@@ -109,20 +109,20 @@ async function fightUntilCombat(win, maxTries) {
   {
     const hurt = (id, name, hp) => ({ id, name, portraitSeed: id, hp, maxHp: 40, mode: 'guard', level: 1, xp: 0, equipment: { weapon: null, armor: null } });
     let s = await session(baseSave({ inventory: { 'Baseball Bat': 1, 'Bandage': 3 }, roster: [hurt(1, 'Sable', 10)] }));
-    tab(s.window, 'character');
+    tab(s.window, 'survivor');
     clickEl(s.window, q(s.window, '[data-heal-companion="1"]'));
     c.ok($(s.window, 'rosterContent').innerHTML.includes('HP 40/40'), 'manual heal works on a guarding companion');
     done(s);
 
     s = await session(baseSave({ inventory: { 'Baseball Bat': 1, 'Bandage': 3 }, roster: [hurt(2, 'Dutch', 5)] }));
     fastForward(s.window, 16000); await settle(s.window);
-    tab(s.window, 'character');
+    tab(s.window, 'survivor');
     c.ok($(s.window, 'rosterContent').innerHTML.includes('HP 35/40'), 'auto-heal patches a companion below 60% HP');
     done(s);
 
     s = await session(baseSave({ autoHealCompanions: false, inventory: { 'Baseball Bat': 1, 'Bandage': 3 }, roster: [hurt(3, 'Wren', 5)] }));
     fastForward(s.window, 16000); await settle(s.window);
-    tab(s.window, 'character');
+    tab(s.window, 'survivor');
     c.ok($(s.window, 'rosterContent').innerHTML.includes('HP 5/40'), 'auto-heal does nothing when toggled off');
     done(s);
   }
@@ -133,7 +133,7 @@ async function fightUntilCombat(win, maxTries) {
     let s = await session(baseSave({ level: 24, xp: 15, xpToNext: 20 }));
     tab(s.window, 'crafting'); clickEl(s.window, q(s.window, '[data-craft="craft_bandage"]'));
     fastForward(s.window, 20000); await settle(s.window);
-    tab(s.window, 'character');
+    tab(s.window, 'survivor');
     const ch = $(s.window, 'characterContent').innerHTML;
     c.ok(ch.includes('Level 25/25 (MAX)'), 'player caps at level 25');
     c.ok(ch.includes('3 / 400 XP to "Unbroken"'), 'overflow XP (15+8-20 = 3) rolls into title progress');
@@ -148,7 +148,7 @@ async function fightUntilCombat(win, maxTries) {
     done(s);
 
     s = await session(baseSave({ inventory: { 'Baseball Bat': 1, 'Energy Drink': 1 }, stamina: 5 }));
-    tab(s.window, 'inventory'); clickEl(s.window, q(s.window, '[data-aid="Energy Drink"]'));
+    tab(s.window, 'survivor'); clickEl(s.window, q(s.window, '[data-aid="Energy Drink"]'));
     c.ok($(s.window, 'apNum').textContent === '20 / 20', 'Energy Drink restores stamina (capped at max)');
     done(s);
   }
@@ -192,7 +192,7 @@ async function fightUntilCombat(win, maxTries) {
 
     const comp = { id: 1, name: 'Rook', portraitSeed: 1, hp: 40, maxHp: 40, mode: 'guard', level: 1, xp: 0, equipment: { weapon: null, armor: null } };
     s = await session(baseSave({ roster: [comp] }));
-    tab(s.window, 'character');
+    tab(s.window, 'survivor');
     const sel = q(s.window, '[data-give-weapon-select="1"]');
     sel.focus(); await sleep(1300);
     c.ok(q(s.window, '[data-give-weapon-select="1"]') === sel && s.window.document.activeElement === sel, 'a focused dropdown survives the 1s render loop (dropdown bug stays fixed)');

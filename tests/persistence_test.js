@@ -61,7 +61,7 @@ async function freshLoaded(saveObj, spoofAheadMs) {
   c.ok(saveC.inventory['Cloth Strips'] === 18, 'ingredients (2 Cloth Strips) were consumed and stay consumed');
   let s5 = await freshLoaded(saveC, 60000);
   await settle(s5.window);
-  tab(s5.window, 'inventory');
+  tab(s5.window, 'survivor');
   c.ok($(s5.window, 'invGrid').innerHTML.includes('Bandage'), 'crafted Bandage is delivered after loading past its finish time');
   c.ok(xpOf(s5.window) === 8, 'craft XP granted (8)');
   allErrors.push(...s5.errors); s5.close();

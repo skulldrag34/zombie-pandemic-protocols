@@ -39,7 +39,7 @@ const fight = (w) => { pin(w, 0.01); click(w, 'btnE'); pin(w, 0.5); };   // move
   done(s);
   s = await session(NO_ART, baseSave({ claimedBlocks: { '1,0': { postedCompanionId: null } }, alpha: { name: 'The Pale Ferryman', quietMs: 0 },
     roster: [{ id: 7, name: 'Rook', portraitSeed: 7, hp: 40, maxHp: 40, mode: 'guard', level: 1, xp: 0, equipment: { weapon: null, armor: null }, turned: true, suspicious: true }] }));
-  w = s.window; tab(w, 'character'); pin(w, 0.01); clickEl(w, q(w, '[data-confront="7"]'));
+  w = s.window; tab(w, 'squad'); pin(w, 0.01); clickEl(w, q(w, '[data-confront="7"]'));
   c.ok(!hidden(w, 'faceoff') && $(w, 'faceoff').querySelector('.fo-enemy svg') && /Traitor/.test($(w, 'faceoff').textContent), 'a traitor fight shows you vs the traitor\'s face (needs no art)');
   done(s);
 

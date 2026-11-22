@@ -55,14 +55,14 @@ const picInfo = (page) => page.evaluate(() => new Promise((res) => {
   c.ok(info && info.mid[0] > 200 && info.mid[1] < 60 && info.corner[0] < 80, 'cropped from the centre (red marker in the middle, dark corner)');
   c.ok(await page.$eval('#hudPortrait', (e) => !e.classList.contains('hidden') && getComputedStyle(e).backgroundImage.startsWith('url("data:image/')), 'stats panel thumbnail is painted');
 
-  await page.click('[data-tab="character"]'); await page.waitForTimeout(300);
-  c.ok(await page.$('#characterContent [data-portrait="player"]') !== null, 'Character tab shows the picture');
+  await page.click('[data-tab="survivor"]'); await page.waitForTimeout(300);
+  c.ok(await page.$('#characterContent [data-portrait="player"]') !== null, 'Survivor tab shows the picture');
   if (shots) await page.screenshot({ path: path.join(shots, 'portrait_desktop.png') });
 
   // Change it with a tall JPEG from the Character tab.
   await choose(page, '[data-portrait-add]', { name: 'tall.jpg', mimeType: 'image/jpeg', buffer: await makePicture(page, 600, 1400, 'image/jpeg') });
   info = await picInfo(page);
-  c.ok(info && info.w === 300 && info.h === 400, 'CHANGE from the Character tab: a tall JPEG is also cropped to 300x400');
+  c.ok(info && info.w === 300 && info.h === 400, 'CHANGE from the Survivor tab: a tall JPEG is also cropped to 300x400');
 
   // Refusals keep the current picture.
   const cur = await page.evaluate(() => window.__zpPortrait.get());

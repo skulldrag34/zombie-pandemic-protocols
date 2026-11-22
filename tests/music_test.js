@@ -99,7 +99,7 @@ const BLOCK = { '1,0': { postedCompanionId: null } };
     c.ok(M(s.window).desired === 'boss', 'Patient Zero -> boss');
     done(s);
     s = await plain(baseSave({ claimedBlocks: BLOCK, alpha: ALPHA, roster: [{ id: 1, name: 'Rook', portraitSeed: 1, hp: 40, maxHp: 40, mode: 'guard', level: 1, xp: 0, equipment: { weapon: null, armor: null }, turned: true, suspicious: true }] }));
-    tab(s.window, 'character'); pin(s.window, 0.01); clickEl(s.window, q(s.window, '[data-confront="1"]'));
+    tab(s.window, 'squad'); pin(s.window, 0.01); clickEl(s.window, q(s.window, '[data-confront="1"]'));
     c.ok(M(s.window).desired === 'boss', 'a traitor fight -> boss');
     done(s);
     s = await plain(baseSave({ hp: 1 }));

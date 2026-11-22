@@ -60,6 +60,26 @@ const shots = process.argv[2] || null;
     await p.close();
   }
 
+  // Survivor tab (record + gear + inventory) on a phone and a desktop.
+  for (const [w, h] of [[360, 740], [1280, 900]]) {
+    const p = await b.newPage({ viewport: { width: w, height: h } }); p.on('pageerror', (e) => errs.push(e.message));
+    await p.goto('file://' + path.resolve(H.GAME_PATH)); await p.waitForTimeout(300);
+    await p.setInputFiles('#creationLoadInput', { name: 's.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(H.baseSave({
+      inventory: { 'Bandana': 1, 'Motorcycle Helmet': 1, 'Pistol': 1, 'Baseball Bat': 1, 'Bandage': 3 }, equipment: { head: 'Bandana', torso: null, hands: null, pants: null, feet: null } }))) });
+    await p.waitForTimeout(500); await p.click('[data-tab="survivor"]'); await p.waitForTimeout(300);
+    const r = await p.evaluate(() => ({ ow: document.documentElement.scrollWidth > innerWidth,
+      leaks: [...document.querySelectorAll('#tab-survivor .hidden')].filter(e => e.offsetParent !== null).map(e => e.id || e.className),
+      order: ['characterContent', 'invGrid', 'audioPanel'].map(id => document.getElementById(id).getBoundingClientRect().top) }));
+    c.ok(!r.ow && r.leaks.length === 0 && r.order[0] < r.order[1] && r.order[1] < r.order[2], `${w}x${h}: Survivor tab: record, then inventory, then audio; no sideways scroll; nothing hidden leaks`);
+    await p.click('[data-slot-pick="head"] .slotname');
+    await p.waitForTimeout(700);
+    await p.waitForTimeout(800);   // smooth scroll
+    const f = await p.evaluate(() => { const r = document.getElementById('invGrid').getBoundingClientRect(); return { n: document.querySelectorAll('#invGrid .inv-card').length, top: r.top, bottom: r.bottom, vh: innerHeight }; });
+    c.ok(f.n === 2 && f.top >= 0 && f.bottom <= f.vh, `${w}x${h}: tapping HEAD filters to 2 items and the filtered list is on screen (${Math.round(f.top)}-${Math.round(f.bottom)}px of ${f.vh})`);
+    if (shots) await p.screenshot({ path: path.join(shots, `survivor_${w}x${h}.png`) });
+    await p.close();
+  }
+
   await b.close();
   c.done(errs);
 })();

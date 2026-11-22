@@ -278,7 +278,7 @@ async function loaded(saveObj, opts) {
     sfx.value = '40'; sfx.dispatchEvent(new w.Event('input'));
     c.ok(Math.abs(sess.stats.ctx.gains[1].gain.value - 0.4) < 1e-9, 'effects slider sets the SFX bus gain');
 
-    A(w).clearLog(); await nextFrame(); tab(w, 'inventory');
+    A(w).clearLog(); await nextFrame(); tab(w, 'survivor');
     c.ok(hasPlayed(w, 'ui_click'), 'tab switches play an interface click');
     const ui = $(w, 'chkUiSounds'); ui.checked = false; ui.dispatchEvent(new w.Event('change'));
     A(w).clearLog(); await nextFrame(); tab(w, 'field');
@@ -286,7 +286,7 @@ async function loaded(saveObj, opts) {
     A(w).clearLog(); await nextFrame(); A(w).play('melee_hit');
     c.ok(hasPlayed(w, 'melee_hit'), 'gameplay sounds still play with interface clicks off');
 
-    tab(w, 'character');
+    tab(w, 'survivor');
     slider.focus(); await sleep(1300);
     c.ok($(w, 'volMaster') === slider && w.document.activeElement === slider, 'audio controls survive the 1s render loop (not rebuilt mid-drag)');
     done(sess);
@@ -355,7 +355,7 @@ async function loaded(saveObj, opts) {
     fixRandom(w, 0.01);
     click(w, 'btnE');
     for (let i = 0; i < 10 && !hidden(w, 'combatOverlay'); i++) { if (!click(w, 'btnFire')) click(w, 'btnAdvance'); }
-    tab(w, 'shop'); tab(w, 'character'); click(w, 'btnMute'); click(w, 'btnMute'); click(w, 'btnTestSound');
+    tab(w, 'shop'); tab(w, 'survivor'); click(w, 'btnMute'); click(w, 'btnMute'); click(w, 'btnTestSound');
     const log = A(w).log();
     c.ok(log.length > 0 && log.every(e => e.played === false), 'events are still logged but nothing claims to have played');
     c.ok(log.some(e => e.reason === 'unavailable'), 'reason is reported as unavailable');

@@ -14,7 +14,7 @@ const styleText = (w) => { const el = w.document.getElementById('zp-player-portr
 
   console.log('A) No model: slots as before');
   let s = await session(baseSave({ inventory: { 'Pistol': 1, 'Bandana': 1, 'Combat Boots': 1 }, equippedWeapon: 'Pistol', equipment: { head: 'Bandana', torso: null, hands: null, pants: null, feet: 'Combat Boots' } }));
-  let w = s.window; tab(w, 'character');
+  let w = s.window; tab(w, 'survivor');
   c.ok(P(w).getBody() === null && $(w, 'characterContent').querySelector('.gear-slot-grid') && !$(w, 'gearDoll'), 'no model: the plain slot list');
   c.ok(/ADD CHARACTER MODEL/.test(q(w, '[data-body-add]').textContent) && !q(w, '[data-body-remove]'), 'ADD CHARACTER MODEL offered, no REMOVE');
   let opened = 0; $(w, 'portraitInput').click = () => { opened++; };
@@ -33,9 +33,9 @@ const styleText = (w) => { const el = w.document.getElementById('zp-player-portr
   c.ok(/empty/.test(slot('TORSO').textContent) && !slot('TORSO').classList.contains('filled'), 'empty slots say empty');
   c.ok(styleText(w).includes(BODY) && !/data:image/.test($(w, 'characterContent').innerHTML), 'picture via the stylesheet, not in the markup');
   c.ok(/CHANGE MODEL/.test(q(w, '[data-body-add]').textContent) && q(w, '[data-body-remove]'), 'buttons become CHANGE MODEL and REMOVE');
-  tab(w, 'inventory');
+  tab(w, 'survivor');
   const uneq = q(w, '[data-equip="Bandana"]');
-  clickEl(w, uneq); tab(w, 'character');
+  clickEl(w, uneq); tab(w, 'survivor');
   c.ok(uneq && /empty/.test($(w, 'gearDoll').querySelector('[data-doll-slot="HEAD"]').textContent), 'taking the Bandana off (Inventory) empties the head slot');
 
   console.log('C) Refusals, save and load');
@@ -45,7 +45,7 @@ const styleText = (w) => { const el = w.document.getElementById('zp-player-portr
   const sv = await captureSave(w);
   c.ok(sv.bodyModel === BODY && sv.portrait === null, 'the model is saved, separately from the portrait');
   done(s);
-  s = await session(sv); w = s.window; tab(w, 'character');
+  s = await session(sv); w = s.window; tab(w, 'survivor');
   c.ok(P(w).getBody() === BODY && $(w, 'gearDoll'), 'and restored on load');
   clickEl(w, q(w, '[data-body-remove]'));
   c.ok(P(w).getBody() === null && $(w, 'characterContent').querySelector('.gear-slot-grid'), 'REMOVE goes back to the slot list');

@@ -6,7 +6,7 @@ const { $, q, tab, click, loadSave, captureSave, fastForward, settle, sleep, bas
 
 const xpOf = (win) => parseInt($(win, 'xpNum').textContent.split('/')[0].trim(), 10);
 const logText = (win) => $(win, 'logFeed').textContent;
-const rosterText = (win) => { tab(win, 'character'); return $(win, 'rosterContent').textContent.replace(/\s+/g, ' '); };
+const rosterText = (win) => { tab(win, 'survivor'); return $(win, 'rosterContent').textContent.replace(/\s+/g, ' '); };
 
 async function session(saveObj, aheadMs) {
   const s = H.makeSession();

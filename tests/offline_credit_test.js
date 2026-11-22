@@ -15,7 +15,7 @@ async function loadAfterAway(saveObj, awayMs) {
 const stamina = (w) => $(w, 'apNum').textContent.trim();
 const scrap = (w) => parseInt($(w, 'scrapNum').textContent, 10);
 const logText = (w) => { tab(w, 'field'); return $(w, 'logFeed').textContent; };
-const invHas = (w, name) => { tab(w, 'inventory'); const m = $(w, 'invGrid').innerHTML.match(new RegExp(name + '</span><span class="count">(\\d+)')); return m ? parseInt(m[1], 10) : 0; };
+const invHas = (w, name) => { tab(w, 'survivor'); const m = $(w, 'invGrid').innerHTML.match(new RegExp(name + '</span><span class="count">(\\d+)')); return m ? parseInt(m[1], 10) : 0; };
 
 (async () => {
   const c = makeChecker('OFFLINE CREDIT');
@@ -58,7 +58,7 @@ const invHas = (w, name) => { tab(w, 'inventory'); const m = $(w, 'invGrid').inn
   console.log('Systems that must stay online-only');
   const hurt = { id: 1, name: 'Sable', portraitSeed: 1, hp: 5, maxHp: 40, mode: 'guard', level: 1, xp: 0, equipment: { weapon: null, armor: null } };
   s = await loadAfterAway(baseSave({ roster: [hurt], safehouseIntegrity: 80, inventory: { 'Baseball Bat': 1, 'Bandage': 3, 'Scrap Metal': 500 } }), 5 * HOUR);
-  tab(s.window, 'character');
+  tab(s.window, 'squad');
   c.ok($(s.window, 'rosterContent').innerHTML.includes('HP 5/40'), 'auto-heal is NOT credited while away (companion still 5/40, Bandages untouched)');
   c.ok(invHas(s.window, 'Bandage') === 3, 'no aid items were consumed');
   tab(s.window, 'safehouse');

@@ -73,7 +73,7 @@ async function session(saveObj) { const s = H.makeSession(); loadSave(s.window, 
   const inv = { 'Bandage': 2, 'Crowbar': 1, 'Pistol': 1, 'Medkit': 1, 'Cloth Strips': 4, 'Bandana': 1, 'Shotgun': 1, 'Riot Armor': 1, 'Padded Leg Guards': 1, 'Combat Boots': 1, 'Camo Hoodie': 1, 'Cargo Pants': 1 };
   let s = await session(baseSave({ inventory: inv, equippedWeapon: 'Crowbar', equipment: { head: 'Bandana', torso: null, hands: null, pants: null, feet: null } }));
   let w = s.window;
-  tab(w, 'inventory');
+  tab(w, 'survivor');
   const artIn = (root, n) => !!root.querySelector(`[data-art="${n}"]`);
   const grid = $(w, 'invGrid');
   c.ok(artIn(grid, 'Bandage') && artIn(grid, 'Crowbar') && artIn(grid, 'Medkit'), 'inventory: Bandage, Crowbar and Medkit cards show art');
@@ -99,7 +99,7 @@ async function session(saveObj) { const s = H.makeSession(); loadSave(s.window, 
   tab(w, 'crafting');
   c.ok(artIn($(w, 'craftList'), 'Bandage') && artIn($(w, 'craftList'), 'Improvised Flamethrower'), 'crafting cards show the art of what they make');
 
-  tab(w, 'character');
+  tab(w, 'survivor');
   c.ok(artIn($(w, 'characterContent'), 'Bandana'), 'equipment slot shows art for the worn item');
   done(s);
 

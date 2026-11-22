@@ -22,7 +22,7 @@ const nextTick = () => sleep(1150);   // let the 1s render pass run
   console.log('A) No portrait: drawn face, nothing extra');
   let s = await session(baseSave());
   let w = s.window;
-  tab(w, 'character');
+  tab(w, 'survivor');
   let cc = $(w, 'characterContent');
   c.ok(P(w).get() === null && cc.querySelector('svg') && !cc.querySelector('[data-portrait]'), 'a save without a portrait keeps the drawn face');
   c.ok(q(w, '[data-portrait-add]') && /ADD PORTRAIT/.test(q(w, '[data-portrait-add]').textContent) && !q(w, '[data-portrait-remove]'), 'Character tab offers ADD PORTRAIT, no REMOVE');
@@ -57,7 +57,7 @@ const nextTick = () => sleep(1150);   // let the 1s render pass run
   let sv = await captureSave(w);
   c.ok(sv.portrait === PIC_B, 'the portrait is written to the save');
   done(s);
-  s = await session(sv); w = s.window; tab(w, 'character');
+  s = await session(sv); w = s.window; tab(w, 'survivor');
   c.ok(P(w).get() === PIC_B && q(w, '[data-portrait="player"]') && styleText(w).includes(PIC_B), 'and restored on load');
   done(s);
   for (const [v, label] of bad) {
@@ -65,7 +65,7 @@ const nextTick = () => sleep(1150);   // let the 1s render pass run
     c.ok(P(w).get() === null && s.errors.length === 0, `a save holding ${label} loads with no portrait`);
     done(s);
   }
-  s = await session(baseSave({ portrait: PIC_A })); w = s.window; tab(w, 'character');
+  s = await session(baseSave({ portrait: PIC_A })); w = s.window; tab(w, 'survivor');
   clickEl(w, q(w, '[data-portrait-remove]'));
   c.ok(P(w).get() === null && $(w, 'characterContent').querySelector('svg') && hidden(w, 'hudPortrait'), 'REMOVE goes back to the drawn face');
   sv = await captureSave(w);

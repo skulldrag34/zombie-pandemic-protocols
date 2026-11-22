@@ -306,6 +306,19 @@
   .doll-slot .stats { color: var(--text-dim); font-size: 9px; }
   .gear-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
   .gear-head .portrait-btns .reroll-btn { width: auto; margin-top: 0; padding: 4px 8px; }
+  .slot-filter { margin-left: 8px; font-weight: normal; letter-spacing: 0; color: var(--amber); }
+  .slot-filter button { font-family: var(--font); font-size: 10px; background: none; border: 1px solid var(--amber-dim); color: var(--amber); border-radius: 2px; padding: 1px 6px; margin-left: 4px; cursor: pointer; }
+  .slot-filter.hidden { display: none; }
+  .audio-panel summary { cursor: pointer; list-style: none; display: block; text-align: left; margin-bottom: 0; }
+  .audio-panel summary::-webkit-details-marker { display: none; }
+  .audio-panel summary::before { content: "\25B8  "; }
+  .audio-panel[open] summary::before { content: "\25BE  "; }
+  .audio-panel[open] summary { margin-bottom: 8px; }
+  [data-slot-pick] { cursor: pointer; }
+  [data-slot-pick]:hover, [data-slot-pick].slot-picked { border-color: var(--toxic-dim); }
+  [data-slot-pick].slot-picked { box-shadow: 0 0 6px rgba(127,178,56,0.35); }
+  .slot-unequip { font-family: var(--font); font-size: 9px; background: none; border: 1px solid var(--line); color: var(--text-dim); border-radius: 2px; padding: 2px 6px; margin-top: 3px; cursor: pointer; }
+  .slot-unequip:hover { color: var(--blood); border-color: var(--blood-dim); }
   .portrait-note { font-size: 10px; color: var(--blood); margin-top: 4px; min-height: 0; }
   .attr-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 12px; }
   .attr-row .aname { width: 78px; color: var(--text-dim); }
@@ -385,11 +398,11 @@
 
   <div class="tabbar">
     <button class="tabbtn active" data-tab="field">FIELD <span style="opacity:.5">1</span></button>
-    <button class="tabbtn" data-tab="inventory">INVENTORY <span style="opacity:.5">2</span></button>
+    <button class="tabbtn" data-tab="survivor">SURVIVOR <span style="opacity:.5">2</span></button>
     <button class="tabbtn" data-tab="crafting">CRAFTING <span style="opacity:.5">3</span></button>
     <button class="tabbtn" data-tab="safehouse">SAFEHOUSE <span style="opacity:.5">4</span></button>
     <button class="tabbtn" data-tab="shop">SHOP <span style="opacity:.5">5</span></button>
-    <button class="tabbtn" data-tab="character">CHARACTER <span style="opacity:.5">6</span></button>
+    <button class="tabbtn" data-tab="squad">SQUAD <span style="opacity:.5">6</span></button>
     <button class="tabbtn" data-tab="achievements">ACHIEVEMENTS <span style="opacity:.5">7</span></button>
     <button class="tabbtn" data-tab="worldmap">WORLD MAP <span style="opacity:.5">8</span></button>
   </div>
@@ -426,14 +439,6 @@
     </div>
   </div>
 
-  <div class="tabpanel" id="tab-inventory">
-    <div class="panel">
-      <div class="panel-label">INVENTORY</div>
-      <div class="cat-tabs" id="catTabs"></div>
-      <div class="inv-grid" id="invGrid"></div>
-    </div>
-  </div>
-
   <div class="tabpanel" id="tab-crafting">
     <div class="panel">
       <div class="panel-label">FIELD CRAFTING</div>
@@ -455,17 +460,18 @@
     </div>
   </div>
 
-  <div class="tabpanel" id="tab-character">
+  <div class="tabpanel" id="tab-survivor">
     <div class="panel">
       <div class="panel-label">SURVIVOR RECORD</div>
       <div id="characterContent"></div>
     </div>
-    <div class="panel">
-      <div class="panel-label">ROSTER <span id="rosterCountLabel"></span><button class="mini-btn" id="btnToggleAutoHeal" style="float:right;"></button></div>
-      <div id="rosterContent"></div>
+    <div class="panel" id="inventoryPanel">
+      <div class="panel-label">INVENTORY <span class="slot-filter hidden" id="slotFilterChip"></span></div>
+      <div class="cat-tabs" id="catTabs"></div>
+      <div class="inv-grid" id="invGrid"></div>
     </div>
-    <div class="panel">
-      <div class="panel-label">AUDIO</div>
+    <details class="panel audio-panel" id="audioPanel">
+      <summary class="panel-label">AUDIO SETTINGS</summary>
       <div class="audio-row"><label for="volMaster">Master</label><input type="range" id="volMaster" min="0" max="100" step="5" /><span class="audio-val" id="volMasterVal"></span></div>
       <div class="audio-row"><label for="volSfx">Effects</label><input type="range" id="volSfx" min="0" max="100" step="5" /><span class="audio-val" id="volSfxVal"></span></div>
       <div class="audio-row"><label for="volMusic">Music</label><input type="range" id="volMusic" min="0" max="100" step="5" /><span class="audio-val" id="volMusicVal"></span></div>
@@ -474,6 +480,13 @@
       <div class="audio-row"><label for="chkUiSounds">Interface clicks</label><input type="checkbox" id="chkUiSounds" /><span class="audio-val"></span></div>
       <div class="row-btns" style="margin-top:6px;"><button class="mini-btn" id="btnTestSound">test sound</button></div>
       <div class="req-list" style="margin-top:6px;" id="audioNote">All sound and music is generated live in the browser. The music follows the danger around you: calm at the Safehouse, darker the farther you roam. Each world gets its own key and melodies.</div>
+    </details>
+  </div>
+
+  <div class="tabpanel" id="tab-squad">
+    <div class="panel">
+      <div class="panel-label">ROSTER <span id="rosterCountLabel"></span><button class="mini-btn" id="btnToggleAutoHeal" style="float:right;"></button></div>
+      <div id="rosterContent"></div>
     </div>
   </div>
 
@@ -2333,7 +2346,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
         addLog(`LEVEL UP! You are now level ${s.level} &mdash; the maximum level. +1 attribute point available. Further XP now earns reputation titles instead.`, "loot");
         checkAchievements();
       } else {
-        addLog(`LEVEL UP! You are now level ${s.level}. +1 attribute point available (Character tab).`, "loot");
+        addLog(`LEVEL UP! You are now level ${s.level}. +1 attribute point available (Survivor tab).`, "loot");
       }
     }
     if (s.level > levelBefore) playSfx("level_up");
@@ -2477,7 +2490,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
   function recruitNpc() {
     if (!s.pendingNpc) return;
     if (s.roster.length >= MAX_ROSTER) {
-      addLog(`Your roster is full (${MAX_ROSTER}/${MAX_ROSTER}). Dismiss someone from the Character tab first if you want to bring ${s.pendingNpc.name} along.`, "system");
+      addLog(`Your roster is full (${MAX_ROSTER}/${MAX_ROSTER}). Dismiss someone from the Squad tab first if you want to bring ${s.pendingNpc.name} along.`, "system");
       render();
       return;
     }
@@ -3600,7 +3613,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     }
     const guards = guardingCompanions();
     if (guards.length > 0) gearHtml += `<br>GUARDING SAFEHOUSE: <span>${guards.map(c => c.name).join(", ")}</span>`;
-    if (s.unspentPoints > 0) gearHtml += `<br><span style="color:var(--amber)">+${s.unspentPoints} unspent attribute point(s) &mdash; Character tab</span>`;
+    if (s.unspentPoints > 0) gearHtml += `<br><span style="color:var(--amber)">+${s.unspentPoints} unspent attribute point(s) &mdash; Survivor tab</span>`;
     document.getElementById("gearLine").innerHTML = gearHtml;
 
     renderMinimap();
@@ -3651,7 +3664,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     const wrap = document.getElementById("npcCardWrap");
     if (!s.pendingNpc || s.combat || s.dead) { wrap.innerHTML = ""; return; }
     const npc = s.pendingNpc;
-    const rosterFullNote = s.roster.length >= MAX_ROSTER ? `<div class="desc" style="color:var(--blood);margin-top:4px;">Roster full (${MAX_ROSTER}/${MAX_ROSTER}) &mdash; dismiss someone in the Character tab first.</div>` : "";
+    const rosterFullNote = s.roster.length >= MAX_ROSTER ? `<div class="desc" style="color:var(--blood);margin-top:4px;">Roster full (${MAX_ROSTER}/${MAX_ROSTER}) &mdash; dismiss someone in the Squad tab first.</div>` : "";
     wrap.innerHTML = `<div class="npc-card">
       <div class="portrait-frame">${renderPortraitSVGSmall(npc.portraitSeed)}</div>
       <div class="info">
@@ -3924,18 +3937,43 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     return bits.join(" &middot; ");
   }
 
+  // Tapping a gear slot on the Survivor tab filters the inventory below to items that fit it.
+  let invSlotFilter = null;      // null | "weapon" | one of EQUIP_SLOTS
+  function fitsSlot(item, slot) {
+    if (!item) return false;
+    if (slot === "weapon") return item.category === "Weapons" && item.kind !== "thrown";
+    return (item.category === "Armor" || item.category === "Clothing") && item.slot === slot;
+  }
+  function pickSlot(slot) {
+    invSlotFilter = invSlotFilter === slot ? null : slot;
+    render();
+    const panel = document.getElementById("inventoryPanel");
+    if (invSlotFilter && panel && panel.scrollIntoView) { try { panel.scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) { /* older browsers */ } }
+  }
+  function unequipSlot(slot) {
+    if (s.dead || !EQUIP_SLOTS.includes(slot) || !s.equipment[slot]) return;
+    s.equipment[slot] = null;
+    render();
+  }
   function renderInventoryTab(derived) {
     const cats = ["All", "Weapons", "Armor", "Clothing", "Aid", "Ammo", "Other"];
     const catTabs = document.getElementById("catTabs");
-    catTabs.innerHTML = cats.map(c => `<button data-cat="${c}" class="${c === activeCat ? "active" : ""}">${c}</button>`).join("");
-    catTabs.querySelectorAll("button").forEach(b => b.addEventListener("click", () => { activeCat = b.getAttribute("data-cat"); render(); }));
+    catTabs.innerHTML = cats.map(c => `<button data-cat="${c}" class="${c === activeCat && !invSlotFilter ? "active" : ""}">${c}</button>`).join("");
+    catTabs.querySelectorAll("button").forEach(b => b.addEventListener("click", () => { activeCat = b.getAttribute("data-cat"); invSlotFilter = null; render(); }));
+
+    const chip = document.getElementById("slotFilterChip");
+    chip.classList.toggle("hidden", !invSlotFilter);
+    chip.innerHTML = invSlotFilter ? `showing ${invSlotFilter === "weapon" ? "WEAPON" : SLOT_LABELS[invSlotFilter]} gear <button data-clear-slot="1">show all</button>` : "";
+    const clr = chip.querySelector("[data-clear-slot]");
+    if (clr) clr.addEventListener("click", () => { invSlotFilter = null; render(); });
 
     const grid = document.getElementById("invGrid");
     const entries = Object.entries(s.inventory).filter(([name]) => {
       const item = CATALOG[name]; const cat = item ? item.category : "Other";
+      if (invSlotFilter) return fitsSlot(item, invSlotFilter);
       return activeCat === "All" || cat === activeCat;
     });
-    if (entries.length === 0) { grid.innerHTML = `<div class="empty-note">Nothing here.</div>`; return; }
+    if (entries.length === 0) { grid.innerHTML = `<div class="empty-note">${invSlotFilter ? "Nothing in your pack fits that slot." : "Nothing here."}</div>`; return; }
 
     grid.innerHTML = "";
     entries.forEach(([name, count]) => {
@@ -4350,27 +4388,29 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     const gearSlots = EQUIP_SLOTS.map(slot => {
       const name = s.equipment[slot];
       const item = name ? CATALOG[name] : null;
-      return `<div class="gear-slot-card">${withItemArt(item ? name : "", `
+      return `<div class="gear-slot-card" data-slot-pick="${slot}" title="Show ${SLOT_LABELS[slot]} gear from your pack">${withItemArt(item ? name : "", `
         <div class="slotname">${SLOT_LABELS[slot]}</div>
         <div class="itemname ${item ? "" : "empty"}">${item ? name : "empty"}</div>
-        <div class="stats">${item ? slotStatLine(item) : "&mdash;"}</div>`)}
+        <div class="stats">${item ? slotStatLine(item) : "&mdash;"}</div>
+        ${item ? `<button class="slot-unequip" data-slot-unequip="${slot}">unequip</button>` : ""}`)}
       </div>`;
     }).join("");
 
     // With a character model, the slots sit around the full-body picture (weapon included).
-    const dollSlot = (label, name, stat) => {
+    const dollSlot = (key, label, name, stat) => {
       const item = name ? CATALOG[name] : null;
-      return `<div class="doll-slot${item ? " filled" : ""}" data-doll-slot="${label}">${item ? itemArt(name) : ""}
+      return `<div class="doll-slot${item ? " filled" : ""}" data-doll-slot="${label}" data-slot-pick="${key}" title="Show ${label} gear from your pack">${item ? itemArt(name) : ""}
         <div class="slotname">${label}</div><div class="itemname ${item ? "" : "empty"}">${item ? name : "empty"}</div>
-        ${item && stat ? `<div class="stats">${stat}</div>` : ""}</div>`;
+        ${item && stat ? `<div class="stats">${stat}</div>` : ""}
+        ${item && key !== "weapon" ? `<button class="slot-unequip" data-slot-unequip="${key}">unequip</button>` : ""}</div>`;
     };
-    const slotOf = (slot) => dollSlot(SLOT_LABELS[slot], s.equipment[slot], s.equipment[slot] && CATALOG[s.equipment[slot]] ? slotStatLine(CATALOG[s.equipment[slot]]) : "");
+    const slotOf = (slot) => dollSlot(slot, SLOT_LABELS[slot], s.equipment[slot], s.equipment[slot] && CATALOG[s.equipment[slot]] ? slotStatLine(CATALOG[s.equipment[slot]]) : "");
     const wpn = s.equippedWeapon && s.equippedWeapon !== "Bare Fists" ? s.equippedWeapon : null;
     const gearBlock = s.bodyModel
       ? `<div class="doll" id="gearDoll">
           <div class="doll-col">${slotOf("head")}${slotOf("torso")}${slotOf("hands")}</div>
           <i class="doll-body pp-body" role="img" aria-label="Your character model" data-body="player"></i>
-          <div class="doll-col">${dollSlot("WEAPON", wpn, wpn ? `DMG ${getWeaponStats(wpn).damage || ""}`.trim() : "")}${slotOf("pants")}${slotOf("feet")}</div>
+          <div class="doll-col">${dollSlot("weapon", "WEAPON", wpn, wpn ? `DMG ${getWeaponStats(wpn).damage || ""}`.trim() : "")}${slotOf("pants")}${slotOf("feet")}</div>
         </div>`
       : `<div class="gear-slot-grid">${gearSlots}</div>`;
 
@@ -4421,6 +4461,9 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     wrap.querySelectorAll("[data-spend]").forEach(b => b.addEventListener("click", () => spendAttrPoint(b.getAttribute("data-spend"))));
     wrap.querySelectorAll("[data-portrait-add]").forEach(b => b.addEventListener("click", () => pickPortrait("player")));
     wrap.querySelectorAll("[data-portrait-remove]").forEach(b => b.addEventListener("click", () => { portraitNote = ""; setPlayerPortrait(null); }));
+    wrap.querySelectorAll("[data-slot-pick]").forEach(el => el.addEventListener("click", (e) => { if (e.target.closest("button")) return; pickSlot(el.getAttribute("data-slot-pick")); }));
+    wrap.querySelectorAll("[data-slot-pick]").forEach(el => el.classList.toggle("slot-picked", el.getAttribute("data-slot-pick") === invSlotFilter));
+    wrap.querySelectorAll("[data-slot-unequip]").forEach(b => b.addEventListener("click", () => unequipSlot(b.getAttribute("data-slot-unequip"))));
     wrap.querySelectorAll("[data-body-add]").forEach(b => b.addEventListener("click", () => pickPortrait("body")));
     wrap.querySelectorAll("[data-body-remove]").forEach(b => b.addEventListener("click", () => { bodyNote = ""; setBodyModel(null); }));
   }
@@ -4780,11 +4823,11 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     else if (k === "h") useDefaultAid();
     else if (k === "r") rest();
     else if (k === "1") switchTab("field");
-    else if (k === "2") switchTab("inventory");
+    else if (k === "2") switchTab("survivor");
     else if (k === "3") switchTab("crafting");
     else if (k === "4") switchTab("safehouse");
     else if (k === "5") switchTab("shop");
-    else if (k === "6") switchTab("character");
+    else if (k === "6") switchTab("squad");
     else if (k === "7") switchTab("achievements");
     else if (k === "8") switchTab("worldmap");
   });

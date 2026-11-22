@@ -8,8 +8,8 @@ const { $, q, tab, click, clickEl, loadSave, captureSave, fastForward, settle, s
 const hidden = (win, id) => $(win, id).classList.contains('hidden');
 const xpOf = (win) => parseInt($(win, 'xpNum').textContent.split('/')[0].trim(), 10);
 const logText = (win) => $(win, 'logFeed').textContent;
-const rosterHtml = (win) => { tab(win, 'character'); return $(win, 'rosterContent').innerHTML; };
-const rosterText = (win) => { tab(win, 'character'); return $(win, 'rosterContent').textContent.replace(/\s+/g, ' '); };
+const rosterHtml = (win) => { tab(win, 'squad'); return $(win, 'rosterContent').innerHTML; };
+const rosterText = (win) => { tab(win, 'squad'); return $(win, 'rosterContent').textContent.replace(/\s+/g, ' '); };
 const pin = (win, v) => { win.Math.random = () => v; };
 const script = (win, seq, then) => { let i = 0; win.Math.random = () => (i < seq.length ? seq[i++] : then); };
 const tick = async (win) => { fastForward(win, 5000); await settle(win); };
@@ -93,7 +93,7 @@ async function session(saveObj) {
   console.log('A2) Suspects refuse to hand gear back');
   {
     let s = await session(alphaSave({ roster: [comp(1, 'Rook', { turned: true, suspicious: true, equipment: { weapon: 'Crowbar', armor: 'Padded Vest' } })] }));
-    tab(s.window, 'character');
+    tab(s.window, 'squad');
     const wb = q(s.window, '[data-take-weapon="1"]'), ab = q(s.window, '[data-take-armor="1"]');
     c.ok(wb.disabled && ab.disabled && wb.textContent === 'refuses' && ab.textContent === 'refuses', 'take-back buttons show "refuses" and are disabled on a suspect');
     wb.disabled = false; wb.dispatchEvent(new s.window.Event('click'));   // bypass the UI: the game itself must refuse
@@ -102,7 +102,7 @@ async function session(saveObj) {
     done(s);
 
     s = await session(alphaSave({ roster: [comp(1, 'Rook', { turned: true })] }));
-    tab(s.window, 'character'); clickEl(s.window, q(s.window, '[data-take-weapon="1"]'));
+    tab(s.window, 'squad'); clickEl(s.window, q(s.window, '[data-take-weapon="1"]'));
     sv = await captureSave(s.window);
     c.ok(sv.inventory['Crowbar'] === 1, 'an undetected traitor hands gear back normally (no tell)');
     done(s);
@@ -220,7 +220,7 @@ async function session(saveObj) {
   {
     const suspect = (extra) => comp(1, 'Rook', Object.assign({ turned: true, suspicious: true }, extra || {}));
     let s = await session(alphaSave({ hp: 5000, baseMaxHp: 5000, inventory: { 'Pistol': 1, 'Ammo': 50 }, equippedWeapon: 'Pistol', roster: [suspect()] }));
-    tab(s.window, 'character'); pin(s.window, 0.01);
+    tab(s.window, 'squad'); pin(s.window, 0.01);
     clickEl(s.window, q(s.window, '[data-confront="1"]'));
     c.ok(!hidden(s.window, 'combatOverlay') && $(s.window, 'combatTitle').textContent === 'TRAITOR: ROOK', 'a hostile confront opens a traitor fight');
     c.ok($(s.window, 'zLevel').textContent === '2' && $(s.window, 'zHpNum').textContent === '40 / 40', 'traitor level = companion level + escalation (1+1), HP = their max HP');
@@ -234,7 +234,7 @@ async function session(saveObj) {
     done(s);
 
     s = await session(alphaSave({ roster: [suspect()] }));
-    tab(s.window, 'character'); pin(s.window, 0.71);
+    tab(s.window, 'squad'); pin(s.window, 0.71);
     clickEl(s.window, q(s.window, '[data-confront="1"]'));
     sv = await captureSave(s.window);
     c.ok(hidden(s.window, 'combatOverlay') && sv.roster.length === 0 && /Rook bolts/.test(logText(s.window)), 'a roll over 70% means they flee instead');
@@ -242,7 +242,7 @@ async function session(saveObj) {
     done(s);
 
     s = await session(alphaSave({ roster: [suspect()] }));
-    tab(s.window, 'character'); pin(s.window, 0.01);
+    tab(s.window, 'squad'); pin(s.window, 0.01);
     clickEl(s.window, q(s.window, '[data-confront="1"]'));
     click(s.window, 'btnFlee');
     sv = await captureSave(s.window);
@@ -250,14 +250,14 @@ async function session(saveObj) {
     done(s);
 
     s = await session(alphaSave({ roster: [suspect()] }));
-    tab(s.window, 'character');
+    tab(s.window, 'squad');
     clickEl(s.window, q(s.window, '[data-dismiss="1"]'));
     sv = await captureSave(s.window);
     c.ok(sv.roster.length === 0 && !sv.inventory['Crowbar'] && sv.alpha.leak === 1 && /You send Rook away/.test(logText(s.window)), 'dismissing a suspect = the flee outcome (no gear back, leak)');
     done(s);
 
     s = await session(alphaSave({ roster: [comp(1, 'Rook', { turned: true })] }));
-    tab(s.window, 'character');
+    tab(s.window, 'squad');
     clickEl(s.window, q(s.window, '[data-dismiss="1"]'));
     sv = await captureSave(s.window);
     c.ok(sv.inventory['Crowbar'] === 1 && sv.alpha.leak === 0, 'dismissing an undetected traitor looks normal (gear back, no tell)');
@@ -277,7 +277,7 @@ async function session(saveObj) {
     done(s);
 
     s = await session(alphaSave({ roster: [comp(1, 'Rook', { turned: true, suspicious: true })] }));
-    tab(s.window, 'character'); pin(s.window, 0.31); clickEl(s.window, q(s.window, '[data-interrogate="1"]'));
+    tab(s.window, 'squad'); pin(s.window, 0.31); clickEl(s.window, q(s.window, '[data-interrogate="1"]'));
     c.ok(!hidden(s.window, 'combatOverlay') && /won't talk/.test($(s.window, 'combatLog').textContent), 'a roll of 31% fails: straight into a fight (no flee outcome)');
     done(s);
 
@@ -289,7 +289,7 @@ async function session(saveObj) {
     done(s);
 
     s = await session(alphaSave({ roster: [comp(1, 'Rook', { doubleAgent: true }), comp(2, 'Sable', { turned: true, suspicious: true })] }));
-    const btn = (tab(s.window, 'character'), q(s.window, '[data-interrogate="2"]'));
+    const btn = (tab(s.window, 'squad'), q(s.window, '[data-interrogate="2"]'));
     c.ok(btn && btn.disabled && /Only one double agent at a time \(Rook\)/.test(rosterText(s.window)), 'only one double agent at a time');
     done(s);
   }
@@ -311,7 +311,7 @@ async function session(saveObj) {
     done(s);
 
     s = await session(alphaSave({ roster: [comp(1, 'Rook', { doubleAgent: true })] }));
-    tab(s.window, 'character'); clickEl(s.window, q(s.window, '[data-dismiss="1"]'));
+    tab(s.window, 'squad'); clickEl(s.window, q(s.window, '[data-dismiss="1"]'));
     sv = await captureSave(s.window);
     c.ok(sv.roster.length === 0 && sv.inventory['Crowbar'] === 1 && sv.alpha.leak === 0, 'releasing a double agent is safe: gear back, no leak');
     done(s);
