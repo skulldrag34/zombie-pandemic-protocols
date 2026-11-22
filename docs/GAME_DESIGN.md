@@ -262,4 +262,4 @@ All timers are play time (accumulated in `tickAlpha`, paused during combat), sto
 | Patient Zero | Patient Zero |
 | Traitor | the traitor's own face (needs no art) |
 
-- If a type has no art, its pool partner's art is used; with neither, combat looks exactly as before. Art: `enemies` in `tools/art_manifest.json`, 300x400 WebP in `ZP_ART.enemies`, one generated stylesheet (`#zp-enemy-art`).
+- If a type has no art, its pool partner's art is used; a horde without horde art shows the zombie in front of you; with neither, combat looks exactly as before. Art: `enemies` in `tools/art_manifest.json`, 300x400 WebP in `ZP_ART.enemies`, one generated stylesheet (`#zp-enemy-art`).

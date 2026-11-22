@@ -167,6 +167,19 @@
       "_note": "Creation-screen banner. Box crops below the AI lettering in the source; the title is real text."
     }
   },
-  "enemies": {},
+  "enemies": {
+    "courier": {
+      "src": "enemies/courier.jpg"
+    },
+    "office": {
+      "src": "enemies/office.jpg"
+    },
+    "jogger": {
+      "src": "enemies/jogger.jpg"
+    },
+    "resident": {
+      "src": "enemies/resident.jpg"
+    }
+  },
   "_enemies_comment": "Zombie portraits for the combat face-off, keyed by type id (see ENEMY_TYPES in index.html): resident, jogger, office, courier, worker, riot, soldier, feral, bloater, horde, patient_zero. Entry: {src, optional box}."
 }
