@@ -24,9 +24,9 @@ const nextTick = () => sleep(1150);   // let the 1s render pass run
   let w = s.window;
   tab(w, 'survivor');
   let cc = $(w, 'characterContent');
-  c.ok(P(w).get() === null && cc.querySelector('svg') && !cc.querySelector('[data-portrait]'), 'a save without a portrait keeps the drawn face');
-  c.ok(q(w, '[data-portrait-add]') && /ADD PORTRAIT/.test(q(w, '[data-portrait-add]').textContent) && !q(w, '[data-portrait-remove]'), 'Character tab offers ADD PORTRAIT, no REMOVE');
-  c.ok(hidden(w, 'hudPortrait'), 'no thumbnail in the stats panel');
+  c.ok(P(w).get() === null && $(w, 'hudFaceDrawn').querySelector('svg') && !cc.querySelector('[data-portrait]'), 'a save without a portrait keeps the drawn face (header)');
+  c.ok(q(w, '[data-portrait-add]') && /ADD PORTRAIT/.test(q(w, '[data-portrait-add]').textContent) && !q(w, '[data-portrait-remove]'), 'Survivor tab offers ADD PORTRAIT, no REMOVE');
+  c.ok(hidden(w, 'hudPortrait'), 'no picture in the stats header');
   let opened = 0; $(w, 'portraitInput').click = () => { opened++; };
   clickEl(w, q(w, '[data-portrait-add]'));
   c.ok(opened === 1, 'ADD PORTRAIT opens the image picker');
@@ -34,10 +34,9 @@ const nextTick = () => sleep(1150);   // let the 1s render pass run
   console.log('B) Adding a portrait');
   c.ok(P(w).setPlayer(PIC_A) === true && P(w).get() === PIC_A, 'a processed picture is accepted');
   cc = $(w, 'characterContent');
-  c.ok(cc.querySelector('[data-portrait="player"].pp-cur') && !cc.querySelector('svg.portrait, .portrait-frame svg'), 'Character tab shows the picture instead of the drawn face');
-  c.ok(cc.querySelector('.portrait-frame.has-photo'), 'the sepia frame filter is lifted for real pictures');
+  c.ok($(w, 'hudPortrait').classList.contains('pp-cur') && hidden(w, 'hudFaceDrawn') && !$(w, 'hudFaceDrawn').querySelector('svg'), 'the header shows the picture instead of the drawn face');
   c.ok(/CHANGE/.test(q(w, '[data-portrait-add]').textContent) && q(w, '[data-portrait-remove]'), 'buttons become CHANGE and REMOVE');
-  c.ok(!hidden(w, 'hudPortrait') && $(w, 'hudPortrait').classList.contains('pp-cur'), 'stats panel shows a thumbnail');
+  c.ok(!hidden(w, 'hudPortrait') && $(w, 'hudPortrait').classList.contains('pp-cur'), 'stats header shows the picture');
   c.ok(styleText(w).includes(PIC_A), 'the picture lives in one generated stylesheet');
   await nextTick();
   c.ok(!/data:image/.test(cc.innerHTML) && !/data:image/.test($(w, 'hudPortrait').outerHTML), 'markup carries a class, not image data (cheap 1s re-render)');
@@ -58,7 +57,7 @@ const nextTick = () => sleep(1150);   // let the 1s render pass run
   c.ok(sv.portrait === PIC_B, 'the portrait is written to the save');
   done(s);
   s = await session(sv); w = s.window; tab(w, 'survivor');
-  c.ok(P(w).get() === PIC_B && q(w, '[data-portrait="player"]') && styleText(w).includes(PIC_B), 'and restored on load');
+  c.ok(P(w).get() === PIC_B && $(w, 'hudPortrait').classList.contains('pp-cur') && styleText(w).includes(PIC_B), 'and restored on load');
   done(s);
   for (const [v, label] of bad) {
     s = await session(baseSave({ portrait: v })); w = s.window;
@@ -67,7 +66,7 @@ const nextTick = () => sleep(1150);   // let the 1s render pass run
   }
   s = await session(baseSave({ portrait: PIC_A })); w = s.window; tab(w, 'survivor');
   clickEl(w, q(w, '[data-portrait-remove]'));
-  c.ok(P(w).get() === null && $(w, 'characterContent').querySelector('svg') && hidden(w, 'hudPortrait'), 'REMOVE goes back to the drawn face');
+  c.ok(P(w).get() === null && $(w, 'hudFaceDrawn').querySelector('svg') && hidden(w, 'hudPortrait'), 'REMOVE goes back to the drawn face');
   sv = await captureSave(w);
   c.ok(sv.portrait === null, 'and the save no longer carries a picture');
   done(s);

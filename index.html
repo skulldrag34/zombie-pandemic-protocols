@@ -45,7 +45,28 @@
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 3px; padding: 12px 14px; margin-bottom: 12px; }
   .panel-label { font-size: 10px; color: var(--text-dim); letter-spacing: 1.5px; margin-bottom: 8px; display: flex; justify-content: space-between; }
 
-  .hud-top { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; font-size: 11px; }
+  .hud-top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-bottom: 6px; font-size: 11px; }
+  .hud-panel { padding-top: 12px; padding-bottom: 12px; }
+  .hud-grid { display: grid; grid-template-columns: 72px minmax(0, 1fr) minmax(0, 290px); gap: 12px; align-items: start; }
+  .hud-face { width: 72px; height: 96px; border: 1px solid var(--line); background: #0c110b; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .hud-face .hud-portrait { position: absolute; inset: 0; width: auto; height: auto; border: 0; border-radius: 0; }
+  .hud-face-drawn svg { width: 72px; height: 72px; display: block; }
+  .hud-face-drawn.hidden { display: none; }
+  .hud-name { color: var(--amber); font-size: 13px; letter-spacing: 1px; margin-right: 2px; overflow-wrap: anywhere; }
+  .hud-title { margin-left: 5px; }
+  .hud-main .stat-row { margin-bottom: 5px; }
+  .hud-main .bar-track { height: 13px; }
+  .hud-attrs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; font-size: 10.5px; }
+  .hud-attr { display: flex; align-items: center; justify-content: center; gap: 4px; flex-wrap: nowrap; border: 1px solid var(--line); background: var(--panel-raised); border-radius: 3px; padding: 4px 2px; color: var(--text-dim); cursor: help; min-width: 0; }
+  .hud-attr b { color: var(--text); font-size: 12px; font-weight: normal; }
+  .hud-attr b.boosted { color: var(--toxic); }
+  .hud-attr .attr-btn { width: 18px; height: 18px; font-size: 11px; padding: 0; flex-shrink: 0; }
+  .hud-points { grid-column: 1 / -1; color: var(--amber); font-size: 10px; text-align: center; }
+  .gear-line .nw { font-style: normal; white-space: nowrap; }
+  .hud-side .gear-line { margin-top: 6px; line-height: 1.5; font-size: 11px; }
+  .record-line { font-size: 11px; color: var(--text-dim); line-height: 1.5; }
+  .appearance-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; margin-bottom: 10px; }
+  .appearance-row .portrait-btns .reroll-btn { width: auto; margin-top: 0; padding: 4px 8px; }
   .chip { border: 1px solid var(--line); background: var(--panel-raised); padding: 4px 9px; border-radius: 3px; }
   .chip.cash { color: var(--amber); } .chip.scrap { color: var(--cyan); } .chip.lvl { color: var(--toxic); } .chip.quest { color: var(--purple); }
 
@@ -71,6 +92,14 @@
   .chip.hidden { display: none; }
   /* Phone layout: compact map, actions directly under it, log last. Desktop unchanged. */
   @media (max-width: 639px) {
+    .hud-grid { grid-template-columns: 52px minmax(0, 1fr); gap: 8px 10px; }
+    .hud-face { width: 52px; height: 69px; }
+    .hud-face-drawn svg { width: 52px; height: 52px; }
+    .hud-side { grid-column: 1 / -1; }
+    .hud-name { font-size: 12px; }
+    .hud-top { gap: 4px 5px; }
+    .hud-top .chip { padding: 3px 6px; font-size: 10px; }
+    .hud-attr { font-size: 9.5px; gap: 3px; }
     #tab-field.active { display: flex; flex-direction: column; }
     #tab-field .grid-2col { display: contents; }
     #tab-field .panel-map { order: 1; }
@@ -373,10 +402,16 @@
     <button id="btnMute" title="Toggle sound (M)">SOUND: ON</button>
   </div>
 
-  <div class="panel">
-    <div class="hud-top">
+  <div class="panel hud-panel">
+   <div class="hud-grid">
+    <div class="hud-face" id="hudFace">
       <i class="hud-portrait hidden" id="hudPortrait" role="img" aria-label="Your portrait"></i>
-      <div class="chip lvl">LV <span id="lvlNum"></span></div>
+      <div class="hud-face-drawn" id="hudFaceDrawn"></div>
+    </div>
+    <div class="hud-main">
+    <div class="hud-top">
+      <span class="hud-name" id="hudName"></span>
+      <div class="chip lvl" id="lvlChip">LV <span id="lvlNum"></span><span class="hud-title" id="hudTitle"></span></div>
       <div class="chip cash">$ <span id="cashNum"></span></div>
       <div class="chip scrap">SCRAP <span id="scrapNum"></span></div>
       <div class="chip quest hidden" id="questChip"></div>
@@ -393,7 +428,12 @@
       <div class="stat-label">XP</div>
       <div class="bar-track"><div class="bar-fill xp" id="xpBar"></div><div class="bar-num" id="xpNum"></div></div>
     </div>
-    <div class="gear-line" id="gearLine"></div>
+    </div>
+    <div class="hud-side">
+      <div class="hud-attrs" id="hudAttrs"></div>
+      <div class="gear-line" id="gearLine"></div>
+    </div>
+   </div>
   </div>
 
   <div class="tabbar">
@@ -3605,16 +3645,15 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     const ammoNote = wstats.kind === "ranged" ? ` (Ammo: ${s.inventory["Ammo"] || 0})` : "";
     const equippedCount = EQUIP_SLOTS.filter(sl => s.equipment[sl]).length;
     let gearHtml =
-      `WEAPON: <span>${s.equippedWeapon}${ammoNote}</span> &middot; DMG ${Math.round(wstats.damage * derived.weaponDmgMult * meleeMult)}<br>` +
-      `GEAR: <span>${equippedCount}/5 slots</span> &middot; DEF ${derived.defenseTotal}`;
+      `<i class="nw"><span>${s.equippedWeapon}${ammoNote}</span></i> &middot; <i class="nw">DMG ${Math.round(wstats.damage * derived.weaponDmgMult * meleeMult)}</i> &middot; <i class="nw">DEF ${derived.defenseTotal}</i> &middot; <i class="nw">GEAR ${equippedCount}/5</i>`;
     if (companion) {
       const atk = computeCompanionAttack(companion);
-      gearHtml += `<br>TRAVELING WITH: <span>${companion.name}</span> ${atk.hasWeapon ? `(${companion.equipment.weapon})` : "(unarmed)"} &middot; HP ${companion.hp}/${companion.maxHp}`;
+      gearHtml += `<br>WITH: <span>${companion.name}</span> ${atk.hasWeapon ? `(${companion.equipment.weapon})` : "(unarmed)"} &middot; HP ${companion.hp}/${companion.maxHp}`;
     }
     const guards = guardingCompanions();
-    if (guards.length > 0) gearHtml += `<br>GUARDING SAFEHOUSE: <span>${guards.map(c => c.name).join(", ")}</span>`;
-    if (s.unspentPoints > 0) gearHtml += `<br><span style="color:var(--amber)">+${s.unspentPoints} unspent attribute point(s) &mdash; Survivor tab</span>`;
+    if (guards.length > 0) gearHtml += `<br>GUARDS: <span>${guards.map(c => c.name).join(", ")}</span>`;
     document.getElementById("gearLine").innerHTML = gearHtml;
+    renderHudRecord(derived);
 
     renderMinimap();
     renderLog();
@@ -3935,6 +3974,36 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     if (item.accuracy) bits.push(`${item.accuracy >= 0 ? "+" : ""}${item.accuracy} ACC`);
     if (item.attrBonus) Object.entries(item.attrBonus).forEach(([k, v]) => bits.push(`+${v} ${ATTR_INFO[k].label}`));
     return bits.join(" &middot; ");
+  }
+
+  // --- STATUS HEADER: face, name, title and attributes beside the bars (visible on every tab) ---
+  let hudRecordKey = "";
+  function renderHudRecord(derived) {
+    const isCapped = s.level >= PLAYER_LEVEL_CAP;
+    const tier = isCapped ? currentTitleTier() : null;
+    const attrKey = Object.keys(ATTR_INFO).map(k => s.attributes[k] + "/" + derived.effAttr[k]).join(",");
+    const key = [s.name, s.portrait ? "p" : "d", s.portraitSeed, tier ? tier.title : "", s.unspentPoints, attrKey, s.level, s.kills, s.turns, s.postCapXp].join("|");
+    if (key === hudRecordKey) return;
+    hudRecordKey = key;
+    document.getElementById("hudName").textContent = s.name;
+    const title = document.getElementById("hudTitle");
+    title.textContent = tier ? `"${tier.title}"` : "";
+    title.style.color = tier ? tier.color : "";
+    document.getElementById("lvlChip").title = `Level ${s.level}${isCapped ? " (max)" : ""} \u00b7 ${s.kills} kills \u00b7 ${s.turns} turns survived`;
+    const face = document.getElementById("hudFace");
+    face.style.borderColor = tier ? tier.color : "";
+    const drawn = document.getElementById("hudFaceDrawn");
+    drawn.classList.toggle("hidden", !!s.portrait);
+    drawn.innerHTML = s.portrait ? "" : renderPortraitSVG(s.portraitSeed);
+    const attrs = document.getElementById("hudAttrs");
+    attrs.innerHTML = Object.entries(ATTR_INFO).map(([k, info]) => {
+      const val = s.attributes[k], eff = derived.effAttr[k];
+      const canSpend = s.unspentPoints > 0 && val < MAX_ATTR;
+      const tip = `${info.full}: ${info.desc}. Base ${val}${eff !== val ? ` + ${eff - val} from gear and achievements` : ""} (max ${MAX_ATTR}).`;
+      return `<div class="hud-attr" title="${escapeHtml(tip)}" data-hud-attr="${k}">${k.toUpperCase()}<b class="${eff !== val ? "boosted" : ""}">${eff}</b>`
+        + (s.unspentPoints > 0 ? `<button class="attr-btn" data-spend="${k}" ${canSpend ? "" : "disabled"} aria-label="Raise ${info.full}">+</button>` : "") + `</div>`;
+    }).join("") + (s.unspentPoints > 0 ? `<div class="hud-points">+${s.unspentPoints} point${s.unspentPoints > 1 ? "s" : ""} to spend</div>` : "");
+    attrs.querySelectorAll("[data-spend]").forEach(b => b.addEventListener("click", () => spendAttrPoint(b.getAttribute("data-spend"))));
   }
 
   // Tapping a gear slot on the Survivor tab filters the inventory below to items that fit it.
@@ -4375,15 +4444,6 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
   function renderCharacterTab(derived) {
     const wrap = document.getElementById("characterContent");
     const attr = s.attributes;
-    const rows = Object.entries(ATTR_INFO).map(([key, info]) => {
-      const val = attr[key];
-      const eff = derived.effAttr[key];
-      const canSpend = s.unspentPoints > 0 && val < MAX_ATTR;
-      return `<div class="attr-row"><span class="aname">${info.full}</span>
-        <span class="aval">${eff}${eff !== val ? ` (${val}+${eff - val})` : ""}</span>
-        <button class="attr-btn" data-spend="${key}" ${canSpend ? "" : "disabled"}>+</button>
-        <span class="adesc">${info.desc}</span></div>`;
-    }).join("");
 
     const gearSlots = EQUIP_SLOTS.map(slot => {
       const name = s.equipment[slot];
@@ -4416,7 +4476,6 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
 
     const isCapped = s.level >= PLAYER_LEVEL_CAP;
     const tier = currentTitleTier();
-    const frameStyle = isCapped ? `border-color:${tier.color};box-shadow:0 0 8px ${tier.color}55;` : "";
     let levelLine = `Level ${s.level} Survivor &middot; ${s.kills} kills &middot; ${s.turns} turns survived${s.locationTheme ? ` &middot; ${s.locationTheme}` : ""}`;
     if (isCapped) {
       const tierIdx = TITLE_TIERS.findIndex(t => t.title === tier.title);
@@ -4429,23 +4488,14 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     }
 
     wrap.innerHTML = `
-      <div class="creation-row">
-        <div>
-          <div class="portrait-frame${s.portrait ? " has-photo" : ""}" style="${frameStyle}">${playerPortraitHtml()}</div>
-          <div class="portrait-btns">
-            <button class="reroll-btn" data-portrait-add="1" title="Use your own picture (cropped to 3:4)">${s.portrait ? "CHANGE" : "ADD PORTRAIT"}</button>
-            ${s.portrait ? `<button class="reroll-btn" data-portrait-remove="1" title="Go back to the drawn face">REMOVE</button>` : ""}
-          </div>
-          <div class="portrait-note" id="playerPortraitNote">${portraitNote}</div>
-        </div>
-        <div class="creation-col">
-          <div style="font-size:14px;color:var(--amber);margin-bottom:4px;">${s.name}</div>
-          <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;">${levelLine}</div>
-          ${s.unspentPoints > 0 ? `<div class="points-left">Unspent points: ${s.unspentPoints}</div>` : ""}
-          ${rows}
-          <div class="req-list" style="margin-top:6px;">Effective values include gear and achievement bonuses.</div>
+      <div class="appearance-row">
+        <div class="record-line">${levelLine}</div>
+        <div class="portrait-btns">
+          <button class="reroll-btn" data-portrait-add="1" title="Use your own picture (cropped to 3:4)">${s.portrait ? "CHANGE PORTRAIT" : "ADD PORTRAIT"}</button>
+          ${s.portrait ? `<button class="reroll-btn" data-portrait-remove="1" title="Go back to the drawn face">REMOVE</button>` : ""}
         </div>
       </div>
+      <div class="portrait-note" id="playerPortraitNote">${portraitNote}</div>
       <div class="gear-head"><div class="panel-label" style="margin:0;">EQUIPMENT SLOTS</div>
         <div class="portrait-btns">
           <button class="reroll-btn" data-body-add="1" title="Use a full-body picture (cropped to 2:3)">${s.bodyModel ? "CHANGE MODEL" : "ADD CHARACTER MODEL"}</button>

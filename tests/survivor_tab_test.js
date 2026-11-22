@@ -26,7 +26,7 @@ const active = (w) => w.document.querySelector('.tabpanel.active').id;
   c.ok($(w, 'audioPanel').tagName === 'DETAILS' && !$(w, 'audioPanel').open, 'audio settings are a collapsed section');
   $(w, 'audioPanel').open = true; await sleep(1250);
   c.ok($(w, 'audioPanel').open, 'once opened, audio settings stay open through the 1s refresh');
-  c.ok(/Survivor tab/.test($(w, 'gearLine').textContent), 'the unspent-points hint points at the Survivor tab');
+  c.ok(/1 point to spend/.test($(w, 'hudAttrs').textContent) && w.document.querySelectorAll('#hudAttrs [data-spend]').length === 5, 'unspent points show in the header with a + per attribute');
 
   console.log('B) Equip and see it on the same tab');
   tab(w, 'survivor');

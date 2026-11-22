@@ -56,7 +56,7 @@ const picInfo = (page) => page.evaluate(() => new Promise((res) => {
   c.ok(await page.$eval('#hudPortrait', (e) => !e.classList.contains('hidden') && getComputedStyle(e).backgroundImage.startsWith('url("data:image/')), 'stats panel thumbnail is painted');
 
   await page.click('[data-tab="survivor"]'); await page.waitForTimeout(300);
-  c.ok(await page.$('#characterContent [data-portrait="player"]') !== null, 'Survivor tab shows the picture');
+  c.ok(await page.$eval('#hudFaceDrawn', (e) => e.classList.contains('hidden')) && await page.$('#characterContent [data-portrait-remove]') !== null, 'header shows the picture (drawn face hidden); Survivor tab offers REMOVE');
   if (shots) await page.screenshot({ path: path.join(shots, 'portrait_desktop.png') });
 
   // Change it with a tall JPEG from the Character tab.
@@ -109,7 +109,7 @@ const picInfo = (page) => page.evaluate(() => new Promise((res) => {
   c.ok(await page.evaluate(() => window.__zpPortrait.getBody()) === null && await page.$('#gearDoll') === null, 'REMOVE model returns to the slot list');
 
   await page.click('[data-portrait-remove]'); await page.waitForTimeout(300);
-  c.ok(await page.evaluate(() => window.__zpPortrait.get()) === null && await page.$('#characterContent svg') !== null, 'REMOVE returns to the drawn face');
+  c.ok(await page.evaluate(() => window.__zpPortrait.get()) === null && await page.$('#hudFaceDrawn svg') !== null, 'REMOVE returns to the drawn face');
 
   await b.close();
   c.done(errs);

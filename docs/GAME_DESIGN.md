@@ -276,3 +276,9 @@ All timers are play time (accumulated in `tickAlpha`, paused during combat), sto
 - Tap a gear slot to filter the inventory to items that fit it (WEAPON = weapons, not throwables). A "showing HEAD gear / show all" chip appears; tapping the slot again, a category, or "show all" clears it. Filled armor slots have an **unequip** button; the weapon slot has none.
 - **Squad** (was the roster on the Character tab): companions, auto-heal toggle, gear dropdowns, posts and suspects.
 - Layout only: no save or gameplay change.
+
+## Status header
+- The top panel (on every tab) holds your face (72x96 desktop, 52x69 phone; portrait or drawn face; title-colour border at level 25), name, LV (title beside it at the cap; kills and turns in its tooltip), cash, scrap, the quest chip, HP/STAM/XP bars, the five attributes, and a compact gear line ("Pistol (Ammo 20) · DMG 30 · DEF 1 · GEAR 0/5", then WITH: companion and GUARDS: lines when they apply).
+- Attributes show their effective value (green when gear or achievements add to it); the tooltip gives the description and the base value. With unspent points, each attribute gets a + button (disabled at 10) and "+N points to spend" shows, so points can be spent from any tab.
+- Height: phone 171px (190px with points to spend), desktop about 125px; it was 196px. The header record only rebuilds when something in it changes.
+- The Survivor tab keeps a one-line record (level, kills, turns, title progress) and the ADD/CHANGE PORTRAIT buttons above the gear.

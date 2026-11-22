@@ -79,7 +79,7 @@ async function fightUntilCombat(win, maxTries) {
     tab(s.window, 'survivor');
     clickEl(s.window, q(s.window, '[data-set-mode="2"]'));
     const g = $(s.window, 'gearLine').innerHTML;
-    c.ok(g.includes('TRAVELING WITH: <span>Sable') && g.includes('GUARDING SAFEHOUSE: <span>Rook'), 'promoting one companion to traveler demotes the previous traveler');
+    c.ok(g.includes('WITH: <span>Sable') && g.includes('GUARDS: <span>Rook'), 'promoting one companion to traveler demotes the previous traveler');
     c.ok($(s.window, 'rosterCountLabel').textContent.trim() === '(2/5)', 'roster cap is 5');
     done(s);
 

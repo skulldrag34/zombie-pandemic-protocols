@@ -80,6 +80,21 @@ const shots = process.argv[2] || null;
     await p.close();
   }
 
+  // Status header: compact on phone and desktop, no sideways scroll, nothing hidden leaks.
+  for (const [w, h, max] of [[360, 740, 200], [390, 844, 200], [1280, 900, 135]]) {
+    const p = await b.newPage({ viewport: { width: w, height: h } }); p.on('pageerror', (e) => errs.push(e.message));
+    await p.goto('file://' + path.resolve(H.GAME_PATH)); await p.waitForTimeout(300);
+    await p.setInputFiles('#creationLoadInput', { name: 's.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(H.baseSave({ name: 'Skulldrag', unspentPoints: 1,
+      inventory: { 'Pistol': 1, 'Ammo': 20 }, equippedWeapon: 'Pistol', roster: [{ id: 1, name: 'Rook', portraitSeed: 1, hp: 30, maxHp: 40, mode: 'travel', level: 1, xp: 0, equipment: { weapon: null, armor: null } }] }))) });
+    await p.waitForTimeout(600);
+    const r = await p.evaluate(() => { const hud = document.querySelector('.hud-panel'); const hr = hud.getBoundingClientRect();
+      return { h: hr.height, ow: document.documentElement.scrollWidth > innerWidth, inside: [...hud.querySelectorAll('.hud-attr, .chip, .bar-track')].filter(e => e.offsetParent !== null).every(e => { const q = e.getBoundingClientRect(); return q.right <= hr.right + 1 && q.left >= hr.left - 1; }),
+        leaks: [...hud.querySelectorAll('.hidden')].filter(e => e.offsetParent !== null).map(e => e.id || e.className) }; });
+    c.ok(r.h <= max && !r.ow && r.inside && r.leaks.length === 0, `${w}x${h}: status header ${Math.round(r.h)}px tall (limit ${max}), everything inside it, no sideways scroll${r.leaks.length ? ' leaks: ' + r.leaks.join(',') : ''}`);
+    if (shots) await p.screenshot({ path: path.join(shots, `header_${w}x${h}.png`) });
+    await p.close();
+  }
+
   await b.close();
   c.done(errs);
 })();
