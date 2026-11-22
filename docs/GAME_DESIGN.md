@@ -263,3 +263,9 @@ All timers are play time (accumulated in `tickAlpha`, paused during combat), sto
 | Traitor | the traitor's own face (needs no art) |
 
 - If a type has no art, its pool partner's art is used; a horde without horde art shows the zombie in front of you; with neither, combat looks exactly as before. Art: `enemies` in `tools/art_manifest.json`, 300x400 WebP in `ZP_ART.enemies`, one generated stylesheet (`#zp-enemy-art`).
+
+## Character model (Phase A)
+- **ADD CHARACTER MODEL** on the Character tab (next to EQUIPMENT SLOTS): any PNG, JPEG, WebP or GIF. The whole picture is fitted, not cropped, into 2:3 at 400x600 with see-through padding, so a tall full-body figure keeps its head and feet. Saved as WebP, which keeps PNG transparency; browsers that can't encode WebP fall back to JPEG without transparency. Usually 30-100 KB.
+- With a model, the Character tab shows it in the middle with six slots around it: head, torso and hands on the left; weapon, pants and feet on the right. Each slot shows the item's art, its name and its stats. On phones under 520px the body sits on top with the slots two by two below. Without a model, the plain slot list stays.
+- Saved as `bodyModel` (data URL or null), separately from `portrait`. On load it must be a base64 WebP/JPEG/PNG data URL under 400,000 characters, or it is dropped. CHANGE MODEL / REMOVE. Rendered through the `#zp-player-portrait` stylesheet (`.pp-body`).
+- Phase B (not built): true equip/unequip layers on one original mannequin; see the roadmap.

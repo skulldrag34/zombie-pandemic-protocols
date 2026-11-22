@@ -78,6 +78,36 @@ const picInfo = (page) => page.evaluate(() => new Promise((res) => {
   c.ok(!(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)), 'phone width: no sideways scroll on the Character tab');
   if (shots) await page.screenshot({ path: path.join(shots, 'portrait_phone.png'), fullPage: false });
 
+  // Character model: a transparent 900x1000 PNG (not 2:3) with an opaque marker in the middle.
+  await page.setViewportSize({ width: 1280, height: 900 }); await page.waitForTimeout(1200);
+  const bodyPng = Buffer.from((await page.evaluate(() => { const cv = document.createElement('canvas'); cv.width = 900; cv.height = 1000;
+    const x = cv.getContext('2d'); x.fillStyle = '#00ff00'; x.fillRect(400, 450, 100, 100); return cv.toDataURL('image/png'); })).split(',')[1], 'base64');
+  await choose(page, '[data-body-add]', { name: 'body.png', mimeType: 'image/png', buffer: bodyPng });
+  const bi = await page.evaluate(() => new Promise((res) => { const u = window.__zpPortrait.getBody(); if (!u) return res(null);
+    const im = new Image(); im.onload = () => { const cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height; const x = cv.getContext('2d'); x.drawImage(im, 0, 0);
+      res({ w: im.width, h: im.height, type: u.slice(5, u.indexOf(';')), kb: Math.round(u.length / 1024), corner: [...x.getImageData(5, 5, 1, 1).data], mid: [...x.getImageData(200, 300, 1, 1).data] }); }; im.src = u; }));
+  c.ok(bi && bi.w === 400 && bi.h === 600 && bi.type === 'image/webp', `character model stored as 400x600 WebP (${bi && bi.w}x${bi && bi.h} ${bi && bi.type}, ${bi && bi.kb} KB)`);
+  c.ok(bi && bi.corner[3] === 0 && bi.mid[1] > 200 && bi.mid[3] === 255, 'transparency kept (clear corner), picture centred (marker in the middle)');
+  // A tall, narrow full-body picture keeps its head and feet (fitted whole, not cropped).
+  const tall = Buffer.from((await page.evaluate(() => { const cv = document.createElement('canvas'); cv.width = 300; cv.height = 1200;
+    const x = cv.getContext('2d'); x.fillStyle = '#334'; x.fillRect(0, 0, 300, 1200); x.fillStyle = '#f00'; x.fillRect(100, 0, 100, 40); x.fillStyle = '#00f'; x.fillRect(100, 1160, 100, 40); return cv.toDataURL('image/png'); })).split(',')[1], 'base64');
+  await choose(page, '[data-body-add]', { name: 'tall.png', mimeType: 'image/png', buffer: tall });
+  const tb = await page.evaluate(() => new Promise((res) => { const im = new Image(); im.onload = () => { const cv = document.createElement('canvas'); cv.width = 400; cv.height = 600; const x = cv.getContext('2d'); x.drawImage(im, 0, 0);
+    res({ top: [...x.getImageData(200, 5, 1, 1).data], bottom: [...x.getImageData(200, 595, 1, 1).data], side: [...x.getImageData(20, 300, 1, 1).data] }); }; im.src = window.__zpPortrait.getBody(); }));
+  c.ok(tb.top[0] > 200 && tb.top[2] < 60 && tb.bottom[2] > 200 && tb.side[3] === 0, 'a tall narrow figure is fitted whole: head (red) and feet (blue) kept, see-through sides');
+  const lay = async () => page.evaluate(() => { const d = document.getElementById('gearDoll'); if (!d) return null; const r = d.getBoundingClientRect(), b = d.querySelector('.doll-body').getBoundingClientRect();
+    return { bw: b.width, ratio: b.height / b.width, inside: [...d.querySelectorAll('.doll-slot')].every(e => { const q = e.getBoundingClientRect(); return q.left >= r.left - 1 && q.right <= r.right + 1; }),
+      painted: getComputedStyle(d.querySelector('.doll-body')).backgroundImage.startsWith('url("data:image/'), ow: document.documentElement.scrollWidth > innerWidth }; });
+  let L = await lay();
+  c.ok(L && L.painted && Math.abs(L.ratio - 1.5) < 0.03 && L.inside && !L.ow, `desktop: body painted at 2:3 (${L && Math.round(L.bw)}px wide), slots inside, no sideways scroll`);
+  if (shots) await page.screenshot({ path: path.join(shots, 'bodymodel_desktop.png') });
+  await page.setViewportSize({ width: 360, height: 740 }); await page.waitForTimeout(1200);
+  L = await lay();
+  c.ok(L && L.painted && L.bw >= 100 && L.inside && !L.ow, `phone 360px: body ${L && Math.round(L.bw)}px wide, slots inside, no sideways scroll`);
+  if (shots) await page.screenshot({ path: path.join(shots, 'bodymodel_phone.png'), fullPage: true });
+  await page.click('[data-body-remove]'); await page.waitForTimeout(300);
+  c.ok(await page.evaluate(() => window.__zpPortrait.getBody()) === null && await page.$('#gearDoll') === null, 'REMOVE model returns to the slot list');
+
   await page.click('[data-portrait-remove]'); await page.waitForTimeout(300);
   c.ok(await page.evaluate(() => window.__zpPortrait.get()) === null && await page.$('#characterContent svg') !== null, 'REMOVE returns to the drawn face');
 
