@@ -246,3 +246,20 @@ All timers are play time (accumulated in `tickAlpha`, paused during combat), sto
 - GitHub repo banner: `docs/social-preview.jpg` (1280x640), also the README header. Upload it once in the repo's Settings, Social preview.
 - Both banners render from `tools/banner.html` with `node tools/build_banners.js`.
 - Popup screens (`.overlay`) centre their card with `margin: auto` and scroll from the top when the card is taller than the screen. The old `align-items: center` made the top of the new-character card unreachable on phones.
+
+## Combat face-off (Combat visuals Phase 1: art only)
+- When the zombie in a fight has art, the combat card shows your portrait (or drawn face) VS the zombie's portrait in place of the crosshair. Distance, speed, level, HP and all actions are unchanged.
+- Original zombie types (no stats), chosen per fight from where it started and the zombie's level, never from HP or distance:
+
+| Area type | Types |
+|---|---|
+| Safehouse, Residential | Shambling Resident, Dead Jogger |
+| Commercial | Office Drone, Lost Courier |
+| Industrial | Site Worker, Lost Courier |
+| Military | Riot Husk, Fallen Guardsman |
+| Wasteland, or any zombie level 8+ | Feral, Bloater |
+| More zombies queued | The Horde (the last one shows its own type) |
+| Patient Zero | Patient Zero |
+| Traitor | the traitor's own face (needs no art) |
+
+- If a type has no art, its pool partner's art is used; with neither, combat looks exactly as before. Art: `enemies` in `tools/art_manifest.json`, 300x400 WebP in `ZP_ART.enemies`, one generated stylesheet (`#zp-enemy-art`).

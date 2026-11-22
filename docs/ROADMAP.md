@@ -8,7 +8,7 @@ Process reminder: propose design → get go-ahead on anything large → back up 
 
 ## 1. Shipped so far
 
-Roster (5, one traveler) · World Map · Compound Expansion (8 blocks) · Fitness/Marksmanship training · Energy Drink · crafting/building XP · bigger caches · vendor density scaling · player level cap 25 + reputation titles · companion leveling (cap 10) · Vendor Quests + reputation · companion manual & auto-heal · combat balance pass (faster zombies, danger ceiling 10, hordes up to 5, faster boss) · 32-name NPC pool · Safehouse structural integrity + repair · dropdown re-render fix · offline persistence of craft/build queues · capped (8h) offline credit for stamina, Garden and outposts · mobile viewport meta · per-device localStorage autosave · **phone layout pass (compact map, actions above the log, bigger tap targets, empty quest chip fixed) · **Alpha Phase 1: emergence** · **Alpha Phase 2: turned recruits + double agents** · **Audio Phase A: procedural Web Audio sound effects (20 SFX, settings panel, mute/M key, prefs in save)** · **Audio Phase B: adaptive music + ambience** · **Item art batch 1 (18 items, embedded)** · **Item art batch 2 (6 gear items)** · **Player portrait: add your own picture** · **Title banner + link preview + GitHub banner; popup screens no longer clip their top on phones (latest)** · repair XP.
+Roster (5, one traveler) · World Map · Compound Expansion (8 blocks) · Fitness/Marksmanship training · Energy Drink · crafting/building XP · bigger caches · vendor density scaling · player level cap 25 + reputation titles · companion leveling (cap 10) · Vendor Quests + reputation · companion manual & auto-heal · combat balance pass (faster zombies, danger ceiling 10, hordes up to 5, faster boss) · 32-name NPC pool · Safehouse structural integrity + repair · dropdown re-render fix · offline persistence of craft/build queues · capped (8h) offline credit for stamina, Garden and outposts · mobile viewport meta · per-device localStorage autosave · **phone layout pass (compact map, actions above the log, bigger tap targets, empty quest chip fixed) · **Alpha Phase 1: emergence** · **Alpha Phase 2: turned recruits + double agents** · **Audio Phase A: procedural Web Audio sound effects (20 SFX, settings panel, mute/M key, prefs in save)** · **Audio Phase B: adaptive music + ambience** · **Item art batch 1 (18 items, embedded)** · **Item art batch 2 (6 gear items)** · **Player portrait: add your own picture** · **Title banner + link preview + GitHub banner; popup screens no longer clip their top on phones** · **Combat visuals Phase 1: face-off panel + zombie art slots; ALLY bar no longer shows without a companion (latest)** · repair XP.
 
 ---
 
@@ -75,10 +75,14 @@ Noted during Phase 1 balancing (not Alpha-related): a fresh 1-block Medium base 
 
 ## 5b. Art (in progress)
 
+**Combat visuals Phase 2 (proposal later):** zombie types get gameplay quirks; pick your target within a horde.
+
+
 Designer's Gemini art in a gritty graphic-novel style, **embedded** in index.html (single-file rule kept; designer's call). Prompt pack: the "Art Prompt Pack" doc. Pipeline: originals in `art-src/`, crops in `tools/art_manifest.json`, `python3 tools/build_art.py` writes 256px WebP into the `zp-art` script block. Items without art render as before, so art lands in batches.
 - **Batch 1 DONE (18):** Bandage, Ammo, Cloth Strips, Duct Tape, Scrap Metal, Empty Bottle, Painkillers, Energy Drink, Bandana, Work Gloves, Canned Food, Wallet, Watch, Jewelry, Improvised Flamethrower, Machete (grid cell; replace with a single card later), Crowbar, Medkit. Grid B's medkit cell was not used (cross symbol).
 - **Batch 2 DONE (6):** Shotgun, Padded Vest, Riot Armor, Motorcycle Helmet, Reinforced Gauntlets, Padded Leg Guards.
 - **Batch 3 DONE (4):** Pistol, Combat Boots, Leather Jacket, Camo Hoodie.
+- **Zombie portraits (11, 300x400, prompts in the Art Prompt Pack):** resident, jogger, office, courier, worker, riot, soldier, feral, bloater, horde, patient_zero. Code is ready; art pending.
 - **Next shop items (2):** Cargo Pants; Running Shoes (batch 3 image held back: it carried a real sportswear brand's swoosh; regenerate with no logos).
 - Then: Patient Zero zone + portrait, companion portraits, remaining items, rooms, vendors, Alphas, scenes. Companion/NPC portraits and scenes need new slots (not built yet); the player portrait frame (300x400) is built and can be reused.
 

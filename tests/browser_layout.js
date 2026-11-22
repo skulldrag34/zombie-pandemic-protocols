@@ -3,6 +3,7 @@
 //    clipped the top of the new-character card on phones, hiding its first ~100-200px)
 //  - popups that fit are still centred
 //  - the title banner paints and nothing scrolls sideways
+//  - the combat face-off fits phone and desktop (with placeholder enemy art)
 //   node tests/browser_layout.js [shotsDir]
 const path = require('path');
 const { chromium } = require('playwright');
@@ -30,6 +31,35 @@ const shots = process.argv[2] || null;
     c.ok(d && Math.abs(d.above - d.below) <= 2, `${w}x${h}: death screen is still centred (${d ? Math.round(d.above) + ' above / ' + Math.round(d.below) + ' below' : 'not shown'})`);
     await p.close();
   }
+  // Combat face-off with placeholder enemy art (the live file has none yet).
+  const os = require('os'), fs = require('fs');
+  const PIC = 'data:image/webp;base64,UklGRiABAABXRUJQVlA4IBQBAACwHACdASosAZABPp1OpE4lpCOiICgAsBOJaW7hd2EbQAnsA99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D1gAP7/uYQ/0Hxcv/9St+uiqZO+Rgowj8gQAAAAAAAAAAAAAAAAAAA=';
+  const variant = path.join(os.tmpdir(), 'zp_faceoff_layout.html');
+  fs.writeFileSync(variant, fs.readFileSync(path.resolve(H.GAME_PATH), 'utf8').replace(/(<script id="zp-art">[\s\S]*?<\/script>)/,
+    `$1\n<script>window.ZP_ART.enemies = { office: "${PIC}", courier: "${PIC}", horde: "${PIC}" };</script>`));
+  for (const [w, h] of [[360, 640], [390, 844], [1280, 900]]) {
+    const p = await b.newPage({ viewport: { width: w, height: h } }); p.on('pageerror', (e) => errs.push(e.message));
+    await p.goto('file://' + variant); await p.waitForTimeout(300);
+    await p.setInputFiles('#creationLoadInput', { name: 's.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(H.baseSave({ hp: 5000, baseMaxHp: 5000 }))) });
+    await p.waitForTimeout(500);
+    await p.evaluate(() => { const r = Math.random; Math.random = () => 0.01; document.getElementById('btnE').click(); Math.random = r; });
+    await p.waitForTimeout(400);
+    const f = await p.evaluate(() => {
+      const o = document.getElementById('combatOverlay'); o.scrollTop = 0;
+      const fo = document.getElementById('faceoff'), frames = [...fo.querySelectorAll('.fo-frame')].map(e => e.getBoundingClientRect());
+      const card = document.getElementById('combatCard').getBoundingClientRect();
+      return { shown: !fo.classList.contains('hidden'), n: frames.length, minW: Math.min(...frames.map(r => r.width)), ratio: frames[1] ? frames[1].height / frames[1].width : 0,
+        inside: frames.every(r => r.left >= card.left && r.right <= card.right), top: card.top, ow: document.documentElement.scrollWidth > innerWidth,
+        painted: frames[1] ? getComputedStyle(fo.querySelectorAll('.fo-frame')[1]).backgroundImage.startsWith('url("data:image/') : false,
+        leaks: [...document.querySelectorAll('.hidden')].filter(e => e.offsetParent !== null).map(e => e.id || e.className) };
+    });
+    c.ok(f.shown && f.n === 2 && f.painted, `${w}x${h}: combat face-off shows both portraits, enemy painted`);
+    c.ok(f.minW >= 100 && Math.abs(f.ratio - 4 / 3) < 0.05 && f.inside && !f.ow && f.top >= 0, `${w}x${h}: frames ${Math.round(f.minW)}px wide at 3:4, inside the card, card top on screen, no sideways scroll`);
+    c.ok(f.leaks.length === 0, `${w}x${h}: nothing marked hidden is visible in combat (e.g. the ALLY bar with no companion)${f.leaks.length ? ' - leaks: ' + f.leaks.join(', ') : ''}`);
+    if (shots) await p.screenshot({ path: path.join(shots, `faceoff_${w}x${h}.png`) });
+    await p.close();
+  }
+
   await b.close();
   c.done(errs);
 })();
