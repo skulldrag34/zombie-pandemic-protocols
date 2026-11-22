@@ -78,7 +78,8 @@ Noted during Phase 1 balancing (not Alpha-related): a fresh 1-block Medium base 
 Designer's Gemini art in a gritty graphic-novel style, **embedded** in index.html (single-file rule kept; designer's call). Prompt pack: the "Art Prompt Pack" doc. Pipeline: originals in `art-src/`, crops in `tools/art_manifest.json`, `python3 tools/build_art.py` writes 256px WebP into the `zp-art` script block. Items without art render as before, so art lands in batches.
 - **Batch 1 DONE (18):** Bandage, Ammo, Cloth Strips, Duct Tape, Scrap Metal, Empty Bottle, Painkillers, Energy Drink, Bandana, Work Gloves, Canned Food, Wallet, Watch, Jewelry, Improvised Flamethrower, Machete (grid cell; replace with a single card later), Crowbar, Medkit. Grid B's medkit cell was not used (cross symbol).
 - **Batch 2 DONE (6):** Shotgun, Padded Vest, Riot Armor, Motorcycle Helmet, Reinforced Gauntlets, Padded Leg Guards.
-- **Next shop items (6):** Pistol (image did not arrive in batch 2), Combat Boots, Leather Jacket, Camo Hoodie, Running Shoes, Cargo Pants.
+- **Batch 3 DONE (4):** Pistol, Combat Boots, Leather Jacket, Camo Hoodie.
+- **Next shop items (2):** Cargo Pants; Running Shoes (batch 3 image held back: it carried a real sportswear brand's swoosh; regenerate with no logos).
 - Then: Patient Zero zone + portrait, companion portraits, remaining items, rooms, vendors, Alphas, scenes. Companion/NPC portraits and scenes need new slots (not built yet); the player portrait frame (300x400) is built and can be reused.
 
 ## 6. Parked

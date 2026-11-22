@@ -138,6 +138,18 @@
     },
     "Shotgun": {
       "src": "shotgun.jpg"
+    },
+    "Combat Boots": {
+      "src": "combat-boots.jpg"
+    },
+    "Leather Jacket": {
+      "src": "leather-jacket.jpg"
+    },
+    "Camo Hoodie": {
+      "src": "camo-hoodie.jpg"
+    },
+    "Pistol": {
+      "src": "pistol.jpg"
     }
   },
   "scenes": {
