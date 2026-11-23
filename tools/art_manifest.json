@@ -198,6 +198,9 @@
     },
     "Precision Rifle": {
       "src": "items/precision-rifle.jpg"
+    },
+    "Trauma Kit": {
+      "src": "items/trauma-kit.jpg"
     }
   },
   "scenes": {

@@ -79,9 +79,18 @@ async function session(saveObj) { const s = H.makeSession(); loadSave(s.window, 
   c.ok(artIn(grid, 'Bandage') && artIn(grid, 'Crowbar') && artIn(grid, 'Medkit'), 'inventory: Bandage, Crowbar and Medkit cards show art');
   c.ok(artIn(grid, 'Shotgun') && artIn(grid, 'Riot Armor') && artIn(grid, 'Padded Leg Guards'), 'inventory: batch 2 gear (Shotgun, Riot Armor, Leg Guards) shows art');
   c.ok(artIn(grid, 'Scrap Plate Armor') && artIn(grid, 'Pistol') && artIn(grid, 'Combat Boots') && artIn(grid, 'Camo Hoodie'), 'inventory: batch 3 (Pistol, Combat Boots, Camo Hoodie) shows art');
-  // Trauma Kit has no art yet (held back); if it gets some, move this check to another item without art.
-  const bareCard = [...grid.querySelectorAll('.inv-card')].find(e => /Trauma Kit/.test(e.textContent));
-  c.ok(bareCard && !bareCard.querySelector('.item-art') && !bareCard.querySelector('.art-row'), 'an item without art (Trauma Kit) renders exactly as before');
+  c.ok(artIn(grid, 'Trauma Kit') && artIn(grid, 'Rusty Pipe'), 'inventory: quest and crafted items (Trauma Kit, Rusty Pipe) show art');
+  {
+    // Every item has art now, so check the fallback on a copy with the Trauma Kit's art removed.
+    const { JSDOM } = require('jsdom');
+    const stripped = GAME.replace(/(<script id="zp-art">[\s\S]*?<\/script>)/, '$1\n<script>delete window.ZP_ART.items["Trauma Kit"];</script>');
+    const dom = new JSDOM(stripped, { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://example.com/' });
+    const sw = dom.window; sw.URL.createObjectURL = () => 'blob:mock'; sw.URL.revokeObjectURL = () => {};
+    loadSave(sw, baseSave({ inventory: { 'Trauma Kit': 1, 'Bandage': 1 } })); await sleep(300); tab(sw, 'survivor');
+    const bareCard = [...sw.document.querySelectorAll('#invGrid .inv-card')].find(e => /Trauma Kit/.test(e.textContent));
+    c.ok(bareCard && !bareCard.querySelector('.item-art') && !bareCard.querySelector('.art-row') && sw.document.querySelector('#invGrid [data-art="Bandage"]'), 'an item without art renders exactly as before (Trauma Kit art removed in a copy)');
+    sw.close();
+  }
   const bArt = grid.querySelector('[data-art="Bandage"]');
   c.ok(bArt.getAttribute('role') === 'img' && bArt.getAttribute('aria-label') === 'Bandage', 'art is labelled for screen readers');
   c.ok(!/data:image/.test(grid.innerHTML), 'cards carry a class name, not image data (cheap 1s re-render)');

@@ -90,7 +90,7 @@ Designer's Gemini art in a gritty graphic-novel style, **embedded** in index.htm
 - **Room art:** ALL 7 DONE. Rejected: 'Alpha tokens' (lettered coins; not the pack's Alpha portraits).
 - **Scenes waiting for a slot:** `art-src/scenes-pending/` rooftop-survivors.jpg, street-fight.jpg (16:9). Not embedded until a scene slot is designed.
 - **Held back:** a wide street banner with a zombie lineup and a hand-lettered sign; it resembles another game's site header and carries baked-in text.
-- **Scrap Plate Armor DONE.** Crafted/quest items DONE from the 8-item sheet except Trauma Kit (held: cross-like mark on the bag). Every other item has art.
+- **Scrap Plate Armor DONE.** **Every item in the game has art** (Trauma Kit redone without the cross mark).
 - **Shop items: ALL DONE** (Cargo Pants and a logo-free Running Shoes added last).
 - Then: Patient Zero zone + portrait, companion portraits, remaining items, rooms, vendors, Alphas, scenes. Companion/NPC portraits and scenes need new slots (not built yet); the player portrait frame (300x400) is built and can be reused.
 
