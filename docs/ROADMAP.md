@@ -86,7 +86,7 @@ Designer's Gemini art in a gritty graphic-novel style, **embedded** in index.htm
 - **Batch 3 DONE (4):** Pistol, Combat Boots, Leather Jacket, Camo Hoodie.
 - **Zombie portraits (11, 300x400, prompts in the Art Prompt Pack):** ALL 11 DONE. Every fight shows a zombie portrait (traitors show their own face).
 - **Companion portraits (12):** DONE 11: C1-C11 (C9 lab-coat scientist, C10 welder in cap, C11 braided woman in a leather vest). C12 DONE (young man with locs): all 12 slots filled. Held: a man in the same patched jacket (art-src/companions/held-patched-jacket-man.jpg); also held: a mohawk woman with a respirator (art-src/companions/held-mohawk-woman.jpg); all 5 women's slots are full, and adding a slot would change existing companions' faces.
-- **Scrap gear DONE (6 craftable pieces).** Art in for 5; Plate Bracers need a redo (license-plate lettering): ask for blank metal plates.
+- **Scrap gear DONE (6 craftable pieces).** Art in for all 6.
 - **Room art:** ALL 7 DONE. Rejected: 'Alpha tokens' (lettered coins; not the pack's Alpha portraits).
 - **Scenes waiting for a slot:** `art-src/scenes-pending/` rooftop-survivors.jpg, street-fight.jpg (16:9). Not embedded until a scene slot is designed.
 - **Held back:** a wide street banner with a zombie lineup and a hand-lettered sign; it resembles another game's site header and carries baked-in text.
