@@ -153,6 +153,21 @@
     },
     "Scrap Plate Armor": {
       "src": "scrap-plate-armor.jpg"
+    },
+    "Site Helmet": {
+      "src": "site-helmet.jpg"
+    },
+    "Tire Pauldron": {
+      "src": "tire-pauldron.jpg"
+    },
+    "Scavenger Gas Mask": {
+      "src": "gas-mask.jpg"
+    },
+    "Scrap Shin Guards": {
+      "src": "shin-guards.jpg"
+    },
+    "Chain-Knuckle Gloves": {
+      "src": "chain-gloves.jpg"
     }
   },
   "scenes": {

@@ -292,3 +292,16 @@ All timers are play time (accumulated in `tickAlpha`, paused during combat), sto
 - A companion's slot = that gender's list[portraitSeed mod length], fixed for life: a slot without art shows the drawn face until its picture arrives, so faces never swap as art lands.
 - Shown on the encounter card, roster cards (48x64) and the traitor face-off. Stored 240x320 WebP in `ZP_ART.companions`; one stylesheet (`#zp-companion-art`).
 - Combat card: a **YOU** HP bar sits above Z-HP (the fight screen covers the header). At 25% HP or less it glows red.
+
+## Scrap gear (crafted)
+| Item | Slot | Stats | Recipe | Time | Level |
+|---|---|---|---|---|---|
+| Site Helmet | Head | 5 DEF, +5 HP, +1 PER | 2 Scrap Metal, 1 Duct Tape, 1 Cloth Strips | 30s | 2 |
+| Scavenger Gas Mask | Head | 2 DEF, +2 END | 2 Empty Bottle, 2 Cloth Strips, 1 Duct Tape | 30s | 2 |
+| Tire Pauldron | Torso | 10 DEF, +12 HP, −1 AGI | 4 Scrap Metal, 2 Duct Tape | 45s | 3 |
+| Plate Bracers | Hands | 3 DEF, +1 STR | 2 Scrap Metal, 1 Duct Tape | 25s | 1 |
+| Chain-Knuckle Gloves | Hands | 1 DEF, +1 STR, +1 AGI | 1 Work Gloves, 1 Scrap Metal | 20s | 1 |
+| Scrap Shin Guards | Pants | 4 DEF, +6 HP | 2 Scrap Metal, 1 Duct Tape, 1 Cloth Strips | 30s | 1 |
+- Recipes can carry `minLevel`; locked recipes show "Requires level N" and cannot start. Recipe cards show the slot and stats of what they make.
+- Effective attributes never drop below 1 (gear penalties included); negative bonuses print as "−1 AGI".
+- The gas mask has no gas to resist yet; a hook for Combat Phase 2 (e.g. Bloater gas).
