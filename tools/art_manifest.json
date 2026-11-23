@@ -150,6 +150,9 @@
     },
     "Pistol": {
       "src": "pistol.jpg"
+    },
+    "Scrap Plate Armor": {
+      "src": "scrap-plate-armor.jpg"
     }
   },
   "scenes": {
@@ -228,6 +231,15 @@
     },
     "c8": {
       "src": "companions/c8.jpg"
+    },
+    "c9": {
+      "src": "companions/c9.jpg"
+    },
+    "c10": {
+      "src": "companions/c10.jpg"
+    },
+    "c11": {
+      "src": "companions/c11.jpg"
     }
   }
 }

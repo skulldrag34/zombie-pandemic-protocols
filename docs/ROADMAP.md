@@ -85,9 +85,11 @@ Designer's Gemini art in a gritty graphic-novel style, **embedded** in index.htm
 - **Batch 2 DONE (6):** Shotgun, Padded Vest, Riot Armor, Motorcycle Helmet, Reinforced Gauntlets, Padded Leg Guards.
 - **Batch 3 DONE (4):** Pistol, Combat Boots, Leather Jacket, Camo Hoodie.
 - **Zombie portraits (11, 300x400, prompts in the Art Prompt Pack):** ALL 11 DONE. Every fight shows a zombie portrait (traitors show their own face).
-- **Companion portraits (12):** DONE 8: C1-C8. To do: C9, C10, C11, C12.
+- **Companion portraits (12):** DONE 11: C1-C11 (C9 lab-coat scientist, C10 welder in cap, C11 braided woman in a leather vest). To do: C12 (man). Held: a mohawk woman with a respirator (art-src/companions/held-mohawk-woman.jpg); all 5 women's slots are full, and adding a slot would change existing companions' faces.
+- **Gear sheet pending a design decision:** art-src/gear-pending/gear-sheet-6.jpg (plate bracers, hard hat with mesh visor, tire pauldron, gas mask, shin guards, fingerless chain gloves). None are game items yet.
 - **Scenes waiting for a slot:** `art-src/scenes-pending/` rooftop-survivors.jpg, street-fight.jpg (16:9). Not embedded until a scene slot is designed.
 - **Held back:** a wide street banner with a zombie lineup and a hand-lettered sign; it resembles another game's site header and carries baked-in text.
+- **Scrap Plate Armor DONE.** Still no art: Baseball Bat, Rusty Pipe, Hunting Rifle, Molotov Cocktail, Research Fragment, Reinforced Combat Vest, Precision Rifle, Trauma Kit (prompts in the pack).
 - **Next shop items (2):** Cargo Pants; Running Shoes (batch 3 image held back: it carried a real sportswear brand's swoosh; regenerate with no logos).
 - Then: Patient Zero zone + portrait, companion portraits, remaining items, rooms, vendors, Alphas, scenes. Companion/NPC portraits and scenes need new slots (not built yet); the player portrait frame (300x400) is built and can be reused.
 
