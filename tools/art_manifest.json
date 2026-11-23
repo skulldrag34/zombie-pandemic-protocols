@@ -259,5 +259,14 @@
     "c12": {
       "src": "companions/c12.jpg"
     }
+  },
+  "_rooms_comment": "Safehouse room thumbnails keyed by room id (armory, sickbay, range, garden, gym, workshop, lab); square, stored 224x224.",
+  "rooms": {
+    "armory": {
+      "src": "rooms/armory.jpg"
+    },
+    "workshop": {
+      "src": "rooms/workshop.jpg"
+    }
   }
 }

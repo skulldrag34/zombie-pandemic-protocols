@@ -123,5 +123,18 @@ async function session(saveObj) { const s = H.makeSession(); loadSave(s.window, 
   c.ok(og && og.w === 1200 && og.h === 630 && meta('og:image:width') === '1200' && meta('og:image:height') === '630', `og-image.jpg exists at 1200x630 (${og ? og.w + 'x' + og.h : 'missing'})`);
   c.ok(gh && gh.w === 1280 && gh.h === 640 && /\(docs\/social-preview\.jpg\)/.test(fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8')), 'GitHub banner exists at 1280x640 and heads the README');
 
+  console.log('D) Safehouse room thumbnails');
+  s = await session(baseSave({ builtRooms: ['armory'] })); w = s.window;
+  tab(w, 'safehouse');
+  const rl = $(w, 'roomList');
+  const roomIds = Object.keys(MANIFEST.rooms || {});
+  c.ok(roomIds.length > 0 && roomIds.every(id => rl.querySelector(`[data-room-art="${id}"]`)), `rooms with art show a thumbnail (${roomIds.join(', ')})`);
+  const gymCard = [...rl.querySelectorAll('.room-card')].find(e => /Gym/.test(e.textContent));
+  c.ok(gymCard && !gymCard.querySelector('.room-art'), 'a room without art (Gym) renders as before');
+  const armCard = rl.querySelector('[data-room-art="armory"]').closest('.room-card'), wsCard = rl.querySelector('[data-room-art="workshop"]').closest('.room-card');
+  c.ok(armCard.classList.contains('built') && !wsCard.classList.contains('built') && !/data:image/.test(rl.innerHTML), 'built and unbuilt rooms both show art (unbuilt is greyed by CSS); markup carries only a class');
+  c.ok(wsCard.querySelector('[data-build="workshop"]'), 'the build button still sits inside an art card');
+  done(s);
+
   c.done(errors);
 })();
