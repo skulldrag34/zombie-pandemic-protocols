@@ -18,13 +18,13 @@ function webpSize(buf) { if (buf.toString('ascii', 12, 16) !== 'VP8 ') return nu
   const keys = Object.keys(arts).sort();
   c.ok(keys.length === Object.keys(MAN.companions).length && keys.every(k => /^c\d+$/.test(k)), `all manifest portraits embedded (${keys.join(', ')})`);
   c.ok(keys.every(k => { const z = webpSize(Buffer.from(arts[k].split(',')[1], 'base64')); return z && z.w === 240 && z.h === 320; }), 'each is a 240x320 WebP');
-  c.ok(!!arts.c1 && !!arts.c11 && !arts.c12, 'C1-C11 are in; C12 has not arrived yet');
+  c.ok(['c1','c2','c3','c4','c5','c6','c7','c8','c9','c10','c11','c12'].every(k => arts[k]), 'all 12 companion portraits are in');
   c.ok(CA.slots.m.length + CA.slots.f.length === 12 && new Set([...CA.slots.m, ...CA.slots.f]).size === 12, '12 distinct slots: 7 men, 5 women');
   c.ok(CA.female.has('Fatima') && !CA.female.has('Kwame'), 'names carry a gender (Fatima: woman, Kwame: man)');
   c.ok(CA.slots.f.includes(CA.slot('Naomi', 123456)) && CA.slots.m.includes(CA.slot('Jamal', 123456)), "a woman's name gets a woman's slot, a man's name a man's");
   c.ok(CA.slot('Rook', 987654) === CA.slot('Rook', 987654), 'the same companion always gets the same slot');
   c.ok(CA.slot('Hazel', 0) === 'c2' && CA.key('Hazel', 0) === 'c2' && CA.slot('Hazel', 4) === 'c11' && CA.key('Hazel', 4) === 'c11', 'women\'s slots: all five have art (C2, C11 checked)');
-  c.ok(CA.slot('Cole', 0) === 'c1' && CA.key('Cole', 0) === 'c1' && CA.slot('Cole', 6) === 'c12' && CA.key('Cole', 6) === null, 'C1 has art; the C12 slot (no art yet) falls back to the drawn face');
+  c.ok(CA.slot('Cole', 0) === 'c1' && CA.key('Cole', 0) === 'c1' && CA.slot('Cole', 6) === 'c12' && CA.key('Cole', 6) === 'c12', 'men\'s slots: C1 and C12 have art');
   done(s);
 
   console.log('B) Roster cards (Squad tab)');
@@ -33,7 +33,7 @@ function webpSize(buf) { if (buf.toString('ascii', 12, 16) !== 'VP8 ') return nu
   const card = (name) => [...w.document.querySelectorAll('.roster-card')].find(e => e.textContent.includes(name));
   c.ok(card('Hazel').querySelector('[data-comp-art="c2"].ca-c2') && card('Hazel').querySelector('.portrait-frame.has-photo'), 'Hazel shows portrait C2 (sepia filter lifted)');
   c.ok(card('Kenji').querySelector('[data-comp-art="c3"]'), 'Kenji shows portrait C3');
-  c.ok(card('Cole').querySelector('.portrait-frame svg') && !card('Cole').querySelector('[data-comp-art]'), 'Cole (C12 slot, no art yet) keeps the drawn face');
+  c.ok(card('Cole').querySelector('[data-comp-art="c12"]'), 'Cole shows portrait C12');
   c.ok(!/data:image/.test($(w, 'rosterContent').innerHTML) && w.document.getElementById('zp-companion-art'), 'cards carry a class; images live in one stylesheet');
   done(s);
 

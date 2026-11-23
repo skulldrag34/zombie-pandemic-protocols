@@ -85,7 +85,7 @@ Designer's Gemini art in a gritty graphic-novel style, **embedded** in index.htm
 - **Batch 2 DONE (6):** Shotgun, Padded Vest, Riot Armor, Motorcycle Helmet, Reinforced Gauntlets, Padded Leg Guards.
 - **Batch 3 DONE (4):** Pistol, Combat Boots, Leather Jacket, Camo Hoodie.
 - **Zombie portraits (11, 300x400, prompts in the Art Prompt Pack):** ALL 11 DONE. Every fight shows a zombie portrait (traitors show their own face).
-- **Companion portraits (12):** DONE 11: C1-C11 (C9 lab-coat scientist, C10 welder in cap, C11 braided woman in a leather vest). To do: C12 (man). Held: a mohawk woman with a respirator (art-src/companions/held-mohawk-woman.jpg); all 5 women's slots are full, and adding a slot would change existing companions' faces.
+- **Companion portraits (12):** DONE 11: C1-C11 (C9 lab-coat scientist, C10 welder in cap, C11 braided woman in a leather vest). C12 DONE (young man with locs): all 12 slots filled. Held: a man in the same patched jacket (art-src/companions/held-patched-jacket-man.jpg); also held: a mohawk woman with a respirator (art-src/companions/held-mohawk-woman.jpg); all 5 women's slots are full, and adding a slot would change existing companions' faces.
 - **Gear sheet pending a design decision:** art-src/gear-pending/gear-sheet-6.jpg (plate bracers, hard hat with mesh visor, tire pauldron, gas mask, shin guards, fingerless chain gloves). None are game items yet.
 - **Scenes waiting for a slot:** `art-src/scenes-pending/` rooftop-survivors.jpg, street-fight.jpg (16:9). Not embedded until a scene slot is designed.
 - **Held back:** a wide street banner with a zombie lineup and a hand-lettered sign; it resembles another game's site header and carries baked-in text.
