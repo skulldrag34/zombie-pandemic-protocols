@@ -267,6 +267,21 @@
     },
     "workshop": {
       "src": "rooms/workshop.jpg"
+    },
+    "sickbay": {
+      "src": "rooms/sickbay.jpg"
+    },
+    "range": {
+      "src": "rooms/range.jpg"
+    },
+    "garden": {
+      "src": "rooms/garden.jpg"
+    },
+    "gym": {
+      "src": "rooms/gym.jpg"
+    },
+    "lab": {
+      "src": "rooms/lab.jpg"
     }
   }
 }

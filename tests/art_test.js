@@ -129,8 +129,7 @@ async function session(saveObj) { const s = H.makeSession(); loadSave(s.window, 
   const rl = $(w, 'roomList');
   const roomIds = Object.keys(MANIFEST.rooms || {});
   c.ok(roomIds.length > 0 && roomIds.every(id => rl.querySelector(`[data-room-art="${id}"]`)), `rooms with art show a thumbnail (${roomIds.join(', ')})`);
-  const gymCard = [...rl.querySelectorAll('.room-card')].find(e => /Gym/.test(e.textContent));
-  c.ok(gymCard && !gymCard.querySelector('.room-art'), 'a room without art (Gym) renders as before');
+  c.ok(rl.querySelectorAll('.room-card .room-art').length === 7, 'all 7 Safehouse rooms have art');
   const armCard = rl.querySelector('[data-room-art="armory"]').closest('.room-card'), wsCard = rl.querySelector('[data-room-art="workshop"]').closest('.room-card');
   c.ok(armCard.classList.contains('built') && !wsCard.classList.contains('built') && !/data:image/.test(rl.innerHTML), 'built and unbuilt rooms both show art (unbuilt is greyed by CSS); markup carries only a class');
   c.ok(wsCard.querySelector('[data-build="workshop"]'), 'the build button still sits inside an art card');

@@ -308,5 +308,5 @@ All timers are play time (accumulated in `tickAlpha`, paused during combat), sto
 
 ## Room art (Safehouse tab)
 - Room cards show a 72px thumbnail when the room has art (`ZP_ART.rooms`, 224x224 WebP, keyed by room id); unbuilt rooms show it greyed. Rooms without art render as before.
-- In: Armory, Workshop (cropped from the 9-card sheet, captions removed). Needed: Sickbay (no cross symbol), Lab, Garden, Gym, Shooting Range.
+- All 7 rooms have art (Armory and Workshop cropped from the 9-card sheet; the other five single images).
 - Spare cards from that sheet (Generator, Kitchen, Dorm, Comms, Storage) are kept in art-src/rooms/room-sheet-9.jpg as ideas for future rooms.
