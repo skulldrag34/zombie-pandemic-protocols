@@ -282,3 +282,13 @@ All timers are play time (accumulated in `tickAlpha`, paused during combat), sto
 - Attributes show their effective value (green when gear or achievements add to it); the tooltip gives the description and the base value. With unspent points, each attribute gets a + button (disabled at 10) and "+N points to spend" shows, so points can be spent from any tab.
 - Height: phone 171px (190px with points to spend), desktop about 125px; it was 196px. The header record only rebuilds when something in it changes.
 - The Survivor tab keeps a one-line record (level, kills, turns, title progress) and the ADD/CHANGE PORTRAIT buttons above the gear.
+
+## Header while scrolling
+- Desktop (640px and wider): the status header is sticky, pinned at the top while the page scrolls.
+- Phone: the header scrolls away normally; once it is off screen a 45px bar slides in at the top with your face and HP, STAM and XP (numbers inside). It hides again when the header comes back.
+
+## Companion portraits
+- 12 portrait slots from the Art Prompt Pack: men C1, C3, C6, C8, C9, C10, C12; women C2, C4, C5, C7, C11. Each NPC name carries a gender (14 women's names, 18 men's).
+- A companion's slot = that gender's list[portraitSeed mod length], fixed for life: a slot without art shows the drawn face until its picture arrives, so faces never swap as art lands.
+- Shown on the encounter card, roster cards (48x64) and the traitor face-off. Stored 240x320 WebP in `ZP_ART.companions`; one stylesheet (`#zp-companion-art`).
+- C1 was held back: the generated face closely resembled a well-known real actor. Regenerate before use.

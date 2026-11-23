@@ -95,6 +95,28 @@ const shots = process.argv[2] || null;
     await p.close();
   }
 
+  // Header while scrolling: pinned on desktop; on phones a slim bar slides in once the header is gone.
+  const scrollSave = H.baseSave({ name: 'Skulldrag', inventory: Object.fromEntries(['Pistol', 'Shotgun', 'Machete', 'Crowbar', 'Bandage', 'Medkit', 'Painkillers', 'Canned Food', 'Energy Drink', 'Bandana', 'Riot Armor', 'Combat Boots', 'Work Gloves', 'Leather Jacket'].map(n => [n, 1])) });
+  for (const [w, h, phone] of [[1280, 700, false], [390, 700, true]]) {
+    const p = await b.newPage({ viewport: { width: w, height: h } }); p.on('pageerror', (e) => errs.push(e.message));
+    await p.goto('file://' + path.resolve(H.GAME_PATH)); await p.waitForTimeout(300);
+    await p.setInputFiles('#creationLoadInput', { name: 's.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(scrollSave)) });
+    await p.waitForTimeout(500); await p.click('[data-tab="survivor"]'); await p.waitForTimeout(300);
+    const at = async () => p.evaluate(() => { const hud = document.querySelector('.hud-panel').getBoundingClientRect(), m = document.getElementById('hudMini');
+      return { top: hud.top, bottom: hud.bottom, miniShown: m.classList.contains('show'), miniTop: m.getBoundingClientRect().top, miniH: m.getBoundingClientRect().height,
+        hp: document.getElementById('hmHpNum').textContent, sy: scrollY }; });
+    const before = await at();
+    c.ok(!before.miniShown, `${w}px: at the top of the page the slim bar is hidden`);
+    await p.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight)); await p.waitForTimeout(500);
+    const after = await at();
+    if (!phone) c.ok(after.sy > 300 && Math.abs(after.top) < 1 && !after.miniShown, `${w}px: scrolled ${Math.round(after.sy)}px, the full header stays pinned at the top (top ${Math.round(after.top)}px)`);
+    else c.ok(after.sy > 300 && after.bottom < 0 && after.miniShown && after.miniTop >= -1 && after.miniH <= 48 && /\d+\/\d+/.test(after.hp), `${w}px: scrolled ${Math.round(after.sy)}px, header scrolls away and the slim bar shows (${Math.round(after.miniH)}px tall, HP ${after.hp})`);
+    if (shots) await p.screenshot({ path: path.join(shots, `scrolled_${w}.png`) });
+    await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(500);
+    c.ok(!(await at()).miniShown, `${w}px: back at the top the slim bar hides again`);
+    await p.close();
+  }
+
   await b.close();
   c.done(errs);
 })();

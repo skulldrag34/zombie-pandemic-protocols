@@ -202,5 +202,29 @@
       "src": "enemies/worker.jpg"
     }
   },
-  "_enemies_comment": "Zombie portraits for the combat face-off, keyed by type id (see ENEMY_TYPES in index.html): resident, jogger, office, courier, worker, riot, soldier, feral, bloater, horde, patient_zero. Entry: {src, optional box}."
+  "_enemies_comment": "Zombie portraits for the combat face-off, keyed by type id (see ENEMY_TYPES in index.html): resident, jogger, office, courier, worker, riot, soldier, feral, bloater, horde, patient_zero. Entry: {src, optional box}.",
+  "_companions_comment": "Companion portraits C1-C12 from the Art Prompt Pack (3:4, stored 240x320). C1 held back (resembled a real actor); regenerate.",
+  "companions": {
+    "c2": {
+      "src": "companions/c2.jpg"
+    },
+    "c3": {
+      "src": "companions/c3.jpg"
+    },
+    "c4": {
+      "src": "companions/c4.jpg"
+    },
+    "c5": {
+      "src": "companions/c5.jpg"
+    },
+    "c6": {
+      "src": "companions/c6.jpg"
+    },
+    "c7": {
+      "src": "companions/c7.jpg"
+    },
+    "c8": {
+      "src": "companions/c8.jpg"
+    }
+  }
 }
