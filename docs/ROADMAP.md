@@ -85,7 +85,7 @@ Designer's Gemini art in a gritty graphic-novel style, **embedded** in index.htm
 - **Batch 2 DONE (6):** Shotgun, Padded Vest, Riot Armor, Motorcycle Helmet, Reinforced Gauntlets, Padded Leg Guards.
 - **Batch 3 DONE (4):** Pistol, Combat Boots, Leather Jacket, Camo Hoodie.
 - **Zombie portraits (11, 300x400, prompts in the Art Prompt Pack):** ALL 11 DONE. Every fight shows a zombie portrait (traitors show their own face).
-- **Companion portraits (12):** DONE 7: C2-C8. To do: C9, C10, C11, C12, and C1 regenerated (first version resembled a real actor; ask for an original face).
+- **Companion portraits (12):** DONE 8: C1-C8. To do: C9, C10, C11, C12.
 - **Scenes waiting for a slot:** `art-src/scenes-pending/` rooftop-survivors.jpg, street-fight.jpg (16:9). Not embedded until a scene slot is designed.
 - **Held back:** a wide street banner with a zombie lineup and a hand-lettered sign; it resembles another game's site header and carries baked-in text.
 - **Next shop items (2):** Cargo Pants; Running Shoes (batch 3 image held back: it carried a real sportswear brand's swoosh; regenerate with no logos).
