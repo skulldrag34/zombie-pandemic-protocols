@@ -271,6 +271,8 @@
   .combat-sub { text-align: center; font-size: 10.5px; color: var(--text-dim); margin-bottom: 14px; }
   .crosshair-wrap { display: flex; justify-content: center; margin-bottom: 14px; }
   .faceoff { display: grid; grid-template-columns: minmax(0, 150px) auto minmax(0, 150px); justify-content: center; align-items: center; gap: 10px; margin-bottom: 12px; }
+  #playerCombatRow.low .bar-track { box-shadow: 0 0 8px rgba(178,58,58,0.7); }
+  #playerCombatRow.low .stat-label { color: var(--blood); }
   .faceoff.hidden, .crosshair-wrap.hidden, .stat-row.hidden, .combat-subpanel.hidden { display: none; }   /* no generic .hidden rule exists: each toggled class needs one */
   .fo-side { min-width: 0; text-align: center; }
   .fo-frame { aspect-ratio: 3 / 4; border: 1px solid var(--line); background: #0c110b center / cover no-repeat; overflow: hidden; display: flex; align-items: center; justify-content: center; }
@@ -633,6 +635,10 @@
       <div>DISTANCE<b id="zDist"></b></div>
       <div>SPEED<b id="zSpeed"></b></div>
       <div>LEVEL<b id="zLevel"></b></div>
+    </div>
+    <div class="stat-row" id="playerCombatRow">
+      <div class="stat-label">YOU</div>
+      <div class="bar-track"><div class="bar-fill hp" id="pHpBar"></div><div class="bar-num" id="pHpNum"></div></div>
     </div>
     <div class="stat-row">
       <div class="stat-label">Z-HP</div>
@@ -3966,6 +3972,10 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     document.getElementById("zLevel").textContent = s.combat.isBoss ? "BOSS" : s.combat.level;
     document.getElementById("zHpBar").style.width = Math.max(0, (s.combat.hp / s.combat.maxHp) * 100) + "%";
     document.getElementById("zHpNum").textContent = `${s.combat.hp} / ${s.combat.maxHp}`;
+    const pMax = computeDerived().maxHp;
+    document.getElementById("pHpBar").style.width = Math.max(0, Math.min(100, (s.hp / pMax) * 100)) + "%";
+    document.getElementById("pHpNum").textContent = `${Math.max(0, s.hp)} / ${pMax}`;
+    document.getElementById("playerCombatRow").classList.toggle("low", s.hp <= pMax * 0.25);
 
     const canFire = canFireNow();
     document.getElementById("accLine").textContent = canFire ? `HIT CHANCE: ${pct}%` : "OUT OF MELEE RANGE";

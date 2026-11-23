@@ -291,3 +291,4 @@ All timers are play time (accumulated in `tickAlpha`, paused during combat), sto
 - 12 portrait slots from the Art Prompt Pack: men C1, C3, C6, C8, C9, C10, C12; women C2, C4, C5, C7, C11. Each NPC name carries a gender (14 women's names, 18 men's).
 - A companion's slot = that gender's list[portraitSeed mod length], fixed for life: a slot without art shows the drawn face until its picture arrives, so faces never swap as art lands.
 - Shown on the encounter card, roster cards (48x64) and the traitor face-off. Stored 240x320 WebP in `ZP_ART.companions`; one stylesheet (`#zp-companion-art`).
+- Combat card: a **YOU** HP bar sits above Z-HP (the fight screen covers the header). At 25% HP or less it glows red.

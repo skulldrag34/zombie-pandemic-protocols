@@ -101,6 +101,23 @@ const fight = (w) => { pin(w, 0.01); click(w, 'btnE'); pin(w, 0.5); };   // move
   c.ok(!hidden(w, 'combatOverlay') && !hidden(w, 'faceoff') && $(w, 'faceoff').querySelector('[data-enemy-art]'), 'a second fight sets the panel up again');
   done(s);
 
+  console.log('E) Your HP during the fight');
+  s = await session(REAL, baseSave({ hp: 90, baseMaxHp: 100 })); w = s.window;
+  fight(w);
+  const maxHp = () => Number($(w, 'hpNum').textContent.split('/')[1]);
+  c.ok(!hidden(w, 'combatOverlay') && $(w, 'pHpNum').textContent === `90 / ${maxHp()}` && /YOU/.test($(w, 'playerCombatRow').textContent), `the fight screen shows your HP (${$(w, 'pHpNum').textContent})`);
+  c.ok(Math.abs(parseFloat($(w, 'pHpBar').style.width) - 90 / maxHp() * 100) < 0.5 && !$(w, 'playerCombatRow').classList.contains('low'), 'the bar matches and is not flagged low');
+  let hpBefore = 90;
+  for (let i = 0; i < 30 && !hidden(w, 'combatOverlay') && Number($(w, 'pHpNum').textContent.split(' ')[0]) === hpBefore; i++) { w.Math.random = () => 0.01; if (!click(w, 'btnAdvance')) click(w, 'btnRetreat'); }
+  w.Math.random = () => 0.5;
+  const shownHp = Number($(w, 'pHpNum').textContent.split(' ')[0]);
+  c.ok(hidden(w, 'combatOverlay') || (shownHp < hpBefore && $(w, 'pHpNum').textContent === $(w, 'hpNum').textContent.replace(/\s+/g, ' ')), `when the zombie hits you, the fight bar follows (now ${$(w, 'pHpNum').textContent})`);
+  done(s);
+  s = await session(REAL, baseSave({ hp: 20, baseMaxHp: 100 })); w = s.window;
+  fight(w);
+  c.ok($(w, 'playerCombatRow').classList.contains('low'), 'at 25% HP or less the bar is flagged low (red glow)');
+  done(s);
+
   console.log('D) Live file: the real portraits');
   const MAN = JSON.parse(fs.readFileSync(require('path').join(__dirname, '..', 'tools', 'art_manifest.json'), 'utf8'));
   s = await session(REAL, baseSave({ hp: 5000, baseMaxHp: 5000 })); w = s.window;

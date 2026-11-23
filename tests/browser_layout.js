@@ -51,10 +51,12 @@ const shots = process.argv[2] || null;
       return { shown: !fo.classList.contains('hidden'), n: frames.length, minW: Math.min(...frames.map(r => r.width)), ratio: frames[1] ? frames[1].height / frames[1].width : 0,
         inside: frames.every(r => r.left >= card.left && r.right <= card.right), top: card.top, ow: document.documentElement.scrollWidth > innerWidth,
         painted: frames[1] ? getComputedStyle(fo.querySelectorAll('.fo-frame')[1]).backgroundImage.startsWith('url("data:image/') : false,
-        leaks: [...document.querySelectorAll('.hidden')].filter(e => e.offsetParent !== null).map(e => e.id || e.className) };
+        leaks: [...document.querySelectorAll('.hidden')].filter(e => e.offsetParent !== null).map(e => e.id || e.className),
+        you: (() => { const r = document.getElementById('playerCombatRow').getBoundingClientRect(); return r.height > 0 && r.top >= 0 && r.bottom <= innerHeight; })() };
     });
     c.ok(f.shown && f.n === 2 && f.painted, `${w}x${h}: combat face-off shows both portraits, enemy painted`);
     c.ok(f.minW >= 100 && Math.abs(f.ratio - 4 / 3) < 0.05 && f.inside && !f.ow && f.top >= 0, `${w}x${h}: frames ${Math.round(f.minW)}px wide at 3:4, inside the card, card top on screen, no sideways scroll`);
+    c.ok(f.you, `${w}x${h}: your HP bar is on screen during the fight without scrolling`);
     c.ok(f.leaks.length === 0, `${w}x${h}: nothing marked hidden is visible in combat (e.g. the ALLY bar with no companion)${f.leaks.length ? ' - leaks: ' + f.leaks.join(', ') : ''}`);
     if (shots) await p.screenshot({ path: path.join(shots, `faceoff_${w}x${h}.png`) });
     await p.close();
