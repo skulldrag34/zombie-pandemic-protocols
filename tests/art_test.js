@@ -70,7 +70,7 @@ async function session(saveObj) { const s = H.makeSession(); loadSave(s.window, 
   done(s0);
 
   console.log('B) Cards show art when an item has it');
-  const inv = { 'Bandage': 2, 'Crowbar': 1, 'Pistol': 1, 'Medkit': 1, 'Cloth Strips': 4, 'Bandana': 1, 'Shotgun': 1, 'Riot Armor': 1, 'Padded Leg Guards': 1, 'Scrap Plate Armor': 1, 'Combat Boots': 1, 'Camo Hoodie': 1, 'Cargo Pants': 1, 'Rusty Pipe': 1 };
+  const inv = { 'Bandage': 2, 'Crowbar': 1, 'Pistol': 1, 'Medkit': 1, 'Cloth Strips': 4, 'Bandana': 1, 'Shotgun': 1, 'Riot Armor': 1, 'Padded Leg Guards': 1, 'Scrap Plate Armor': 1, 'Combat Boots': 1, 'Camo Hoodie': 1, 'Cargo Pants': 1, 'Rusty Pipe': 1, 'Trauma Kit': 1 };
   let s = await session(baseSave({ inventory: inv, equippedWeapon: 'Crowbar', equipment: { head: 'Bandana', torso: null, hands: null, pants: null, feet: null } }));
   let w = s.window;
   tab(w, 'survivor');
@@ -79,9 +79,9 @@ async function session(saveObj) { const s = H.makeSession(); loadSave(s.window, 
   c.ok(artIn(grid, 'Bandage') && artIn(grid, 'Crowbar') && artIn(grid, 'Medkit'), 'inventory: Bandage, Crowbar and Medkit cards show art');
   c.ok(artIn(grid, 'Shotgun') && artIn(grid, 'Riot Armor') && artIn(grid, 'Padded Leg Guards'), 'inventory: batch 2 gear (Shotgun, Riot Armor, Leg Guards) shows art');
   c.ok(artIn(grid, 'Scrap Plate Armor') && artIn(grid, 'Pistol') && artIn(grid, 'Combat Boots') && artIn(grid, 'Camo Hoodie'), 'inventory: batch 3 (Pistol, Combat Boots, Camo Hoodie) shows art');
-  // Cargo Pants has no art yet; if they get some, move this check to another item without art.
-  const bareCard = [...grid.querySelectorAll('.inv-card')].find(e => /Rusty Pipe/.test(e.textContent));
-  c.ok(bareCard && !bareCard.querySelector('.item-art') && !bareCard.querySelector('.art-row'), 'an item without art (Rusty Pipe) renders exactly as before');
+  // Trauma Kit has no art yet (held back); if it gets some, move this check to another item without art.
+  const bareCard = [...grid.querySelectorAll('.inv-card')].find(e => /Trauma Kit/.test(e.textContent));
+  c.ok(bareCard && !bareCard.querySelector('.item-art') && !bareCard.querySelector('.art-row'), 'an item without art (Trauma Kit) renders exactly as before');
   const bArt = grid.querySelector('[data-art="Bandage"]');
   c.ok(bArt.getAttribute('role') === 'img' && bArt.getAttribute('aria-label') === 'Bandage', 'art is labelled for screen readers');
   c.ok(!/data:image/.test(grid.innerHTML), 'cards carry a class name, not image data (cheap 1s re-render)');

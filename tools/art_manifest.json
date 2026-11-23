@@ -177,6 +177,27 @@
     },
     "Cargo Pants": {
       "src": "cargo-pants.jpg"
+    },
+    "Baseball Bat": {
+      "src": "items/baseball-bat.jpg"
+    },
+    "Rusty Pipe": {
+      "src": "items/rusty-pipe.jpg"
+    },
+    "Hunting Rifle": {
+      "src": "items/hunting-rifle.jpg"
+    },
+    "Molotov Cocktail": {
+      "src": "items/molotov-cocktail.jpg"
+    },
+    "Research Fragment": {
+      "src": "items/research-fragment.jpg"
+    },
+    "Reinforced Combat Vest": {
+      "src": "items/reinforced-combat-vest.jpg"
+    },
+    "Precision Rifle": {
+      "src": "items/precision-rifle.jpg"
     }
   },
   "scenes": {
