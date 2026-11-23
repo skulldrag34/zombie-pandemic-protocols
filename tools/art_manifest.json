@@ -171,6 +171,12 @@
     },
     "Plate Bracers": {
       "src": "plate-bracers.jpg"
+    },
+    "Running Shoes": {
+      "src": "running-shoes.jpg"
+    },
+    "Cargo Pants": {
+      "src": "cargo-pants.jpg"
     }
   },
   "scenes": {

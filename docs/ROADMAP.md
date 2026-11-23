@@ -91,7 +91,7 @@ Designer's Gemini art in a gritty graphic-novel style, **embedded** in index.htm
 - **Scenes waiting for a slot:** `art-src/scenes-pending/` rooftop-survivors.jpg, street-fight.jpg (16:9). Not embedded until a scene slot is designed.
 - **Held back:** a wide street banner with a zombie lineup and a hand-lettered sign; it resembles another game's site header and carries baked-in text.
 - **Scrap Plate Armor DONE.** Still no art: Baseball Bat, Rusty Pipe, Hunting Rifle, Molotov Cocktail, Research Fragment, Reinforced Combat Vest, Precision Rifle, Trauma Kit (prompts in the pack).
-- **Next shop items (2):** Cargo Pants; Running Shoes (batch 3 image held back: it carried a real sportswear brand's swoosh; regenerate with no logos).
+- **Shop items: ALL DONE** (Cargo Pants and a logo-free Running Shoes added last).
 - Then: Patient Zero zone + portrait, companion portraits, remaining items, rooms, vendors, Alphas, scenes. Companion/NPC portraits and scenes need new slots (not built yet); the player portrait frame (300x400) is built and can be reused.
 
 ## 6. Parked
