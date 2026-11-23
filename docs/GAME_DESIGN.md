@@ -310,3 +310,7 @@ All timers are play time (accumulated in `tickAlpha`, paused during combat), sto
 - Room cards show a 72px thumbnail when the room has art (`ZP_ART.rooms`, 224x224 WebP, keyed by room id); unbuilt rooms show it greyed. Rooms without art render as before.
 - All 7 rooms have art (Armory and Workshop cropped from the 9-card sheet; the other five single images).
 - Spare cards from that sheet (Generator, Kitchen, Dorm, Comms, Storage) are kept in art-src/rooms/room-sheet-9.jpg as ideas for future rooms.
+
+## Alpha portraits
+- 12 portraits keyed by title (the last word of the Alpha's name). Shown on the Alpha Emergence screen (150x200), on the Safehouse ALPHA ACTIVE card (60x80), and in the face-off when an Alpha pack attacks the Safehouse (in place of the zombie type). Ordinary attacks still show zombie art; an unknown title shows no portrait.
+- Stored 300x400 WebP in `ZP_ART.alphas`; one stylesheet (`#zp-alpha-art`). Matron's background station sign is blurred; the Bishop's scrap-plate mitre keeps its characters (designer's call: no state or real identifiers).

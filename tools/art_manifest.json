@@ -316,5 +316,44 @@
     "lab": {
       "src": "rooms/lab.jpg"
     }
+  },
+  "_alphas_comment": "Alpha portraits keyed by title (lowercase), pre-cropped to 3:4 in art-src/alphas (originals in alphas/src; Matron's station sign blurred). Stored 300x400.",
+  "alphas": {
+    "warden": {
+      "src": "alphas/warden.jpg"
+    },
+    "shepherd": {
+      "src": "alphas/shepherd.jpg"
+    },
+    "marshal": {
+      "src": "alphas/marshal.jpg"
+    },
+    "deacon": {
+      "src": "alphas/deacon.jpg"
+    },
+    "foreman": {
+      "src": "alphas/foreman.jpg"
+    },
+    "choirmaster": {
+      "src": "alphas/choirmaster.jpg"
+    },
+    "quartermaster": {
+      "src": "alphas/quartermaster.jpg"
+    },
+    "surveyor": {
+      "src": "alphas/surveyor.jpg"
+    },
+    "ferryman": {
+      "src": "alphas/ferryman.jpg"
+    },
+    "matron": {
+      "src": "alphas/matron.jpg"
+    },
+    "bishop": {
+      "src": "alphas/bishop.jpg"
+    },
+    "herald": {
+      "src": "alphas/herald.jpg"
+    }
   }
 }
