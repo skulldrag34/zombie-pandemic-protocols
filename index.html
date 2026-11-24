@@ -438,6 +438,7 @@
       <div class="chip cash">$ <span id="cashNum"></span></div>
       <div class="chip scrap">SCRAP <span id="scrapNum"></span></div>
       <div class="chip quest hidden" id="questChip"></div>
+      <div class="chip quest hidden" id="lairChip" style="color:var(--blood);"></div>
     </div>
     <div class="stat-row">
       <div class="stat-label">HP</div>
@@ -938,6 +939,20 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
   const DOUBLE_AGENT_FLIP_CHANCE = 0.10;
   const DOUBLE_AGENT_LEVEL_REDUCTION = 1;               // Alpha attacks are one level weaker while a double agent guards
   const ALPHA_LEAK_CAP = 5;
+  // Alpha Phase 3: the lair fight.
+  const ALPHA_LOCATE_COST = 3;                          // intel to find the lair
+  const ALPHA_WEAKEN_MAX = 3;                           // each extra intel: -10% Alpha HP, up to -30%
+  const ALPHA_WEAKEN_STEP = 0.10;
+  const ALPHA_PACK_INTEL_CHANCE = 0.35;                 // repelling an Alpha pack at home may yield +1 intel
+  const ALPHA_LAIR_DIST_MIN = 6, ALPHA_LAIR_DIST_SPAN = 4;   // lair is 6-9 steps from the Safehouse
+  const ALPHA_FIGHT = [null,                            // indexed by escalation
+    { escort: 2, escortLevel: 5, hp: 260, hitLevel: 7, speed: 5 },
+    { escort: 3, escortLevel: 6, hp: 340, hitLevel: 8, speed: 5 },
+    { escort: 4, escortLevel: 7, hp: 420, hitLevel: 10, speed: 6 }];
+  const ALPHA_FIGHT_DISTANCE = 8;
+  const ALPHA_SUCCESSOR_STEP = 0.15, ALPHA_SUCCESSOR_CAP = 3;   // +15% HP per Alpha killed, max +45%
+  const ALPHA_SUCCESSOR_MS = 60 * 60 * 1000;            // play time before a successor emerges
+  const ALPHA_WIN = { xp: 400, cash: 300, scrap: 40, agentXp: 100 };
   const TURNED_TELL_CHANCE = 0.5;                       // a turned recruit shows one of these on joining; loyal ones never do
   const TURNED_TELLS = [
     "keeps glancing back the way they came, like someone might be following.",
@@ -1075,7 +1090,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     quest_runner: { lck: 1 }, trusted_trader: { per: 1 },
     living_legend: { str: 1, agi: 1, end: 1, per: 1, lck: 1 },
     patient_zero: { str: 1, agi: 1, end: 1, per: 1, lck: 1 },
-    trust_no_one: { per: 1 }, turncoat: { lck: 1 }
+    trust_no_one: { per: 1 }, turncoat: { lck: 1 }, pack_breaker: { end: 1 }
   };
 
   const ACHIEVEMENTS = [
@@ -1107,7 +1122,8 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     { id: "living_legend", name: "Living Legend", desc: "Earn the top reputation title through post-cap experience.", bonus: "+1 all attributes", check: s => currentTitleTier().title === "Living Legend" },
     { id: "patient_zero", name: "Patient Zero", desc: "Cure the pandemic.", bonus: "+1 all attributes", check: s => s.questStage === "cured" },
     { id: "trust_no_one", name: "Trust No One", desc: "Defeat a companion who turned on you.", bonus: "+1 PER", check: s => s.traitorsDefeated >= 1 },
-    { id: "turncoat", name: "Turncoat", desc: "Turn one of the Alpha's spies into a double agent.", bonus: "+1 LCK", check: s => s.doubleAgentsTurned >= 1 }
+    { id: "turncoat", name: "Turncoat", desc: "Turn one of the Alpha's spies into a double agent.", bonus: "+1 LCK", check: s => s.doubleAgentsTurned >= 1 },
+    { id: "pack_breaker", name: "Pack Breaker", desc: "Kill an Alpha in its lair.", bonus: "+1 END", check: s => (s.alphaKills || 0) >= 1 }
   ];
 
   // --- AUDIO (Web Audio API, fully procedural, no asset files) ---
@@ -1318,7 +1334,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
   function chooseMusicMood() {
     if (!gameStarted) return null;
     if (s.dead) return "fallen";
-    if (s.combat) return (s.combat.isBoss || s.combat.isTraitor) ? "boss" : "combat";
+    if (s.combat) return (s.combat.isBoss || s.combat.isTraitor || s.combat.isAlphaLair) ? "boss" : "combat";
     if (s.x === 0 && s.y === 0) return alphaActive() ? "haven_alpha" : "haven";
     const d = currentSector().danger;
     return d <= 2 ? "outskirts" : (d <= 5 ? "hostile" : "deadzone");
@@ -1827,6 +1843,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     if (s.questStage === "located" && s.patientZeroCoords && x === s.patientZeroCoords.x && y === s.patientZeroCoords.y) {
       base.isBossSector = true;
     }
+    if (s.alpha && s.alpha.lair && x === s.alpha.lair.x && y === s.alpha.lair.y) base.isLairSector = true;
 
     if (key === "0,0") { base.hasShop = true; base.shopName = "Home Supply Locker"; base.shopStock = SAFEHOUSE_STOCK; base.hasCache = false; return base; }
 
@@ -1903,7 +1920,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
       vendorRep: {},
       totalVendorQuestsCompleted: 0,
       autoHealCompanions: true,
-      traitorsDefeated: 0, doubleAgentsTurned: 0,
+      traitorsDefeated: 0, doubleAgentsTurned: 0, alphaKills: 0, alphaRespawnMs: 0, lastAlphaName: null,
       lastCompanionHealTick: Date.now(),
       safehouseIntegrity: MAX_SAFEHOUSE_INTEGRITY,
       lastSafehouseRepairTick: Date.now(),
@@ -2197,12 +2214,27 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
       leak: int(a.leak, 0, ALPHA_LEAK_CAP),               // pending +levels on the next Alpha attack
       detectMs: int(a.detectMs, 0, TRAITOR_DETECT_MS - 1),
       sabotageMs: int(a.sabotageMs, 0, TRAITOR_SABOTAGE_MS - 1),
-      agentMs: int(a.agentMs, 0, DOUBLE_AGENT_MS - 1)
+      agentMs: int(a.agentMs, 0, DOUBLE_AGENT_MS - 1),
+      lair: (a.lair && Number.isFinite(Number(a.lair.x)) && Number.isFinite(Number(a.lair.y)) && !(Number(a.lair.x) === 0 && Number(a.lair.y) === 0))
+        ? { x: int(a.lair.x, -50, 50), y: int(a.lair.y, -50, 50) } : null,
+      weaken: int(a.weaken, 0, ALPHA_WEAKEN_MAX)
     };
   }
   function alphaNameForSeed(seed) {
     const rng = mulberry32(hash(7, 7, seed) ^ 0x0a1fa);
     return `The ${ALPHA_ADJECTIVES[Math.floor(rng() * ALPHA_ADJECTIVES.length)]} ${ALPHA_TITLES[Math.floor(rng() * ALPHA_TITLES.length)]}`;
+  }
+  function alphaTitleOf(name) { return String(name || "").trim().split(/\s+/).pop(); }
+  // First Alpha uses the world seed; each successor gets a new name with a different title.
+  function nextAlphaName() {
+    const kills = s.alphaKills || 0;
+    if (!kills) return alphaNameForSeed(s.seed);
+    const prev = alphaTitleOf(s.lastAlphaName);
+    for (let i = 0; i < 24; i++) {
+      const n = alphaNameForSeed((s.seed + kills * 7919 + i * 104729) >>> 0);
+      if (alphaTitleOf(n) !== prev) return n;
+    }
+    return alphaNameForSeed(s.seed + kills);
   }
   function alphaEscalation() { const n = claimedCount(); return 1 + (n >= 4 ? 1 : 0) + (n >= 8 ? 1 : 0); }
   function alphaActive() { return !!(s.alpha && s.alpha.quietMs <= 0); }
@@ -2292,6 +2324,85 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     } else a.agentMs = 0;
   }
 
+  // --- ALPHA PHASE 3: LAIR, INTEL, FIGHT, SUCCESSOR ---
+  function lairFor(seed, kills) {
+    const h = hash(911 + kills, 37, seed);
+    const d = ALPHA_LAIR_DIST_MIN + (h % ALPHA_LAIR_DIST_SPAN);
+    const ax = (h >> 3) % (d + 1);                     // |x|, the rest goes to |y|
+    const sx = (h >> 9) & 1 ? 1 : -1, sy = (h >> 10) & 1 ? 1 : -1;
+    let x = sx * ax, y = sy * (d - ax);
+    if (s.patientZeroCoords && x === s.patientZeroCoords.x && y === s.patientZeroCoords.y) y += sy;
+    return { x, y };
+  }
+  function locateAlphaLair() {
+    const a = s.alpha;
+    if (!a || a.lair || s.dead || s.combat || a.intel < ALPHA_LOCATE_COST) return;
+    a.intel -= ALPHA_LOCATE_COST;
+    a.lair = lairFor(s.seed, s.alphaKills || 0);
+    addLog(`Your intel lines up: ${a.name}'s lair is at [${a.lair.x},${a.lair.y}]. It's marked on your map.`, "story");
+    playSfx("boss_alert");
+    render();
+  }
+  function weakenAlpha() {
+    const a = s.alpha;
+    if (!a || !a.lair || s.dead || s.combat || a.intel < 1 || a.weaken >= ALPHA_WEAKEN_MAX) return;
+    a.intel -= 1; a.weaken += 1;
+    addLog(`You use what you know to cut ${a.name}'s supply lines and pick off its sentries. It will be ${Math.round(a.weaken * ALPHA_WEAKEN_STEP * 100)}% weaker when you arrive.`, "story");
+    render();
+  }
+  function alphaBossHp() {
+    const f = ALPHA_FIGHT[alphaEscalation()];
+    const succ = 1 + ALPHA_SUCCESSOR_STEP * Math.min(ALPHA_SUCCESSOR_CAP, s.alphaKills || 0);
+    const weak = 1 - ALPHA_WEAKEN_STEP * ((s.alpha && s.alpha.weaken) || 0);
+    return Math.max(1, Math.round(f.hp * succ * weak));
+  }
+  function startAlphaLairCombat() {
+    combatSubTab = null;
+    const f = ALPHA_FIGHT[alphaEscalation()];
+    const queue = [];
+    for (let i = 1; i < f.escort; i++) queue.push({ level: f.escortLevel });
+    queue.push({ alphaBoss: true });
+    const first = spawnZombie(f.escortLevel);
+    s.combat = Object.assign({ queue, startX: s.x, startY: s.y, log: [], isBoss: false, isAlphaLair: true }, first);
+    combatLog(`${s.alpha.name.toUpperCase()}'S LAIR. Its guard pack (${f.escort}, level ${f.escortLevel}) stands between you and it.`);
+    playSfx("boss_alert");
+    applyHesitation();
+  }
+  function bringOutAlpha() {
+    const f = ALPHA_FIGHT[alphaEscalation()];
+    const hp = alphaBossHp();
+    Object.assign(s.combat, { level: f.hitLevel, hp, maxHp: hp, distance: ALPHA_FIGHT_DISTANCE, speed: f.speed, isAlphaBoss: true, isAlpha: true });
+    combatLog(`The pack is down. ${s.alpha.name} steps out of the dark (${hp} HP${s.alpha.weaken ? `, weakened ${Math.round(s.alpha.weaken * ALPHA_WEAKEN_STEP * 100)}%` : ""}).`);
+    playSfx("boss_alert");
+  }
+  // Death or retreat in the lair: the lair stays known, weakening is lost; dying also teaches it (+1 leak).
+  function alphaFightLost(died) {
+    if (!s.combat || !s.combat.isAlphaLair || !s.alpha) return;
+    s.alpha.weaken = 0;
+    if (died) { addAlphaLeak(1); addLog(`${s.alpha.name} learned from beating you. Its next raid will be stronger.`, "combat"); }
+    else addLog(`You pull back from ${s.alpha.name}'s lair. It knows you're coming now; your groundwork is undone.`, "combat");
+  }
+  function winAlphaFight() {
+    const name = s.alpha.name;
+    s.combat = null;
+    s.alphaKills = (s.alphaKills || 0) + 1;
+    s.lastAlphaName = name;
+    gainXp(ALPHA_WIN.xp);
+    s.cash += ALPHA_WIN.cash; s.totalCashEarned = (s.totalCashEarned || 0) + ALPHA_WIN.cash;
+    s.inventory["Scrap Metal"] = (s.inventory["Scrap Metal"] || 0) + ALPHA_WIN.scrap;
+    addLog(`${name.toUpperCase()} IS DEAD. Its packs scatter. +${ALPHA_WIN.xp} XP, +$${ALPHA_WIN.cash}, +${ALPHA_WIN.scrap} Scrap Metal.`, "story");
+    s.roster.forEach(c => {
+      if (c.turned) { c.turned = false; c.suspicious = false; c.hesitating = false; c.sabotage = 0; addLog(`With its master dead, ${c.name} comes clean: they were reporting to ${name}. They swear they're with you now.`, "story"); }
+      if (c.doubleAgent) { c.doubleAgent = false; gainXp(ALPHA_WIN.agentXp); addLog(`${c.name}'s double-agent work is done. They stay on as one of yours. +${ALPHA_WIN.agentXp} XP.`, "story"); }
+    });
+    s.alpha = null;
+    s.alphaRespawnMs = ALPHA_SUCCESSOR_MS;
+    playSfx("level_up");
+    checkAchievements();
+    render();
+  }
+  window.__zpAlpha3 = { lairFor: (seed, k) => lairFor(seed, k), bossHp: () => alphaBossHp(), fight: ALPHA_FIGHT, nextName: () => nextAlphaName() };   // test hook
+
   function startTraitorCombat(c, line) {
     combatSubTab = null;
     const level = Math.max(1, Math.min(10, (c.level || 1) + alphaEscalation()));
@@ -2370,7 +2481,8 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     const dt = Math.max(0, Math.min(5000, now - (s.lastAlphaTick || now)));  // play time only; big gaps (load, sleep) don't count
     s.lastAlphaTick = now;
     if (!s.alpha) {
-      if (claimedCount() >= 1) emergeAlpha();
+      if (s.alphaRespawnMs > 0) { s.alphaRespawnMs = Math.max(0, s.alphaRespawnMs - dt); if (s.alphaRespawnMs > 0) return; }
+      if (claimedCount() >= 1 && !s.combat && !s.dead) emergeAlpha();
       return;
     }
     if (s.alpha.quietMs > 0) {
@@ -2381,8 +2493,9 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
   }
 
   function emergeAlpha() {
-    s.alpha = sanitizeAlpha({ name: alphaNameForSeed(s.seed), quietMs: ALPHA_QUIET_MS });
-    addLog(`ALPHA EMERGENCE: something out there is thinking. They call it ${s.alpha.name.toUpperCase()}.`, "combat");
+    s.alpha = sanitizeAlpha({ name: nextAlphaName(), quietMs: ALPHA_QUIET_MS });
+    s.lastAlphaName = s.alpha.name;
+    addLog((s.alphaKills ? `A NEW ALPHA RISES to fill the gap you left. ` : `ALPHA EMERGENCE: something out there is thinking. `) + `They call it ${s.alpha.name.toUpperCase()}.`, "combat");
     document.getElementById("alphaName").textContent = s.alpha.name.toUpperCase();
     const ap = document.getElementById("alphaPortrait"), ak = alphaArtKey(s.alpha.name);
     ap.className = "alpha-portrait" + (ak ? " " + ALPHA_ART_CLASS[ak] : " hidden");
@@ -2841,7 +2954,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
       } else {
         s.hp = Math.max(0, s.hp - dmgTaken);
         combatLog(s.combat.isTraitor ? `${s.combat.traitor.name} hits you for ${dmgTaken} damage!` : `The zombie claws you for ${dmgTaken} damage!`);
-        if (s.hp <= 0) { traitorEscapes(); s.dead = true; s.deathCount += 1; s.combat = null; addLog("Your vision fades to static...", "combat"); playSfx("player_death"); }
+        if (s.hp <= 0) { traitorEscapes(); alphaFightLost(true); s.dead = true; s.deathCount += 1; s.combat = null; addLog("Your vision fades to static...", "combat"); playSfx("player_death"); }
         else playSfx("player_hurt");
       }
     } else {
@@ -2991,6 +3104,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     if (s.combat.hp <= 0) {
       playSfx("zombie_death");
       if (s.combat.isTraitor) { winTraitorFight(); return; }
+      if (s.combat.isAlphaBoss) { winAlphaFight(); return; }
       if (s.combat.isBoss) {
         s.questStage = "cured";
         addLog("Patient Zero has fallen. The source strain is contained.", "story");
@@ -3006,14 +3120,20 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
 
       if (s.combat.queue.length > 0) {
         const next = s.combat.queue.shift();
+        if (next.alphaBoss) { bringOutAlpha(); render(); return; }
         Object.assign(s.combat, spawnZombie(next.level));
         combatLog("Another shambler closes in from the horde!");
         render();
         return;
       }
       const isSafehouseDefense = s.combat.isSafehouseDefense;
+      const wasAlphaPack = !!s.combat.isAlpha;
       s.combat = null;
       if (isSafehouseDefense) addLog("The horde is destroyed. Safehouse successfully defended!", "build");
+      if (isSafehouseDefense && wasAlphaPack && s.alpha && Math.random() < ALPHA_PACK_INTEL_CHANCE) {
+        s.alpha.intel += 1;
+        addLog(`You track a straggler from the pack back toward ${s.alpha.name}'s ground. Alpha intel: ${s.alpha.intel}.`, "story");
+      }
       checkAchievements();
       render();
       return;
@@ -3053,6 +3173,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
       addLog("Broke contact and retreated to safer ground.", "system");
       playSfx("flee");
       traitorEscapes();
+      alphaFightLost(false);
       s.x = s.combat.startX; s.y = s.combat.startY; s.combat = null;
       s.fleeSuccesses += 1;
       checkAchievements();
@@ -3065,7 +3186,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
       const dmgTaken = Math.max(1, rawDmg - derived.defenseTotal);
       s.hp = Math.max(0, s.hp - dmgTaken);
       combatLog(`Caught mid-retreat &mdash; takes ${dmgTaken} damage!`);
-      if (s.hp <= 0) { traitorEscapes(); s.dead = true; s.deathCount += 1; s.combat = null; addLog("Your vision fades to static...", "combat"); playSfx("player_death"); }
+      if (s.hp <= 0) { traitorEscapes(); alphaFightLost(true); s.dead = true; s.deathCount += 1; s.combat = null; addLog("Your vision fades to static...", "combat"); playSfx("player_death"); }
       else playSfx("player_hurt");
     }
     render();
@@ -3086,6 +3207,8 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
 
     if (sector.isBossSector) {
       startBossCombat();
+    } else if (sector.isLairSector && s.alpha) {
+      startAlphaLairCombat();
     } else {
       const derived = computeDerived();
       if (sector.danger > 0 && Math.random() < Math.min(0.75, sector.danger * 0.22 * derived.sev.ambush)) {
@@ -3478,6 +3601,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
       safehouseIntegrity: s.safehouseIntegrity,
       alpha: s.alpha,
       traitorsDefeated: s.traitorsDefeated, doubleAgentsTurned: s.doubleAgentsTurned,
+      alphaKills: s.alphaKills || 0, alphaRespawnMs: s.alphaRespawnMs || 0, lastAlphaName: s.lastAlphaName || null,
       craftQueue: s.craftQueue, buildQueue: s.buildQueue,
       kills: s.kills, turns: s.turns, deathCount: s.deathCount,
       roster: s.roster, companionEverRecruited: s.companionEverRecruited,
@@ -3638,6 +3762,9 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     });
     const nonNegInt = (v) => { const n = Math.floor(Number(v)); return Number.isFinite(n) && n > 0 ? n : 0; };
     fresh.traitorsDefeated = nonNegInt(data.traitorsDefeated);
+    fresh.alphaKills = Math.min(99, nonNegInt(data.alphaKills));
+    fresh.alphaRespawnMs = Math.min(ALPHA_SUCCESSOR_MS, Number.isFinite(Number(data.alphaRespawnMs)) ? Math.max(0, Math.floor(Number(data.alphaRespawnMs))) : 0);
+    fresh.lastAlphaName = typeof data.lastAlphaName === "string" ? data.lastAlphaName.slice(0, 40) : null;
     fresh.doubleAgentsTurned = nonNegInt(data.doubleAgentsTurned);
     fresh.lastAlphaTick = Date.now();
     fresh.log = [];
@@ -3754,7 +3881,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     const companion = activeCompanion();
 
     document.getElementById("sectorCoords").textContent = `[${s.x},${s.y}]`;
-    document.getElementById("sectorName").textContent = sector.name + (sector.hasShop ? " \u2726" : "") + (sector.isBossSector ? " \u2620" : "");
+    document.getElementById("sectorName").textContent = sector.name + (sector.hasShop ? " \u2726" : "") + (sector.isBossSector ? " \u2620" : "") + (sector.isLairSector ? " [ALPHA LAIR]" : "");
     document.getElementById("lvlNum").textContent = s.level;
     document.getElementById("cashNum").textContent = s.cash;
     document.getElementById("scrapNum").textContent = getScrap();
@@ -3763,6 +3890,9 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     if (s.questStage === "located") { questChip.textContent = `TARGET: [${s.patientZeroCoords.x},${s.patientZeroCoords.y}]`; questChip.classList.remove("hidden"); }
     else if (s.questStage === "cured") { questChip.textContent = "CURED"; questChip.classList.remove("hidden"); }
     else questChip.classList.add("hidden");
+    const lairChip = document.getElementById("lairChip");
+    if (s.alpha && s.alpha.lair) { lairChip.textContent = `LAIR: [${s.alpha.lair.x},${s.alpha.lair.y}]`; lairChip.classList.remove("hidden"); }
+    else lairChip.classList.add("hidden");
 
     const hpPct = Math.max(0, (s.hp / derived.maxHp) * 100);
     const apPct = Math.max(0, (s.stamina / derived.maxStamina) * 100);
@@ -3887,14 +4017,16 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
         else if (s.visited.has(key)) {
           const sec = sectorAt(cx, cy);
           cell.classList.add("d" + sec.danger);
-          if (sec.isBossSector) cell.classList.add("boss");
+          if (sec.isBossSector || sec.isLairSector) cell.classList.add("boss");
           if (isClaimed(cx, cy)) cell.classList.add("claimed");
-          let inner = (sec.isBossSector ? "!" : sec.type[0]);
+          let inner = (sec.isBossSector ? "!" : (sec.isLairSector ? "A" : sec.type[0]));
           if (sec.hasShop) inner += '<span class="shopdot">$</span>';
           if (sec.hasCache && !s.collectedCaches.has(key)) inner += '<span class="cachedot">+</span>';
           if (isClaimed(cx, cy) && s.claimedBlocks[key].postedCompanionId) inner += '<span class="postdot">&#9679;</span>';
           cell.innerHTML = inner;
-          cell.title = sec.name + (sec.hasShop ? ` (${sec.shopName})` : "") + (sec.isBossSector ? " \u2014 PATIENT ZERO" : "") + (sec.hasCache && !s.collectedCaches.has(key) ? " \u2014 cache" : "") + (isClaimed(cx, cy) ? " \u2014 claimed territory" : "");
+          cell.title = sec.name + (sec.hasShop ? ` (${sec.shopName})` : "") + (sec.isBossSector ? " \u2014 PATIENT ZERO" : "") + (sec.isLairSector ? " \u2014 ALPHA LAIR" : "") + (sec.hasCache && !s.collectedCaches.has(key) ? " \u2014 cache" : "") + (isClaimed(cx, cy) ? " \u2014 claimed territory" : "");
+        } else if (s.alpha && s.alpha.lair && cx === s.alpha.lair.x && cy === s.alpha.lair.y) {
+          cell.classList.add("boss"); cell.textContent = "A"; cell.title = "Alpha lair";
         } else if (s.questStage === "located" && s.patientZeroCoords && cx === s.patientZeroCoords.x && cy === s.patientZeroCoords.y) {
           cell.classList.add("boss"); cell.textContent = "?"; cell.title = "Signal detected here";
         }
@@ -3962,13 +4094,16 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
         } else if (s.visited.has(key)) {
           const sec = sectorAt(cx, cy);
           cell.classList.add("d" + sec.danger);
-          if (sec.isBossSector) cell.classList.add("boss");
+          if (sec.isBossSector || sec.isLairSector) cell.classList.add("boss");
           if (isClaimed(cx, cy)) cell.classList.add("claimed");
-          let inner = (sec.isBossSector ? "!" : sec.type[0]);
+          let inner = (sec.isBossSector ? "!" : (sec.isLairSector ? "A" : sec.type[0]));
           if (sec.hasShop) inner += '<span class="shopdot">$</span>';
           if (sec.hasCache && !s.collectedCaches.has(key)) inner += '<span class="cachedot">+</span>';
           if (isClaimed(cx, cy) && s.claimedBlocks[key].postedCompanionId) inner += '<span class="postdot">&#9679;</span>';
           cell.innerHTML = inner;
+          cell.addEventListener("click", () => selectMapSector(cx, cy));
+        } else if (s.alpha && s.alpha.lair && cx === s.alpha.lair.x && cy === s.alpha.lair.y) {
+          cell.classList.add("boss"); cell.textContent = "A";
           cell.addEventListener("click", () => selectMapSector(cx, cy));
         } else if (s.questStage === "located" && s.patientZeroCoords && cx === s.patientZeroCoords.x && cy === s.patientZeroCoords.y) {
           cell.classList.add("boss"); cell.textContent = "?";
@@ -3998,7 +4133,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
           ${sec.hasShop ? `<br>Vendor: ${sec.shopName}` : ""}
           ${sec.hasCache ? `<br>Supply cache: ${s.collectedCaches.has(selKey) ? "already collected" : "uncollected"}` : ""}
           ${claimedHere ? `<br><span style="color:var(--amber);">Claimed compound territory${postedComp ? ` &mdash; posted: ${postedComp.name}` : " &mdash; unmanned"}</span>` : ""}
-          ${sec.isBossSector ? `<br><span style="color:var(--purple);">Patient Zero signal detected here.</span>` : ""}</div>`;
+          ${sec.isBossSector ? `<br><span style="color:var(--purple);">Patient Zero signal detected here.</span>` : ""}${sec.isLairSector ? `<br><span style="color:var(--blood);">${s.alpha.name}'s lair.</span>` : ""}</div>`;
       }
     }
 
@@ -4028,16 +4163,16 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
   function renderCombatOverlay() {
     if (!s.combat) return;
     const card = document.getElementById("combatCard");
-    card.classList.toggle("boss", !!s.combat.isBoss);
+    card.classList.toggle("boss", !!(s.combat.isBoss || s.combat.isAlphaLair));
     card.classList.toggle("safehouse-defense", !!s.combat.isSafehouseDefense);
-    document.getElementById("combatTitle").textContent = s.combat.isTraitor ? `TRAITOR: ${s.combat.traitor.name.toUpperCase()}` : (s.combat.isBoss ? "PATIENT ZERO" : (s.combat.isSafehouseDefense ? "SAFEHOUSE UNDER ATTACK" : "HOSTILE CONTACT"));
+    document.getElementById("combatTitle").textContent = s.combat.isAlphaLair ? `ALPHA LAIR: ${(s.alpha ? s.alpha.name : "").toUpperCase()}` : s.combat.isTraitor ? `TRAITOR: ${s.combat.traitor.name.toUpperCase()}` : (s.combat.isBoss ? "PATIENT ZERO" : (s.combat.isSafehouseDefense ? "SAFEHOUSE UNDER ATTACK" : "HOSTILE CONTACT"));
     document.getElementById("crosshairLabel").textContent = s.combat.isTraitor ? "T" : (s.combat.isBoss ? "0" : "Z");
     const pct = currentAttackPercent();
     document.getElementById("combatSub").textContent = `Sector [${s.x},${s.y}] \u2014 ${currentSector().name}`;
     document.getElementById("queueLine").textContent = s.combat.queue && s.combat.queue.length > 0 ? `${s.combat.queue.length} more in the horde` : "";
     document.getElementById("zDist").textContent = s.combat.distance;
     document.getElementById("zSpeed").textContent = s.combat.speed;
-    document.getElementById("zLevel").textContent = s.combat.isBoss ? "BOSS" : s.combat.level;
+    document.getElementById("zLevel").textContent = s.combat.isBoss ? "BOSS" : (s.combat.isAlphaBoss ? "ALPHA" : s.combat.level);
     document.getElementById("zHpBar").style.width = Math.max(0, (s.combat.hp / s.combat.maxHp) * 100) + "%";
     document.getElementById("zHpNum").textContent = `${s.combat.hp} / ${s.combat.maxHp}`;
     const pMax = computeDerived().maxHp;
@@ -4350,8 +4485,22 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
         <div class="desc">Its packs raid the compound (level +${ALPHA_LEVEL_BONUS[alphaEscalation()]}, more often, 1.5&times; salvage when repelled). Escalation rises at 4 and 8 claimed blocks.</div>
         <div class="req-list">Survivors recruited from now on may be its spies (${Math.round(TURNED_CHANCE[alphaEscalation()] * 100)}% at this escalation). Perception helps you spot them.</div>
         <div class="req-list">Alpha intel: ${s.alpha.intel || 0}${doubleAgent() ? ` &middot; double agent: ${doubleAgent().name}${doubleAgent().mode === "guard" ? " (attacks -1 level)" : " (traveling &mdash; no defense effect)"}` : ""}${s.alpha.leak > 0 ? ` &middot; <span style="color:var(--blood);">leaked intel: next attack +${s.alpha.leak} level${s.alpha.leak > 1 ? "s" : ""}</span>` : ""}</div>`;
+      const a = s.alpha, busy = !!(s.combat || s.dead);
+      let p3 = "";
+      if (!a.lair) p3 = `<div class="req-list">Spend ${ALPHA_LOCATE_COST} intel to find its lair (6-9 sectors out). Intel comes from a double agent, or tracking stragglers after you repel its packs at home.</div>
+        <button class="mini-btn" data-alpha-locate="1" ${(a.intel < ALPHA_LOCATE_COST || busy) ? "disabled" : ""}>locate lair (${ALPHA_LOCATE_COST} intel)</button>`;
+      else p3 = `<div class="req-list" style="color:var(--blood);">LAIR at [${a.lair.x},${a.lair.y}] &middot; Alpha ${alphaBossHp()} HP behind a guard pack of ${ALPHA_FIGHT[alphaEscalation()].escort}${a.weaken ? ` &middot; weakened ${Math.round(a.weaken * ALPHA_WEAKEN_STEP * 100)}%` : ""}</div>
+        <button class="mini-btn" data-alpha-weaken="1" ${(a.intel < 1 || a.weaken >= ALPHA_WEAKEN_MAX || busy) ? "disabled" : ""}>weaken it (1 intel, ${a.weaken}/${ALPHA_WEAKEN_MAX})</button>`;
+      alphaCard.innerHTML += p3;
       if (aKey) alphaCard.innerHTML += `</div></div>`;
+      alphaCard.querySelectorAll("[data-alpha-locate]").forEach(b => b.addEventListener("click", locateAlphaLair));
+      alphaCard.querySelectorAll("[data-alpha-weaken]").forEach(b => b.addEventListener("click", weakenAlpha));
       list.appendChild(alphaCard);
+    } else if (s.alphaKills > 0) {
+      const quiet = document.createElement("div");
+      quiet.className = "quest-card";
+      quiet.innerHTML = `<div class="title">ALPHAS KILLED: ${s.alphaKills}</div><div class="desc">${s.alphaRespawnMs > 0 ? `The packs are leaderless for now. Something will try to fill the gap in about ${Math.ceil(s.alphaRespawnMs / 60000)}m of play.` : "A new Alpha will rise once you hold a block."}</div>`;
+      list.appendChild(quiet);
     }
     const defenseCard = document.createElement("div");
     defenseCard.className = "quest-card";

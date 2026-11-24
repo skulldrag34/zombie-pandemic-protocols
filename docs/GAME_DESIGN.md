@@ -314,3 +314,21 @@ All timers are play time (accumulated in `tickAlpha`, paused during combat), sto
 ## Alpha portraits
 - 12 portraits keyed by title (the last word of the Alpha's name). Shown on the Alpha Emergence screen (150x200), on the Safehouse ALPHA ACTIVE card (60x80), and in the face-off when an Alpha pack attacks the Safehouse (in place of the zombie type). Ordinary attacks still show zombie art; an unknown title shows no portrait.
 - Stored 300x400 WebP in `ZP_ART.alphas`; one stylesheet (`#zp-alpha-art`). Matron's background station sign is blurred; the Bishop's scrap-plate mitre keeps its characters (designer's call: no state or real identifiers).
+
+## Alpha Phase 3: the lair fight
+- **Intel:** double agents (+1 per 5 min, as before) and, new, a 35% chance of +1 when you repel an Alpha pack at the Safehouse yourself.
+- **Locate lair:** 3 intel (Alpha card button). The lair is fixed by world seed and Alpha count, 6-9 steps out; marked on both maps ("A") with a LAIR chip in the header.
+- **Weaken:** 1 intel each, -10% Alpha HP, up to 3 (-30%).
+- **Fight:** stepping into the lair starts it: the guard pack (a horde), then the Alpha (level shows ALPHA; boss music; face-off shows its portrait).
+
+| Escalation | Guard pack | Alpha HP | Hits like | Speed | Distance |
+|---|---|---|---|---|---|
+| 1 | 2 x lvl 5 | 260 | lvl 7 | 5 | 8 |
+| 2 | 3 x lvl 6 | 340 | lvl 8 | 5 | 8 |
+| 3 | 4 x lvl 7 | 420 | lvl 10 | 6 | 8 |
+
+- **Win:** +400 XP, +$300, +40 Scrap Metal, Pack Breaker (+1 END). Raids and recruit-turning stop; hidden spies come clean; the double agent stays on as an ordinary companion (+100 XP).
+- **Death:** +1 leak, weakening lost, lair stays known. **Flee:** weakening lost, lair stays known.
+- **Successor:** after 60 min of play (with at least one block held) a new Alpha with a different title emerges; +15% HP per Alpha killed, cap +45%.
+- Balance (simulated, fire/advance only, no healing, 40-60 fights each): L10 mid gear vs escalation 1: 68% win; vs escalation 2: 3%; L18 full gear vs escalation 3: 28% solo, 97% with a companion. Escalation 3's hit level was raised 9 -> 10 after the first simulation (solo was 68%).
+- Saves: `alpha.lair`, `alpha.weaken`, `alphaKills`, `alphaRespawnMs`, `lastAlphaName`, all clamped on load.
