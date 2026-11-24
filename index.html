@@ -136,6 +136,8 @@
   .cell.boss { border-color: var(--purple); box-shadow: 0 0 6px rgba(154,111,217,0.6) inset; }
   .cell.claimed { border-color: var(--amber); }
   .shopdot { position: absolute; top: 0; right: 1px; font-size: 7px; color: var(--amber); }
+  .questdot { position: absolute; top: 0; left: 1px; font-size: 9px; font-weight: bold; line-height: 1; text-shadow: 0 0 3px #000; }
+  .questdot.offer { color: var(--amber); } .questdot.taken { color: var(--text); } .questdot.ready { color: var(--toxic); }
   .cachedot { position: absolute; bottom: 0; left: 1px; font-size: 7px; color: var(--cyan); }
   .postdot { position: absolute; bottom: 0; right: 1px; font-size: 7px; color: var(--toxic); }
   .legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 9.5px; color: var(--text-dim); margin-top: 8px; }
@@ -2709,6 +2711,24 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     return { type: "bounty", zombieLevelMin, countNeeded, progress: 0, rewardXp, rewardCash, rewardRepGain: 3, status: "offered" };
   }
 
+  // Map markers for vendor jobs: "!" = job on offer, "?" = job taken, green "?" = ready to hand in.
+  function vendorQuestReady(q) {
+    if (!q || q.status !== "active") return false;
+    return q.type === "fetch" ? (s.inventory[q.itemName] || 0) >= q.qtyNeeded : (q.progress || 0) >= q.countNeeded;
+  }
+  function vendorQuestMarker(key) {
+    const q = s.vendorQuests && s.vendorQuests[key];
+    if (!q || (q.status !== "offered" && q.status !== "active")) return "";
+    const ready = vendorQuestReady(q);
+    const cls = q.status === "offered" ? "offer" : (ready ? "ready" : "taken");
+    return `<span class="questdot ${cls}" data-quest-marker="${cls}">${q.status === "offered" ? "!" : "?"}</span>`;
+  }
+  function vendorQuestLabel(key) {
+    const q = s.vendorQuests && s.vendorQuests[key];
+    if (!q || (q.status !== "offered" && q.status !== "active")) return "";
+    const what = q.type === "fetch" ? `bring ${q.qtyNeeded} ${q.itemName}` : `kill ${q.countNeeded} zombies of level ${q.zombieLevelMin}+ (${q.progress || 0}/${q.countNeeded})`;
+    return q.status === "offered" ? `job on offer: ${what}` : (vendorQuestReady(q) ? `job ready to hand in: ${what}` : `job taken: ${what}`);
+  }
   function rollVendorQuest() {
     const sector = currentSector();
     if (!sector.hasShop) return;
@@ -4020,11 +4040,11 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
           if (sec.isBossSector || sec.isLairSector) cell.classList.add("boss");
           if (isClaimed(cx, cy)) cell.classList.add("claimed");
           let inner = (sec.isBossSector ? "!" : (sec.isLairSector ? "A" : sec.type[0]));
-          if (sec.hasShop) inner += '<span class="shopdot">$</span>';
+          if (sec.hasShop) inner += '<span class="shopdot">$</span>' + vendorQuestMarker(key);
           if (sec.hasCache && !s.collectedCaches.has(key)) inner += '<span class="cachedot">+</span>';
           if (isClaimed(cx, cy) && s.claimedBlocks[key].postedCompanionId) inner += '<span class="postdot">&#9679;</span>';
           cell.innerHTML = inner;
-          cell.title = sec.name + (sec.hasShop ? ` (${sec.shopName})` : "") + (sec.isBossSector ? " \u2014 PATIENT ZERO" : "") + (sec.isLairSector ? " \u2014 ALPHA LAIR" : "") + (sec.hasCache && !s.collectedCaches.has(key) ? " \u2014 cache" : "") + (isClaimed(cx, cy) ? " \u2014 claimed territory" : "");
+          cell.title = sec.name + (sec.hasShop ? ` (${sec.shopName})` : "") + (vendorQuestLabel(key) ? ` \u2014 ${vendorQuestLabel(key)}` : "") + (sec.isBossSector ? " \u2014 PATIENT ZERO" : "") + (sec.isLairSector ? " \u2014 ALPHA LAIR" : "") + (sec.hasCache && !s.collectedCaches.has(key) ? " \u2014 cache" : "") + (isClaimed(cx, cy) ? " \u2014 claimed territory" : "");
         } else if (s.alpha && s.alpha.lair && cx === s.alpha.lair.x && cy === s.alpha.lair.y) {
           cell.classList.add("boss"); cell.textContent = "A"; cell.title = "Alpha lair";
         } else if (s.questStage === "located" && s.patientZeroCoords && cx === s.patientZeroCoords.x && cy === s.patientZeroCoords.y) {
@@ -4039,6 +4059,8 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
       <span><i style="background:#300c0c"></i>High danger</span>
       <span><i style="background:transparent;color:var(--amber);border:none">$</i>Vendor</span>
       <span><i style="background:transparent;color:var(--cyan);border:none">+</i>Cache</span>
+      <span><i style="background:transparent;color:var(--amber);border:none;font-weight:bold">!</i>Job on offer</span>
+      <span><i style="background:transparent;color:var(--toxic);border:none;font-weight:bold">?</i>Job to hand in</span>
       <span><i style="background:transparent;color:var(--purple);border:none">!</i>Patient Zero</span>
       <span><i style="background:transparent;color:var(--toxic);border:none">@</i>You</span>
       <span><i style="border-color:var(--amber);"></i>Claimed territory</span>
@@ -4097,7 +4119,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
           if (sec.isBossSector || sec.isLairSector) cell.classList.add("boss");
           if (isClaimed(cx, cy)) cell.classList.add("claimed");
           let inner = (sec.isBossSector ? "!" : (sec.isLairSector ? "A" : sec.type[0]));
-          if (sec.hasShop) inner += '<span class="shopdot">$</span>';
+          if (sec.hasShop) inner += '<span class="shopdot">$</span>' + vendorQuestMarker(key);
           if (sec.hasCache && !s.collectedCaches.has(key)) inner += '<span class="cachedot">+</span>';
           if (isClaimed(cx, cy) && s.claimedBlocks[key].postedCompanionId) inner += '<span class="postdot">&#9679;</span>';
           cell.innerHTML = inner;
@@ -4130,7 +4152,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
         const postedComp = claimedHere && s.claimedBlocks[selKey].postedCompanionId ? s.roster.find(c => c.id === s.claimedBlocks[selKey].postedCompanionId) : null;
         info.innerHTML = `<div class="title">${sec.name} &mdash; [${x},${y}]</div>
           <div style="color:var(--text-dim);font-size:11px;">Type: ${sec.type} &middot; Danger: ${sec.danger} &middot; Distance from Safehouse: ${dist}
-          ${sec.hasShop ? `<br>Vendor: ${sec.shopName}` : ""}
+          ${sec.hasShop ? `<br>Vendor: ${sec.shopName}` : ""}${vendorQuestLabel(selKey) ? `<br><span style="color:var(--amber);">${vendorQuestLabel(selKey).replace(/^./, ch => ch.toUpperCase())}</span>` : ""}
           ${sec.hasCache ? `<br>Supply cache: ${s.collectedCaches.has(selKey) ? "already collected" : "uncollected"}` : ""}
           ${claimedHere ? `<br><span style="color:var(--amber);">Claimed compound territory${postedComp ? ` &mdash; posted: ${postedComp.name}` : " &mdash; unmanned"}</span>` : ""}
           ${sec.isBossSector ? `<br><span style="color:var(--purple);">Patient Zero signal detected here.</span>` : ""}${sec.isLairSector ? `<br><span style="color:var(--blood);">${s.alpha.name}'s lair.</span>` : ""}</div>`;
@@ -4143,6 +4165,8 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
       <span><i style="background:#300c0c"></i>High danger</span>
       <span><i style="background:transparent;color:var(--amber);border:none">$</i>Vendor</span>
       <span><i style="background:transparent;color:var(--cyan);border:none">+</i>Cache</span>
+      <span><i style="background:transparent;color:var(--amber);border:none;font-weight:bold">!</i>Job on offer</span>
+      <span><i style="background:transparent;color:var(--toxic);border:none;font-weight:bold">?</i>Job to hand in</span>
       <span><i style="background:transparent;color:var(--purple);border:none">!</i>Patient Zero</span>
       <span><i style="background:transparent;color:var(--toxic);border:none">@</i>You</span>
       <span><i style="background:#0c110b;"></i>Unexplored</span>

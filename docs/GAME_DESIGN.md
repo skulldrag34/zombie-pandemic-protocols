@@ -332,3 +332,7 @@ All timers are play time (accumulated in `tickAlpha`, paused during combat), sto
 - **Successor:** after 60 min of play (with at least one block held) a new Alpha with a different title emerges; +15% HP per Alpha killed, cap +45%.
 - Balance (simulated, fire/advance only, no healing, 40-60 fights each): L10 mid gear vs escalation 1: 68% win; vs escalation 2: 3%; L18 full gear vs escalation 3: 28% solo, 97% with a companion. Escalation 3's hit level was raised 9 -> 10 after the first simulation (solo was 68%).
 - Saves: `alpha.lair`, `alpha.weaken`, `alphaKills`, `alphaRespawnMs`, `lastAlphaName`, all clamped on load.
+
+## Vendor job markers
+- Minimap and world map mark vendors with jobs: amber "!" = job on offer, white "?" = job taken, green "?" = ready to hand in (fetch items in your pack, or bounty kills done). Your own cell shows "@" only; the shop panel shows the job there.
+- The minimap tooltip and the world map sector panel name the job; both legends explain the markers.
