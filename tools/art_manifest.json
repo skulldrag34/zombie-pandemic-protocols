@@ -356,7 +356,7 @@
       "src": "alphas/herald.jpg"
     }
   },
-  "_locations_comment": "Field-tab location banners, cropped to box then resized to 900x300 (3:1). Keys: safehouse, residential, commercial, industrial, military, wasteland, suburb, stripmall, precinct, hq-authority, hq-union, hq-jackals, hq-bloom, lair, pz.",
+  "_locations_comment": "Field-tab location banners, cropped to box then resized to location_w x location_h (840x280, quality 55, to stay under the 3 MB file budget) (3:1). Keys: safehouse, residential, commercial, industrial, military, wasteland, suburb, stripmall, precinct, hq-authority, hq-union, hq-jackals, hq-bloom, lair, pz. Variants: <type>-2, <type>-3, <type>-4 for residential/commercial/industrial/military/wasteland; each sector picks one by world seed.",
   "locations": {
     "safehouse": {
       "src": "locations/safehouse-rooftop.jpg",
@@ -365,7 +365,8 @@
         250,
         1376,
         709
-      ]
+      ],
+      "quality": 55
     },
     "commercial": {
       "src": "locations/commercial-street-fight.jpg",
@@ -374,7 +375,8 @@
         190,
         1376,
         649
-      ]
+      ],
+      "quality": 55
     },
     "residential": {
       "src": "locations/residential-street.jpg",
@@ -383,7 +385,8 @@
         100,
         1376,
         559
-      ]
+      ],
+      "quality": 55
     },
     "industrial": {
       "src": "locations/industrial-railyard.jpg",
@@ -392,7 +395,8 @@
         190,
         1376,
         649
-      ]
+      ],
+      "quality": 55
     },
     "military": {
       "src": "locations/military-checkpoint.jpg",
@@ -401,7 +405,8 @@
         140,
         1376,
         599
-      ]
+      ],
+      "quality": 55
     },
     "wasteland": {
       "src": "locations/wasteland-ashfield.jpg",
@@ -410,7 +415,8 @@
         110,
         1376,
         569
-      ]
+      ],
+      "quality": 55
     },
     "hq-authority": {
       "src": "locations/hq-authority-bunker.jpg",
@@ -419,7 +425,8 @@
         70,
         1376,
         529
-      ]
+      ],
+      "quality": 55
     },
     "hq-union": {
       "src": "locations/hq-union-depot.jpg",
@@ -428,7 +435,8 @@
         110,
         1376,
         569
-      ]
+      ],
+      "quality": 55
     },
     "hq-jackals": {
       "src": "locations/hq-jackals-fort.jpg",
@@ -437,7 +445,8 @@
         140,
         1376,
         599
-      ]
+      ],
+      "quality": 55
     },
     "lair": {
       "src": "locations/alpha-lair-tunnel.jpg",
@@ -446,7 +455,8 @@
         170,
         1376,
         629
-      ]
+      ],
+      "quality": 55
     },
     "pz": {
       "src": "locations/patient-zero-lab.jpg",
@@ -455,7 +465,88 @@
         130,
         1376,
         589
-      ]
+      ],
+      "quality": 55
+    },
+    "precinct": {
+      "src": "locations/landmark-precinct.jpg",
+      "box": [
+        0,
+        90,
+        1376,
+        549
+      ],
+      "quality": 55
+    },
+    "stripmall": {
+      "src": "locations/landmark-stripmall.jpg",
+      "box": [
+        0,
+        72,
+        1376,
+        531
+      ],
+      "quality": 55
+    },
+    "suburb": {
+      "src": "locations/landmark-suburb.jpg",
+      "box": [
+        0,
+        150,
+        1376,
+        609
+      ],
+      "quality": 55
+    },
+    "hq-bloom": {
+      "src": "locations/hq-bloom-greenhouse.jpg",
+      "box": [
+        0,
+        160,
+        1376,
+        619
+      ],
+      "quality": 55
+    },
+    "commercial-2": {
+      "src": "locations/commercial-2-downtown.jpg",
+      "box": [
+        0,
+        150,
+        1376,
+        609
+      ],
+      "quality": 55
+    },
+    "commercial-3": {
+      "src": "locations/commercial-3-stadium.jpg",
+      "box": [
+        0,
+        240,
+        1376,
+        699
+      ],
+      "quality": 55
+    },
+    "industrial-2": {
+      "src": "locations/industrial-2-dock.jpg",
+      "box": [
+        0,
+        150,
+        1376,
+        609
+      ],
+      "quality": 55
+    },
+    "industrial-3": {
+      "src": "locations/industrial-3-bridge.jpg",
+      "box": [
+        0,
+        110,
+        1376,
+        569
+      ],
+      "quality": 55
     }
   },
   "_vendors_comment": "Vendor and faction-leader portraits, centre 3:4 then 240x320. Keys: ray, diane, pete, route9, miller, bill, locker, authority, union, jackals, bloom.",
@@ -494,5 +585,6 @@
       "src": "vendors/leader-marsh.jpg"
     }
   },
-  "_locations_held": "art-src/locations/held: river dock, bridge, stadium, downtown towers - Gemini drifts from the prompts, kept for later use."
+  "location_w": 840,
+  "location_h": 280
 }

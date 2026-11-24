@@ -114,7 +114,7 @@ def main():
                 cw = h * 3; im = im.crop(((w - cw) // 2, 0, (w - cw) // 2 + cw, h))
             else:
                 ch = w // 3; top = (h - ch) // 2; im = im.crop((0, top, w, top + ch))
-        im = im.resize((900, 300), Image.LANCZOS)
+        im = im.resize((man.get("location_w", 900), man.get("location_h", 300)), Image.LANCZOS)
         buf = io.BytesIO()
         im.save(buf, "WEBP", quality=entry.get("quality", q), method=6)
         b = buf.getvalue()

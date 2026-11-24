@@ -31,11 +31,25 @@ const P = (w) => w.__zpPlaceArt;
   c.ok(ban === $(w, 'tab-field').firstElementChild, 'the banner sits at the top of the Field tab');
 
   // Landmark without its own art falls back to its type; a type without art hides the banner.
-  c.ok(P(w).locKey(1, 0) === 'commercial', 'the Strip Mall (no art yet) falls back to Commercial');
-  c.ok(P(w).locKey(0, 1) === 'residential', 'the Suburban Neighborhood (no art yet) falls back to Residential');
+  c.ok(P(w).locKey(1, 0) === 'stripmall' && P(w).locKey(0, 1) === 'suburb' && P(w).locKey(1, 1) === 'precinct', 'the three landmarks show their own banners');
+  c.ok(['suburb', 'stripmall', 'precinct', 'hq-bloom', 'commercial-2', 'commercial-3', 'industrial-2', 'industrial-3'].every(k => P(w).locations().includes(k)), 'landmark, Bloom HQ and variant banners are styled');
+
+  // Variants: a sector type with several banners spreads them across sectors, fixed per sector.
+  const seen = { commercial: new Set(), industrial: new Set() }; let stable = true;
+  for (let x = -12; x <= 12; x++) for (let y = -12; y <= 12; y++) {
+    if (Math.abs(x) + Math.abs(y) < 3) continue;
+    const sc = w.__zpFactions.sector(x, y); const ty = sc.type.toLowerCase();
+    if (!seen[ty] || sc.faction || sc.isBossSector || sc.isLairSector) continue;
+    const k = P(w).locKey(x, y);
+    if (k !== P(w).locKey(x, y)) stable = false;
+    seen[ty].add(k);
+  }
+  c.ok([...seen.commercial].sort().join(',') === 'commercial,commercial-2,commercial-3', `Commercial sectors use all three Commercial banners (${[...seen.commercial].sort()})`);
+  c.ok([...seen.industrial].sort().join(',') === 'industrial,industrial-2,industrial-3', `Industrial sectors use all three Industrial banners (${[...seen.industrial].sort()})`);
+  c.ok(stable, 'each sector always shows the same banner');
   w.Math.random = () => 0.99;
   click(w, 'btnN'); await sleep(50);
-  c.ok($(w, 'sectorBanner').getAttribute('data-location-art') === 'residential' && /Suburban Neighborhood/.test($(w, 'sectorBanner').textContent), 'walking north shows the Residential banner under its own name');
+  c.ok($(w, 'sectorBanner').getAttribute('data-location-art') === 'suburb' && /Suburban Neighborhood/.test($(w, 'sectorBanner').textContent), 'walking north shows the Suburban Neighborhood banner');
   // Wasteland has no art yet: find one and check the banner hides there.
   let waste = null;
   for (let r = 6; r < 40 && !waste; r++) for (let x = -r; x <= r && !waste; x++) { const y = r - Math.abs(x); const sc = w.__zpFactions.sector(x, y); if (sc.type === 'Wasteland' && !sc.faction) waste = { x, y }; }
@@ -44,12 +58,12 @@ const P = (w) => w.__zpPlaceArt;
   c.ok($(w, 'sectorBanner').classList.contains('hidden'), 'standing in a sector without art hides the banner');
   w.__zpFactions.teleport(0, 1); await settle(w);
   click(w, 'btnS'); click(w, 'btnE'); await sleep(50);
-  c.ok(!$(w, 'sectorBanner').classList.contains('hidden') && $(w, 'sectorBanner').getAttribute('data-location-art') === 'commercial' && /Downtown Strip Mall/.test($(w, 'sectorBanner').textContent), 'and stepping into the Strip Mall shows the Commercial banner with its own name');
+  c.ok(!$(w, 'sectorBanner').classList.contains('hidden') && $(w, 'sectorBanner').getAttribute('data-location-art') === 'stripmall' && /Downtown Strip Mall/.test($(w, 'sectorBanner').textContent), 'and stepping into the Strip Mall shows the Commercial banner with its own name');
   const before = $(w, 'sectorBanner').innerHTML;
   await settle(w);
   c.ok($(w, 'sectorBanner').innerHTML === before, 'the banner is not rebuilt every second');
 
-  // HQs with their own banner use it; the Bloom (none yet) falls back to its sector type.
+  // Every HQ in this game uses its own banner.
   for (const id of ['authority', 'union', 'jackals']) { const f = w.__zpFactions.all()[id]; c.ok(P(w).locKey(f.x, f.y) === 'hq-' + id, `the ${id} HQ shows its own banner`); }
   // A faction HQ and the lair/Patient Zero fall back to the underlying type when they have no art.
   const auth = w.__zpFactions.all().authority;
@@ -82,12 +96,12 @@ const P = (w) => w.__zpPlaceArt;
   c.ok(!!q(w, '#shopContent [data-faction-hq="authority"] [data-vendor-art="authority"]'), "the Authority HQ shows President Voss's portrait");
   done(s);
 
-  // Patient Zero's located sector shows the lab; the Bloom HQ (no banner yet) falls back to its sector type.
+  // Patient Zero's located sector shows the lab; the Bloom HQ shows the greenhouse.
   s = await session(baseSave({ questStage: 'located', patientZeroCoords: { x: 3, y: 4 }, settings: { severity: 'Medium', infection: 'Normal', armedPct: 'Medium', factions: 'Many' } })); w = s.window;
   c.ok(P(w).locKey(3, 4) === 'pz', "Patient Zero's sector shows the Patient Zero banner");
   const bl = w.__zpFactions.all().bloom;
   const blType = w.__zpFactions.sector(bl.x, bl.y).type.toLowerCase();
-  c.ok(P(w).locKey(bl.x, bl.y) === blType, `the Bloom HQ, with no banner yet, falls back to ${blType}`);
+  c.ok(blType && P(w).locKey(bl.x, bl.y) === 'hq-bloom', `the Bloom HQ shows its greenhouse banner (over ${blType})`);
   done(s);
 
   fs.unlinkSync(copy);
