@@ -77,7 +77,7 @@ Noted during Phase 1 balancing (not Alpha-related): a fresh 1-block Medium base 
 
 **Character model Phase B (proposal later):** one original faceless mannequin for everyone + ~30 see-through gear overlays (helmet, armor, gloves, pants, boots, weapon, backpack, accessories) drawn on its template, stacked as you equip. A player's own model can't take overlays; they choose their picture or the dressed mannequin.
 
-**Factions (approved in principle, proposal next):** 3 by default; creation setting Few (2) / Normal (3) / Many (4). One is a government remnant (fictional provisional government, a fictional President as leader; no real people, seals or insignia). Phases: 1) HQs, standing, trade, faction jobs; 2) patrols, discovery, raids, expansion; 3) HQ assaults, leader fights, inter-faction politics. Squad above 5 only via an earned room (e.g. Bunkhouse to 7).
+**Factions Phase 1 DONE:** Continuity Authority (President Adelaide Voss), Salvage Union (Harlan Teague), Rust Jackals (Kade "Gravel" Marrow), The Bloom (Dr. Isolde Marsh; secular cult, no religious imagery). Creation setting Few (2) / Normal (3, default) / Many (4). Seeded HQs 8-15 steps out, territory radius 2, standing -100..+100 in five states, rivals, faction shops with Friendly/Allied exclusives, gifts, faction jobs, rumours. Peaceful by design. **Next: Phase 2** patrols, raids on your base, territory expansion, Bunkhouse room (squad to 7). **Phase 3** HQ assaults, leader fights, inter-faction politics. Art to request: 4 leader portraits, 4 emblems (text fallback until then).
 
 **Combat visuals Phase 2 (proposal later):** zombie types get gameplay quirks; pick your target within a horde.
 

@@ -336,3 +336,16 @@ All timers are play time (accumulated in `tickAlpha`, paused during combat), sto
 ## Vendor job markers
 - Minimap and world map mark vendors with jobs: amber "!" = job on offer, white "?" = job taken, green "?" = ready to hand in (fetch items in your pack, or bounty kills done). Your own cell shows "@" only; the shop panel shows the job there.
 - The minimap tooltip and the world map sector panel name the job; both legends explain the markers.
+
+## Factions (Phase 1)
+- **Setting:** Factions Few / Normal / Many at creation. Few = Authority + Union; Normal adds the Rust Jackals; Many adds The Bloom. Saves from before factions load as Normal, all undiscovered.
+- **Factions:** Continuity Authority (government remnant, Civil-Defense Bunker, President Adelaide Voss, start 0); Salvage Union (traders, Union Depot, Harlan Teague, +10); Rust Jackals (raiders, Tire Yard Fort, Kade "Gravel" Marrow, -30); The Bloom (secular cult that studies the infected, Greenhouse Clinic, Dr. Isolde Marsh, -20). Rivals: Authority vs Jackals, Union vs Bloom.
+- **HQ sites:** derived from the world seed (never stored): each faction its own compass direction, 8-15 steps out (16 if nudged off a landmark or Patient Zero). Territory = Manhattan radius 2. Alpha lairs step off HQs.
+- **Standing:** -100..+100. Hostile <= -60 (no trade or jobs; gifts still accepted), Wary -59..-20 (prices +25%, fetch jobs only), Neutral -19..19, Friendly 20..59 (prices -10%, first exclusive, zombie danger -1 in territory, min 1), Allied 60+ (prices -20%, second exclusive).
+- **Changes:** faction job +8..12; every $50 spent at the HQ +1 (max +5 per hour); gift $25 = +1 (max 5 per hour); completing a claim inside their territory -15. Any gain costs the rival half as much. Hourly windows and the Bloom fragment restock are saved as time remaining.
+- **HQ:** a danger-0 vendor sector with the faction panel (leader, standing bar, perks, gift button), faction stock, and jobs (60% chance per visit). Faction bounties count kills within 4 blocks of the HQ and pay standing instead of vendor reputation or bonus items.
+- **Exclusives:** Authority: Reinforced Combat Vest $360 (Friendly), Precision Rifle $650 (Allied). Union: Trauma Kit $90 (Friendly), +15% sell prices (Allied). Jackals: always buy loot at +30%; Shotgun $145 (Friendly), 5 Molotovs $120 (Allied). Bloom: Painkiller and Energy Drink 5-packs (Friendly), Research Fragment $200 once per hour (Allied; only while the cure quest needs it).
+- **Discovery:** entering their territory, or a 10% rumour on entering any ordinary vendor's sector. Discovered HQs show as a coloured H on both maps (even unvisited) with outlined territory.
+- **Squad tab:** FACTIONS panel: discovered factions (leader, HQ, standing, agenda, unlocks, rival, jobs done) plus one "unknown faction" card per undiscovered one.
+- **Test hook:** `window.__zpFactions`. Suite: `tests/factions_test.js`.
+

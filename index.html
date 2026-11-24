@@ -161,6 +161,19 @@
   .cache-card .desc { font-size: 11px; color: var(--text-dim); margin-bottom: 8px; }
   .vendor-header { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px dashed var(--line); }
   .vendor-header .greeting { font-size: 11.5px; color: var(--text-dim); font-style: italic; flex: 1; }
+  .faction-head { border: 1px solid; border-radius: 4px; padding: 10px; }
+  .faction-head .greeting b { font-style: normal; letter-spacing: 1px; }
+  .faction-standing { display: flex; align-items: center; gap: 8px; margin: 6px 0 2px; font-style: normal; }
+  .standing-bar { position: relative; flex: 1; max-width: 220px; height: 8px; background: #0c110b; border: 1px solid var(--line); border-radius: 2px; overflow: hidden; }
+  .standing-bar .sb-mid { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--text-dim); opacity: .6; }
+  .standing-bar .sb-fill { position: absolute; top: 0; bottom: 0; }
+  .standing-label { font-size: 10px; letter-spacing: 1px; white-space: nowrap; }
+  .excl-tag { font-size: 8.5px; letter-spacing: 1px; color: var(--toxic); border: 1px solid var(--toxic); border-radius: 2px; padding: 0 3px; vertical-align: middle; }
+  .hqglyph { font-weight: bold; }
+  .faction-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+  .faction-card { border: 1px solid var(--line); border-left: 3px solid; border-radius: 3px; padding: 10px; font-size: 11px; color: var(--text-dim); }
+  .faction-card .fname { font-size: 12.5px; letter-spacing: 1px; font-weight: bold; }
+  .faction-card.unknown { border-left-color: var(--line); font-style: italic; }
   .shop-card.locked { opacity: 0.5; }
   .shop-card .lockline { font-size: 10px; color: var(--blood); margin-bottom: 4px; }
 
@@ -562,6 +575,10 @@
       <div class="panel-label">ROSTER <span id="rosterCountLabel"></span><button class="mini-btn" id="btnToggleAutoHeal" style="float:right;"></button></div>
       <div id="rosterContent"></div>
     </div>
+    <div class="panel">
+      <div class="panel-label">FACTIONS <span id="factionCountLabel"></span></div>
+      <div id="factionContent"></div>
+    </div>
   </div>
 
   <div class="tabpanel" id="tab-achievements">
@@ -722,6 +739,10 @@
         <div>
           <label>Civilians Armed %</label>
           <select id="armedSelect" class="select-input"></select>
+        </div>
+        <div>
+          <label>Factions</label>
+          <select id="factionSelect" class="select-input"></select>
         </div>
       </div>
     </div>
@@ -1016,6 +1037,67 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
   const VENDOR_FETCH_ITEM_POOL = ["Canned Food", "Bandage", "Cloth Strips", "Duct Tape", "Scrap Metal", "Empty Bottle", "Ammo", "Energy Drink"];
   const VENDOR_PREMIUM_ITEM_CHANCE = 0.25;
   const VENDOR_PREMIUM_ITEMS = ["Reinforced Combat Vest", "Precision Rifle", "Trauma Kit"];
+
+  // --- FACTIONS (Phase 1: HQs, territory, standing, trade, jobs; no faction combat yet) ---
+  const FACTION_OPTIONS = ["Few", "Normal", "Many"];
+  const FACTION_SETS = { Few: ["authority", "union"], Normal: ["authority", "union", "jackals"], Many: ["authority", "union", "jackals", "bloom"] };
+  const FACTIONS = {
+    authority: {
+      name: "Continuity Authority", leader: "President Adelaide Voss", hq: "Civil-Defense Bunker", color: "#6fa8dc", start: 0, rival: "jackals",
+      agenda: "Restore order: rationing, curfews, and drafting survivors into service.",
+      greeting: "The Authority still stands. Papers, purpose, and payment, in that order.",
+      stock: [
+        { name: "Ammo", price: 17, qty: 10 }, { name: "Bandage", price: 14 }, { name: "Medkit", price: 38 },
+        { name: "Padded Vest", price: 65 }, { name: "Riot Armor", price: 210, minLevel: 4 }, { name: "Combat Boots", price: 52, minLevel: 2 },
+        { name: "Reinforced Combat Vest", price: 360, need: "Friendly" }, { name: "Precision Rifle", price: 650, need: "Allied" }
+      ]
+    },
+    union: {
+      name: "Salvage Union", leader: "Harlan Teague, Quartermaster of the Roads", hq: "Union Depot", color: "#d9a441", start: 10, rival: "bloom",
+      agenda: "Keep the scrap routes open. Everyone who pays is a friend.",
+      greeting: "Scrap moves, people eat. Buy in bulk and the roads stay open.",
+      sellBonusAllied: 0.15,
+      stock: [
+        { name: "Scrap Metal", price: 35, qty: 10 }, { name: "Duct Tape", price: 22, qty: 5 }, { name: "Cloth Strips", price: 25, qty: 10 },
+        { name: "Empty Bottle", price: 8, qty: 5 }, { name: "Work Gloves", price: 14 }, { name: "Crowbar", price: 22 },
+        { name: "Trauma Kit", price: 90, need: "Friendly" }
+      ]
+    },
+    jackals: {
+      name: "Rust Jackals", leader: "Kade “Gravel” Marrow", hq: "Tire Yard Fort", color: "#c0573a", start: -30, rival: "authority",
+      agenda: "Take what others built. Respect is paid in loot.",
+      greeting: "Whatever you dragged in, we'll take it. Paying better than the soft towns, too.",
+      sellBonus: 0.30,
+      stock: [
+        { name: "Crowbar", price: 20 }, { name: "Machete", price: 50, minLevel: 2 }, { name: "Pistol", price: 130, minLevel: 2 },
+        { name: "Ammo", price: 20, qty: 10 }, { name: "Leather Jacket", price: 45 },
+        { name: "Shotgun", price: 145, minLevel: 4, need: "Friendly" }, { name: "Molotov Cocktail", price: 120, qty: 5, need: "Allied" }
+      ]
+    },
+    bloom: {
+      name: "The Bloom", leader: "Dr. Isolde Marsh", hq: "Greenhouse Clinic", color: "#9a6fd9", start: -20, rival: "union",
+      agenda: "Study the infected and protect the turned. They call it the next step for humanity.",
+      greeting: "Don't flinch at the specimens. Every one of them teaches us something.",
+      stock: [
+        { name: "Bandage", price: 14 }, { name: "Medkit", price: 38 }, { name: "Painkillers", price: 11 },
+        { name: "Energy Drink", price: 20 }, { name: "Cloth Strips", price: 3 },
+        { name: "Painkillers", price: 50, qty: 5, need: "Friendly" }, { name: "Energy Drink", price: 90, qty: 5, need: "Friendly" },
+        { name: "Research Fragment", price: 200, need: "Allied", perHour: true }
+      ]
+    }
+  };
+  const FACTION_RANK = { Hostile: 0, Wary: 1, Neutral: 2, Friendly: 3, Allied: 4 };
+  const FACTION_BUY_MULT = { Hostile: 1, Wary: 1.25, Neutral: 1, Friendly: 0.9, Allied: 0.8 };
+  const FACTION_STATE_COLOR = { Hostile: "var(--blood)", Wary: "var(--amber)", Neutral: "var(--text-dim)", Friendly: "var(--cyan)", Allied: "var(--toxic)" };
+  const FACTION_HQ_DIST_MIN = 8, FACTION_HQ_DIST_SPAN = 8;    // HQs sit 8-15 steps out
+  const FACTION_TERRITORY = 2;                                 // Manhattan radius around the HQ
+  const FACTION_BOUNTY_RANGE = 4;                              // faction bounty kills count within this distance of the HQ
+  const FACTION_JOB_GAIN_MIN = 8, FACTION_JOB_GAIN_SPAN = 5;  // +8 to +12 per job
+  const FACTION_JOB_CHANCE = 0.6;
+  const FACTION_RIVAL_SHARE = 0.5;
+  const FACTION_SPEND_PER_POINT = 50, FACTION_GIFT_PER_POINT = 25, FACTION_HOURLY_CAP = 5, FACTION_WINDOW_MS = 3600000;
+  const FACTION_CLAIM_PENALTY = 15;
+  const FACTION_RUMOUR_CHANCE = 0.10;
 
   const RECIPES = [
     { id: "craft_bandage", name: "Bandage", inputs: { "Cloth Strips": 2 }, output: { name: "Bandage", qty: 1 }, timeMs: 15000 },
@@ -1847,6 +1929,16 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     }
     if (s.alpha && s.alpha.lair && x === s.alpha.lair.x && y === s.alpha.lair.y) base.isLairSector = true;
 
+    const fac = key === "0,0" ? null : factionTerritoryAt(x, y);
+    if (fac) {
+      base.faction = fac.id;
+      if (fac.hq) {
+        const F = FACTIONS[fac.id];
+        return Object.assign(base, { name: F.hq, danger: 0, factionHq: fac.id, hasShop: true, shopName: `${F.name} \u2014 ${F.hq}`, shopStock: F.stock, hasCache: false });
+      }
+      if (base.danger > 1 && factionRankOf(fac.id) >= FACTION_RANK.Friendly) base.danger -= 1;   // their patrols thin the dead
+    }
+
     if (key === "0,0") { base.hasShop = true; base.shopName = "Home Supply Locker"; base.shopStock = SAFEHOUSE_STOCK; base.hasCache = false; return base; }
 
     const cacheRoll = hash(x + 4000, y + 4000, seed) % 100;
@@ -1892,7 +1984,8 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
       bodyModel: null,
       seed: Math.floor(Math.random() * 4294967295),
       locationTheme: null,
-      settings: { severity: "Medium", infection: "Normal", armedPct: "Medium", audio: Object.assign({}, AUDIO_DEFAULTS) },
+      settings: { severity: "Medium", infection: "Normal", armedPct: "Medium", factions: "Normal", audio: Object.assign({}, AUDIO_DEFAULTS) },
+      factions: null,
       attributes: { str: 1, agi: 1, end: 1, per: 1, lck: 1 },
       unspentPoints: 0,
       hp: 100, baseMaxHp: 100,
@@ -1940,6 +2033,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
   }
 
   let s = newGame();
+  s.factions = buildFactions(s.seed, s.settings.factions);
   let gameStarted = false;
   let logTick = 0, combatLogTick = 0;
   let lastRenderedLogTick = -1, lastRenderedCombatLogTick = -1;
@@ -2126,6 +2220,11 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
         const buildXp = Math.max(5, Math.round(claimCost().timeMs / 1500));
         gainXp(buildXp);
         addLog(`Sector [${key}] claimed. The compound grows. +${buildXp} XP.`, "build");
+        const claimFac = factionTerritoryAt(s.buildQueue.x, s.buildQueue.y);
+        if (claimFac) {
+          changeStanding(claimFac.id, -FACTION_CLAIM_PENALTY);
+          addLog(`The ${FACTIONS[claimFac.id].name} consider that block theirs. Standing -${FACTION_CLAIM_PENALTY}.`, "system");
+        }
         checkAchievements();
       } else if (s.buildQueue.kind === "fitness") {
         s.fitnessLevel = s.buildQueue.targetLevel;
@@ -2333,7 +2432,10 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     const ax = (h >> 3) % (d + 1);                     // |x|, the rest goes to |y|
     const sx = (h >> 9) & 1 ? 1 : -1, sy = (h >> 10) & 1 ? 1 : -1;
     let x = sx * ax, y = sy * (d - ax);
-    if (s.patientZeroCoords && x === s.patientZeroCoords.x && y === s.patientZeroCoords.y) y += sy;
+    for (let i = 0; i < 4; i++) {
+      if ((s.patientZeroCoords && x === s.patientZeroCoords.x && y === s.patientZeroCoords.y) || factionHqAt(x, y)) y += sy;
+      else break;
+    }
     return { x, y };
   }
   function locateAlphaLair() {
@@ -2404,6 +2506,14 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     render();
   }
   window.__zpAlpha3 = { lairFor: (seed, k) => lairFor(seed, k), bossHp: () => alphaBossHp(), fight: ALPHA_FIGHT, nextName: () => nextAlphaName() };   // test hook
+  window.__zpFactions = {   // test hook
+    all: () => s.factions, defs: FACTIONS, sets: FACTION_SETS, sites: (seed, setting) => factionSites(seed, setting), pz: seed => patientZeroFor(seed),
+    stateOf: id => factionState(id), stateFor: v => factionStateFor(v), territoryAt: (x, y) => factionTerritoryAt(x, y), sector: (x, y) => sectorAt(x, y),
+    setStanding: (id, v) => { s.factions[id].standing = v; }, discover: id => discoverFaction(id, "test"), gift: id => giftFaction(id),
+    buyMult: id => factionBuyMult(id), sellMult: id => factionSellMult(id), basePrice: n => shopSellPrice(n),
+    kill: lvl => awardKillKRewards(lvl),
+    queueClaim: (x, y) => { s.buildQueue = { kind: "claim", x, y, finishAt: Date.now() }; }, gain: (id, g) => gainStanding(id, g), teleport: (x, y) => { s.x = x; s.y = y; s.visited.add(`${x},${y}`); }
+  };
 
   function startTraitorCombat(c, line) {
     combatSubTab = null;
@@ -2679,6 +2789,188 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     if (unlockedAny) playSfx("achievement");
   }
 
+  // --- FACTIONS ---
+  function patientZeroFor(seed) {
+    const rng = mulberry32(hash(1, 1, seed) ^ 0x5bd1e995);
+    const dist = 10 + Math.floor(rng() * 5);
+    const angle = rng() * Math.PI * 2;
+    return { x: Math.round(Math.cos(angle) * dist), y: Math.round(Math.sin(angle) * dist) };
+  }
+  // Seeded HQ sites: each faction gets its own compass direction, 8-15 steps out.
+  function factionSites(seed, setting) {
+    const ids = FACTION_SETS[setting] || FACTION_SETS.Normal;
+    const rng = mulberry32(hash(77, 413, seed));
+    const dirs = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+    for (let i = dirs.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = dirs[i]; dirs[i] = dirs[j]; dirs[j] = t; }
+    const pz = patientZeroFor(seed);
+    const out = {};
+    ids.forEach((id, i) => {
+      const [dx, dy] = dirs[i];
+      const d = FACTION_HQ_DIST_MIN + Math.floor(rng() * FACTION_HQ_DIST_SPAN);
+      const latMax = Math.floor(d / 4);
+      const lat = Math.floor(rng() * (latMax * 2 + 1)) - latMax;
+      let main = d - Math.abs(lat);
+      let x, y;
+      for (let tries = 0; tries < 4; tries++) {
+        x = dx !== 0 ? dx * main : lat; y = dy !== 0 ? dy * main : lat;
+        if (!LANDMARKS[`${x},${y}`] && !(x === pz.x && y === pz.y)) break;
+        main += 1;
+      }
+      out[id] = { x, y };
+    });
+    return out;
+  }
+  function newFactionRecord(id, site) {
+    return { x: site.x, y: site.y, standing: FACTIONS[id].start, discovered: false, spendUsed: 0, giftUsed: 0, spendBank: 0, windowEnd: 0, fragReadyAt: 0, jobs: 0 };
+  }
+  function buildFactions(seed, setting) {
+    const sites = factionSites(seed, setting);
+    const out = {};
+    Object.keys(sites).forEach(id => { out[id] = newFactionRecord(id, sites[id]); });
+    return out;
+  }
+  // Saves keep standing and discovery; HQ sites are always re-derived from the seed.
+  function sanitizeFactions(raw, seed, setting) {
+    const out = buildFactions(seed, setting);
+    const now = Date.now();
+    if (!raw || typeof raw !== "object") return out;
+    const num = (v, lo, hi, dflt) => (typeof v === "number" && Number.isFinite(v)) ? Math.max(lo, Math.min(hi, v)) : dflt;
+    Object.keys(out).forEach(id => {
+      const r = raw[id];
+      if (!r || typeof r !== "object") return;
+      const f = out[id];
+      f.standing = num(r.standing, -100, 100, f.standing);
+      f.discovered = r.discovered === true;
+      f.spendUsed = Math.round(num(r.spendUsed, 0, FACTION_HOURLY_CAP, 0));
+      f.giftUsed = Math.round(num(r.giftUsed, 0, FACTION_HOURLY_CAP, 0));
+      f.spendBank = num(r.spendBank, 0, FACTION_SPEND_PER_POINT - 1, 0);
+      const winLeft = num(r.windowLeftMs, 0, FACTION_WINDOW_MS, 0);
+      f.windowEnd = winLeft > 0 ? now + winLeft : 0;
+      if (!winLeft) { f.spendUsed = 0; f.giftUsed = 0; }
+      const fragLeft = num(r.fragLeftMs, 0, FACTION_WINDOW_MS, 0);
+      f.fragReadyAt = fragLeft > 0 ? now + fragLeft : 0;
+      f.jobs = Math.round(num(r.jobs, 0, 100000, 0));
+    });
+    return out;
+  }
+  function serializeFactions() {
+    const now = Date.now();
+    const out = {};
+    Object.keys(s.factions || {}).forEach(id => {
+      const f = s.factions[id];
+      out[id] = {
+        standing: f.standing, discovered: !!f.discovered, spendUsed: f.spendUsed, giftUsed: f.giftUsed, spendBank: f.spendBank,
+        windowLeftMs: f.windowEnd > now ? f.windowEnd - now : 0, fragLeftMs: f.fragReadyAt > now ? f.fragReadyAt - now : 0, jobs: f.jobs
+      };
+    });
+    return out;
+  }
+  function factionStateFor(standing) {
+    const v = Math.round(standing);
+    if (v <= -60) return "Hostile";
+    if (v <= -20) return "Wary";
+    if (v < 20) return "Neutral";
+    if (v < 60) return "Friendly";
+    return "Allied";
+  }
+  function factionState(id) { const f = s.factions && s.factions[id]; return f ? factionStateFor(f.standing) : "Neutral"; }
+  function factionRankOf(id) { return FACTION_RANK[factionState(id)]; }
+  // The faction whose territory covers (x,y), with hq:true on the HQ sector itself.
+  function factionTerritoryAt(x, y) {
+    if (!s.factions) return null;
+    for (const id in s.factions) {
+      const f = s.factions[id];
+      const d = Math.abs(x - f.x) + Math.abs(y - f.y);
+      if (d <= FACTION_TERRITORY) return { id, hq: d === 0 };
+    }
+    return null;
+  }
+  function factionHqAt(x, y) { const t = factionTerritoryAt(x, y); return t && t.hq ? t.id : null; }
+  function changeStanding(id, delta) {
+    const f = s.factions && s.factions[id];
+    if (!f || !delta) return;
+    const before = factionState(id);
+    f.standing = Math.max(-100, Math.min(100, f.standing + delta));
+    const after = factionState(id);
+    if (before !== after && f.discovered) addLog(`${FACTIONS[id].name} now regard you as ${after}.`, "story");
+  }
+  // Helping a faction costs half that much standing with its rival.
+  function gainStanding(id, gain) {
+    changeStanding(id, gain);
+    const rival = FACTIONS[id].rival;
+    if (gain > 0 && s.factions[rival]) changeStanding(rival, -gain * FACTION_RIVAL_SHARE);
+  }
+  function factionWindow(f, now) {
+    if (!f.windowEnd || now >= f.windowEnd) { f.windowEnd = now + FACTION_WINDOW_MS; f.spendUsed = 0; f.giftUsed = 0; }
+  }
+  function factionRefuses(id) { return factionState(id) === "Hostile"; }
+  function discoverFaction(id, how) {
+    const f = s.factions && s.factions[id];
+    if (!f || f.discovered) return false;
+    f.discovered = true;
+    const F = FACTIONS[id];
+    addLog(how === "rumour"
+      ? `A vendor talks: the ${F.name} run their ${F.hq} at [${f.x},${f.y}]. Marked on your map.`
+      : `You've crossed into ${F.name} territory. Their ${F.hq} is at [${f.x},${f.y}], led by ${F.leader}.`, "story");
+    return true;
+  }
+  function checkFactionDiscovery(sector) {
+    if (sector.faction) discoverFaction(sector.faction, "territory");
+    else if (sector.hasShop && !(s.x === 0 && s.y === 0) && Math.random() < FACTION_RUMOUR_CHANCE) {
+      const hidden = Object.keys(s.factions || {}).filter(id => !s.factions[id].discovered);
+      if (hidden.length) discoverFaction(hidden[Math.floor(Math.random() * hidden.length)], "rumour");
+    }
+  }
+  function factionBuyMult(id) { return FACTION_BUY_MULT[factionState(id)]; }
+  function factionSellMult(id) {
+    const F = FACTIONS[id];
+    let m = 1 + (F.sellBonus || 0);
+    if (F.sellBonusAllied && factionState(id) === "Allied") m += F.sellBonusAllied;
+    return m;
+  }
+  function factionEntryLock(id, entry) {
+    if (entry.minLevel && s.level < entry.minLevel) return `UNLOCKS AT LEVEL ${entry.minLevel}`;
+    if (entry.need && factionRankOf(id) < FACTION_RANK[entry.need]) return `NEEDS ${entry.need.toUpperCase()} STANDING`;
+    if (entry.perHour) {
+      const f = s.factions[id];
+      if (f.fragReadyAt > Date.now()) return `RESTOCKS IN ${Math.ceil((f.fragReadyAt - Date.now()) / 60000)} MIN`;
+      if (s.questStage !== "none" || (s.inventory[entry.name] || 0) >= 3) return "YOU HAVE ENOUGH";
+    }
+    return "";
+  }
+  function factionSpend(id, price) {
+    const f = s.factions[id];
+    factionWindow(f, Date.now());
+    f.spendBank += price;
+    let gained = 0;
+    while (f.spendBank >= FACTION_SPEND_PER_POINT && f.spendUsed < FACTION_HOURLY_CAP) { f.spendBank -= FACTION_SPEND_PER_POINT; f.spendUsed += 1; gained += 1; }
+    if (f.spendUsed >= FACTION_HOURLY_CAP) f.spendBank = Math.min(f.spendBank, FACTION_SPEND_PER_POINT - 1);
+    if (gained) gainStanding(id, gained);
+  }
+  function giftFaction(id) {
+    const f = s.factions && s.factions[id];
+    if (!f || s.dead || s.combat || factionHqAt(s.x, s.y) !== id || s.cash < FACTION_GIFT_PER_POINT) return;
+    factionWindow(f, Date.now());
+    if (f.giftUsed >= FACTION_HOURLY_CAP) return;
+    s.cash -= FACTION_GIFT_PER_POINT; f.giftUsed += 1;
+    gainStanding(id, 1);
+    addLog(`You hand over $${FACTION_GIFT_PER_POINT} to the ${FACTIONS[id].name}. Standing +1.`, "system");
+    playSfx("coin");
+    render();
+  }
+  function nearFactionHq(id, x, y) {
+    const f = s.factions && s.factions[id];
+    return !!f && Math.abs(x - f.x) + Math.abs(y - f.y) <= FACTION_BOUNTY_RANGE;
+  }
+  function standingBarHtml(id) {
+    const f = s.factions[id];
+    const st = factionState(id);
+    const v = Math.round(f.standing);
+    const left = v < 0 ? 50 + v / 2 : 50, width = Math.abs(v) / 2;
+    return `<div class="standing-bar" data-standing="${id}" title="Standing ${v}"><i class="sb-mid"></i><i class="sb-fill" style="left:${left}%;width:${width}%;background:${FACTION_STATE_COLOR[st]}"></i></div>
+      <span class="standing-label" style="color:${FACTION_STATE_COLOR[st]}">${st} (${v > 0 ? "+" : ""}${v})</span>`;
+  }
+
   // --- NPC COMPANIONS / ROSTER ---
   function rollNpcEncounter() {
     if (s.pendingNpc) return;
@@ -2694,9 +2986,9 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
   }
 
   // --- VENDOR QUESTS ---
-  function generateVendorQuest() {
+  function generateVendorQuest(forceFetch) {
     const lvl = s.level;
-    const isFetch = Math.random() < 0.5;
+    const isFetch = forceFetch || Math.random() < 0.5;
     if (isFetch) {
       const itemName = VENDOR_FETCH_ITEM_POOL[Math.floor(Math.random() * VENDOR_FETCH_ITEM_POOL.length)];
       const qtyNeeded = 3 + Math.floor(lvl / 3);
@@ -2726,7 +3018,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
   function vendorQuestLabel(key) {
     const q = s.vendorQuests && s.vendorQuests[key];
     if (!q || (q.status !== "offered" && q.status !== "active")) return "";
-    const what = q.type === "fetch" ? `bring ${q.qtyNeeded} ${q.itemName}` : `kill ${q.countNeeded} zombies of level ${q.zombieLevelMin}+ (${q.progress || 0}/${q.countNeeded})`;
+    const what = q.type === "fetch" ? `bring ${q.qtyNeeded} ${q.itemName}` : `kill ${q.countNeeded} zombies of level ${q.zombieLevelMin}+${q.factionId ? " near their HQ" : ""} (${q.progress || 0}/${q.countNeeded})`;
     return q.status === "offered" ? `job on offer: ${what}` : (vendorQuestReady(q) ? `job ready to hand in: ${what}` : `job taken: ${what}`);
   }
   function rollVendorQuest() {
@@ -2736,8 +3028,12 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     const existing = s.vendorQuests[key];
     if (existing && (existing.status === "offered" || existing.status === "active")) return;
     if (existing && existing.status === "completed" && Date.now() < existing.cooldownUntil) return;
-    if (Math.random() < VENDOR_QUEST_CHANCE) {
-      s.vendorQuests[key] = generateVendorQuest();
+    const facId = sector.factionHq;
+    if (facId && factionRefuses(facId)) return;
+    if (Math.random() < (facId ? FACTION_JOB_CHANCE : VENDOR_QUEST_CHANCE)) {
+      const q = generateVendorQuest(facId && factionState(facId) === "Wary");   // Wary factions only trust you with supply runs
+      if (facId) { q.factionId = facId; q.rewardRepGain = 0; }
+      s.vendorQuests[key] = q;
       addLog(`${sector.shopName} has a job posted, if you're interested.`, "system");
     }
   }
@@ -2760,7 +3056,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
 
   function describeVendorQuest(quest) {
     if (quest.type === "fetch") return `bring ${quest.qtyNeeded}x ${quest.itemName}`;
-    return `kill ${quest.countNeeded} level ${quest.zombieLevelMin}+ zombies`;
+    return `kill ${quest.countNeeded} level ${quest.zombieLevelMin}+ zombies${quest.factionId ? " near their HQ" : ""}`;
   }
 
   function fetchQuestSatisfied(quest) {
@@ -2770,6 +3066,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
   function turnInVendorQuest(key) {
     const quest = s.vendorQuests[key];
     if (!quest || quest.status !== "active") return;
+    if (quest.factionId && factionRefuses(quest.factionId)) return;
     if (quest.type === "fetch") {
       if (!fetchQuestSatisfied(quest)) return;
       s.inventory[quest.itemName] -= quest.qtyNeeded;
@@ -2779,10 +3076,18 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     }
     s.cash += quest.rewardCash; s.totalCashEarned += quest.rewardCash;
     gainXp(quest.rewardXp);
-    addVendorRep(key, quest.rewardRepGain);
     s.totalVendorQuestsCompleted += 1;
-    let rewardMsg = `Quest complete: +${quest.rewardXp} XP, +$${quest.rewardCash}, reputation improved.`;
-    if (Math.random() < VENDOR_PREMIUM_ITEM_CHANCE) {
+    let rewardMsg;
+    if (quest.factionId && s.factions[quest.factionId]) {
+      const gain = FACTION_JOB_GAIN_MIN + Math.floor(Math.random() * FACTION_JOB_GAIN_SPAN);
+      s.factions[quest.factionId].jobs += 1;
+      rewardMsg = `Job done for the ${FACTIONS[quest.factionId].name}: +${quest.rewardXp} XP, +$${quest.rewardCash}, standing +${gain}.`;
+      gainStanding(quest.factionId, gain);
+    } else {
+      addVendorRep(key, quest.rewardRepGain);
+      rewardMsg = `Quest complete: +${quest.rewardXp} XP, +$${quest.rewardCash}, reputation improved.`;
+    }
+    if (!quest.factionId && Math.random() < VENDOR_PREMIUM_ITEM_CHANCE) {
       const premium = VENDOR_PREMIUM_ITEMS[Math.floor(Math.random() * VENDOR_PREMIUM_ITEMS.length)];
       s.inventory[premium] = (s.inventory[premium] || 0) + 1;
       rewardMsg += ` The vendor throws in something special: ${premium}.`;
@@ -3032,7 +3337,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
 
     Object.keys(s.vendorQuests).forEach(key => {
       const quest = s.vendorQuests[key];
-      if (quest.status === "active" && quest.type === "bounty" && zombieLevel >= quest.zombieLevelMin && quest.progress < quest.countNeeded) {
+      if (quest.status === "active" && quest.type === "bounty" && zombieLevel >= quest.zombieLevelMin && quest.progress < quest.countNeeded && (!quest.factionId || nearFactionHq(quest.factionId, s.x, s.y))) {
         quest.progress += 1;
         if (quest.progress >= quest.countNeeded) addLog(`Bounty target reached for a vendor job &mdash; return to turn it in.`, "story");
       }
@@ -3223,6 +3528,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     s.visited.add(key);
     const sector = sectorAt(s.x, s.y);
     addLog(`Advanced to [${s.x},${s.y}] &mdash; ${sector.name}${sector.hasShop ? " (vendor present)" : ""}.`, "move");
+    checkFactionDiscovery(sector);
     rollVendorQuest();
 
     if (sector.isBossSector) {
@@ -3381,7 +3687,15 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
 
   function buyItem(name, price, qty) {
     if (s.cash < price) return;
+    const facId = factionHqAt(s.x, s.y);
+    if (facId) {
+      if (factionRefuses(facId)) return;
+      const entry = FACTIONS[facId].stock.find(e => e.name === name && (e.qty || 1) === (qty || 1));
+      if (entry && factionEntryLock(facId, entry)) return;
+      if (entry && entry.perHour) s.factions[facId].fragReadyAt = Date.now() + FACTION_WINDOW_MS;
+    }
     s.cash -= price;
+    if (facId) factionSpend(facId, price);
     s.inventory[name] = (s.inventory[name] || 0) + (qty || 1);
     addLog(`Bought ${qty && qty > 1 ? qty + "x " : ""}${name} for $${price}.`, "loot");
     playSfx("coin");
@@ -3391,7 +3705,9 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
   function sellAtShop(name) {
     if (!(s.inventory[name] > 0)) return;
     const key = `${s.x},${s.y}`;
-    const price = Math.max(1, Math.round(shopSellPrice(name) * vendorSellBonusMult(key)));
+    const facId = factionHqAt(s.x, s.y);
+    if (facId && factionRefuses(facId)) return;
+    const price = Math.max(1, Math.round(shopSellPrice(name) * (facId ? factionSellMult(facId) : vendorSellBonusMult(key))));
     s.inventory[name] -= 1; if (s.inventory[name] <= 0) { delete s.inventory[name]; unequipIfMatches(name); }
     s.cash += price; s.totalCashEarned += price;
     addLog(`Sold ${name} to the vendor for $${price}.`, "loot");
@@ -3432,11 +3748,8 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     if (s.questStage !== "none") return;
     s.inventory["Research Fragment"] -= 3;
     if (s.inventory["Research Fragment"] <= 0) delete s.inventory["Research Fragment"];
-    const rng = mulberry32(hash(1, 1, s.seed) ^ 0x5bd1e995);
-    const dist = 10 + Math.floor(rng() * 5);
-    const angle = rng() * Math.PI * 2;
-    const px = Math.round(Math.cos(angle) * dist);
-    const py = Math.round(Math.sin(angle) * dist);
+    const pz = patientZeroFor(s.seed);
+    const px = pz.x, py = pz.y;
     s.patientZeroCoords = { x: px, y: py };
     s.questStage = "located";
     addLog(`Fragments decoded. Patient Zero's signal traces to Sector [${px},${py}]. Go finish this.`, "story");
@@ -3491,7 +3804,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
         if (nkey === "0,0" || isClaimed(nx, ny) || candidates.has(nkey)) return;
         if (!s.visited.has(nkey)) return;
         const sec = sectorAt(nx, ny);
-        if (sec.danger > CLAIM_DANGER_CAP) return;
+        if (sec.danger > CLAIM_DANGER_CAP || sec.factionHq) return;
         candidates.set(nkey, { x: nx, y: ny, sector: sec });
       });
     });
@@ -3622,6 +3935,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
       alpha: s.alpha,
       traitorsDefeated: s.traitorsDefeated, doubleAgentsTurned: s.doubleAgentsTurned,
       alphaKills: s.alphaKills || 0, alphaRespawnMs: s.alphaRespawnMs || 0, lastAlphaName: s.lastAlphaName || null,
+      factions: serializeFactions(),
       craftQueue: s.craftQueue, buildQueue: s.buildQueue,
       kills: s.kills, turns: s.turns, deathCount: s.deathCount,
       roster: s.roster, companionEverRecruited: s.companionEverRecruited,
@@ -3735,6 +4049,9 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     fresh.settings = Object.assign({}, data.settings || { severity: "Medium", infection: "Normal", armedPct: "Medium" });
     // Audio prefs: saves from before the audio system keep whatever the player has set this session.
     fresh.settings.audio = (data.settings && data.settings.audio) ? sanitizeAudioPrefs(data.settings.audio) : getAudioPrefs();
+    // Saves from before factions get Normal, with every faction undiscovered at its starting standing.
+    if (!FACTION_OPTIONS.includes(fresh.settings.factions)) fresh.settings.factions = "Normal";
+    fresh.factions = sanitizeFactions(data.factions, fresh.seed, fresh.settings.factions);
 
     if (typeof data.scrap === "number" && data.scrap > 0) {
       fresh.inventory = fresh.inventory || {};
@@ -3956,6 +4273,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     renderShopTab();
     renderCharacterTab(derived);
     renderRosterTab();
+    renderFactionsPanel();
     renderAchievementsTab();
     renderWorldMapTab();
 
@@ -4024,6 +4342,18 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     document.getElementById("btnCollectCache").addEventListener("click", collectCache);
   }
 
+  function knownHqAt(x, y) {
+    const id = factionHqAt(x, y);
+    return id && s.factions[id].discovered ? id : null;
+  }
+  function hqGlyph(id) { return `<b class="hqglyph" style="color:${FACTIONS[id].color};" data-hq="${id}">H</b>`; }
+  function decorateFactionCell(cell, x, y) {
+    const t = factionTerritoryAt(x, y);
+    if (!t || !s.factions[t.id].discovered) return;
+    cell.style.boxShadow = `inset 0 0 0 2px ${FACTIONS[t.id].color}`;
+    cell.setAttribute("data-faction-cell", t.id);
+  }
+
   function renderMinimap() {
     const mm = document.getElementById("minimap");
     mm.innerHTML = "";
@@ -4039,17 +4369,21 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
           cell.classList.add("d" + sec.danger);
           if (sec.isBossSector || sec.isLairSector) cell.classList.add("boss");
           if (isClaimed(cx, cy)) cell.classList.add("claimed");
-          let inner = (sec.isBossSector ? "!" : (sec.isLairSector ? "A" : sec.type[0]));
+          let inner = sec.factionHq ? hqGlyph(sec.factionHq) : (sec.isBossSector ? "!" : (sec.isLairSector ? "A" : sec.type[0]));
           if (sec.hasShop) inner += '<span class="shopdot">$</span>' + vendorQuestMarker(key);
           if (sec.hasCache && !s.collectedCaches.has(key)) inner += '<span class="cachedot">+</span>';
           if (isClaimed(cx, cy) && s.claimedBlocks[key].postedCompanionId) inner += '<span class="postdot">&#9679;</span>';
           cell.innerHTML = inner;
-          cell.title = sec.name + (sec.hasShop ? ` (${sec.shopName})` : "") + (vendorQuestLabel(key) ? ` \u2014 ${vendorQuestLabel(key)}` : "") + (sec.isBossSector ? " \u2014 PATIENT ZERO" : "") + (sec.isLairSector ? " \u2014 ALPHA LAIR" : "") + (sec.hasCache && !s.collectedCaches.has(key) ? " \u2014 cache" : "") + (isClaimed(cx, cy) ? " \u2014 claimed territory" : "");
+          cell.title = sec.name + (sec.faction && s.factions[sec.faction].discovered && !sec.factionHq ? ` [${FACTIONS[sec.faction].name} territory]` : "") + (sec.hasShop ? ` (${sec.shopName})` : "") + (vendorQuestLabel(key) ? ` \u2014 ${vendorQuestLabel(key)}` : "") + (sec.isBossSector ? " \u2014 PATIENT ZERO" : "") + (sec.isLairSector ? " \u2014 ALPHA LAIR" : "") + (sec.hasCache && !s.collectedCaches.has(key) ? " \u2014 cache" : "") + (isClaimed(cx, cy) ? " \u2014 claimed territory" : "");
         } else if (s.alpha && s.alpha.lair && cx === s.alpha.lair.x && cy === s.alpha.lair.y) {
           cell.classList.add("boss"); cell.textContent = "A"; cell.title = "Alpha lair";
         } else if (s.questStage === "located" && s.patientZeroCoords && cx === s.patientZeroCoords.x && cy === s.patientZeroCoords.y) {
           cell.classList.add("boss"); cell.textContent = "?"; cell.title = "Signal detected here";
+        } else if (knownHqAt(cx, cy)) {
+          const hid = knownHqAt(cx, cy);
+          cell.innerHTML = hqGlyph(hid); cell.title = `${FACTIONS[hid].name} \u2014 ${FACTIONS[hid].hq}`;
         }
+        decorateFactionCell(cell, cx, cy);
         mm.appendChild(cell);
       }
     }
@@ -4062,6 +4396,8 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
       <span><i style="background:transparent;color:var(--amber);border:none;font-weight:bold">!</i>Job on offer</span>
       <span><i style="background:transparent;color:var(--toxic);border:none;font-weight:bold">?</i>Job to hand in</span>
       <span><i style="background:transparent;color:var(--purple);border:none">!</i>Patient Zero</span>
+      <span><i style="background:transparent;color:var(--text);border:none;font-weight:bold">H</i>Faction HQ</span>
+      <span><i style="background:transparent;box-shadow:inset 0 0 0 2px #6fa8dc;"></i>Faction territory</span>
       <span><i style="background:transparent;color:var(--toxic);border:none">@</i>You</span>
       <span><i style="border-color:var(--amber);"></i>Claimed territory</span>
     `;
@@ -4118,7 +4454,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
           cell.classList.add("d" + sec.danger);
           if (sec.isBossSector || sec.isLairSector) cell.classList.add("boss");
           if (isClaimed(cx, cy)) cell.classList.add("claimed");
-          let inner = (sec.isBossSector ? "!" : (sec.isLairSector ? "A" : sec.type[0]));
+          let inner = sec.factionHq ? hqGlyph(sec.factionHq) : (sec.isBossSector ? "!" : (sec.isLairSector ? "A" : sec.type[0]));
           if (sec.hasShop) inner += '<span class="shopdot">$</span>' + vendorQuestMarker(key);
           if (sec.hasCache && !s.collectedCaches.has(key)) inner += '<span class="cachedot">+</span>';
           if (isClaimed(cx, cy) && s.claimedBlocks[key].postedCompanionId) inner += '<span class="postdot">&#9679;</span>';
@@ -4130,9 +4466,13 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
         } else if (s.questStage === "located" && s.patientZeroCoords && cx === s.patientZeroCoords.x && cy === s.patientZeroCoords.y) {
           cell.classList.add("boss"); cell.textContent = "?";
           cell.addEventListener("click", () => selectMapSector(cx, cy));
+        } else if (knownHqAt(cx, cy)) {
+          cell.innerHTML = hqGlyph(knownHqAt(cx, cy));
+          cell.addEventListener("click", () => selectMapSector(cx, cy));
         } else {
           cell.addEventListener("click", () => selectMapSector(cx, cy));
         }
+        decorateFactionCell(cell, cx, cy);
         grid.appendChild(cell);
       }
     }
@@ -4143,7 +4483,10 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     } else {
       const { x, y } = mapSelected;
       const selKey = `${x},${y}`;
-      if (!s.visited.has(selKey)) {
+      const selHq = knownHqAt(x, y);
+      if (!s.visited.has(selKey) && selHq) {
+        info.innerHTML = `<div class="title">${FACTIONS[selHq].hq} &mdash; [${x},${y}]</div><div class="desc" style="color:var(--text-dim);font-size:11px;">${FACTIONS[selHq].name} headquarters, led by ${FACTIONS[selHq].leader}. Standing: ${factionState(selHq)}.</div>`;
+      } else if (!s.visited.has(selKey)) {
         info.innerHTML = `<div class="title">Unexplored &mdash; [${x},${y}]</div><div class="desc" style="color:var(--text-dim);font-size:11px;">Scout this sector to learn what's there.</div>`;
       } else {
         const sec = sectorAt(x, y);
@@ -4152,6 +4495,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
         const postedComp = claimedHere && s.claimedBlocks[selKey].postedCompanionId ? s.roster.find(c => c.id === s.claimedBlocks[selKey].postedCompanionId) : null;
         info.innerHTML = `<div class="title">${sec.name} &mdash; [${x},${y}]</div>
           <div style="color:var(--text-dim);font-size:11px;">Type: ${sec.type} &middot; Danger: ${sec.danger} &middot; Distance from Safehouse: ${dist}
+          ${sec.faction && s.factions[sec.faction].discovered ? `<br><span style="color:${FACTIONS[sec.faction].color};">${sec.factionHq ? `${FACTIONS[sec.faction].name} HQ &mdash; ${FACTIONS[sec.faction].leader}` : `${FACTIONS[sec.faction].name} territory`} (${factionState(sec.faction)})</span>` : ""}
           ${sec.hasShop ? `<br>Vendor: ${sec.shopName}` : ""}${vendorQuestLabel(selKey) ? `<br><span style="color:var(--amber);">${vendorQuestLabel(selKey).replace(/^./, ch => ch.toUpperCase())}</span>` : ""}
           ${sec.hasCache ? `<br>Supply cache: ${s.collectedCaches.has(selKey) ? "already collected" : "uncollected"}` : ""}
           ${claimedHere ? `<br><span style="color:var(--amber);">Claimed compound territory${postedComp ? ` &mdash; posted: ${postedComp.name}` : " &mdash; unmanned"}</span>` : ""}
@@ -4168,6 +4512,8 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
       <span><i style="background:transparent;color:var(--amber);border:none;font-weight:bold">!</i>Job on offer</span>
       <span><i style="background:transparent;color:var(--toxic);border:none;font-weight:bold">?</i>Job to hand in</span>
       <span><i style="background:transparent;color:var(--purple);border:none">!</i>Patient Zero</span>
+      <span><i style="background:transparent;color:var(--text);border:none;font-weight:bold">H</i>Faction HQ</span>
+      <span><i style="background:transparent;box-shadow:inset 0 0 0 2px #6fa8dc;"></i>Faction territory</span>
       <span><i style="background:transparent;color:var(--toxic);border:none">@</i>You</span>
       <span><i style="background:#0c110b;"></i>Unexplored</span>
       <span><i style="border-color:var(--amber);"></i>Claimed territory</span>
@@ -4712,21 +5058,50 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
       return;
     }
     const key = `${s.x},${s.y}`;
-    const rep = getVendorRep(key);
-    const discMult = vendorDiscountMult(key);
-    const bonusMult = vendorSellBonusMult(key);
+    const facId = sector.factionHq || null;
+    const F = facId ? FACTIONS[facId] : null;
+    const rep = facId ? 0 : getVendorRep(key);
+    const discMult = facId ? factionBuyMult(facId) : vendorDiscountMult(key);
+    const bonusMult = facId ? factionSellMult(facId) : vendorSellBonusMult(key);
     const vendorSeed = hash(s.x + 9000, s.y + 9000, s.seed);
-    const greeting = VENDOR_GREETINGS[vendorSeed % VENDOR_GREETINGS.length];
-    let html = `<div class="vendor-header">
+    const greeting = F ? F.greeting : VENDOR_GREETINGS[vendorSeed % VENDOR_GREETINGS.length];
+    let html;
+    if (F) {
+      const f = s.factions[facId];
+      const st = factionState(facId);
+      const now = Date.now();
+      const giftsLeft = (!f.windowEnd || now >= f.windowEnd) ? FACTION_HOURLY_CAP : FACTION_HOURLY_CAP - f.giftUsed;
+      const perks = [];
+      if (discMult !== 1) perks.push(`prices ${discMult < 1 ? "-" : "+"}${Math.round(Math.abs(1 - discMult) * 100)}%`);
+      if (bonusMult !== 1) perks.push(`sell prices +${Math.round((bonusMult - 1) * 100)}%`);
+      if (FACTION_RANK[st] >= FACTION_RANK.Friendly) perks.push("zombie danger -1 in their territory");
+      html = `<div class="vendor-header faction-head" data-faction-hq="${facId}" style="border-color:${F.color};">
+          <div class="portrait-frame">${renderPortraitSVGSmall(hash(facId.length * 31, 7, s.seed))}</div>
+          <div class="greeting"><b style="color:${F.color};">${F.name}</b> &middot; <span style="color:var(--text-dim);">${F.leader}</span><br>&ldquo;${greeting}&rdquo;
+            <div class="faction-standing">${standingBarHtml(facId)}</div>
+            <span style="font-size:10px;color:var(--text-dim);">${perks.length ? perks.join(" &middot; ") : "No standing perks yet."}</span></div>
+        </div>
+        <div class="row-btns" style="margin-bottom:10px;"><button class="mini-btn" id="btnFactionGift" ${(s.cash >= FACTION_GIFT_PER_POINT && giftsLeft > 0) ? "" : "disabled"}>gift $${FACTION_GIFT_PER_POINT} (+1 standing)</button>
+          <span style="font-size:10px;color:var(--text-dim);">${giftsLeft}/${FACTION_HOURLY_CAP} gifts left this hour</span></div>`;
+      if (st === "Hostile") {
+        html += `<div class="quest-card" style="border-color:var(--blood);" data-faction-refused="${facId}"><div class="title" style="color:var(--blood);">TURNED AWAY</div>
+          <div class="desc">The guards won't trade with you or offer work. Gifts are the only way back in, or help their rivals less.</div></div>`;
+        wrap.innerHTML = html;
+        document.getElementById("btnFactionGift").addEventListener("click", () => giftFaction(facId));
+        return;
+      }
+    } else {
+      html = `<div class="vendor-header">
         <div class="portrait-frame">${renderPortraitSVGSmall(vendorSeed)}</div>
         <div class="greeting">&ldquo;${greeting}&rdquo;<br><span style="font-size:10px;color:var(--cyan);">Reputation: ${rep}/${VENDOR_REP_CAP}${rep > 0 ? ` (${Math.round((discMult && (1 - discMult)) * 100)}% buy discount, ${Math.round((bonusMult - 1) * 100)}% sell bonus)` : ""}</span></div>
       </div>`;
+    }
 
     const quest = s.vendorQuests[key];
     if (quest && quest.status === "offered") {
       html += `<div class="quest-card" style="border-color:var(--amber);">
         <div class="title" style="color:var(--amber);">JOB AVAILABLE</div>
-        <div class="desc">${describeVendorQuest(quest)}. Reward: +${quest.rewardXp} XP, +$${quest.rewardCash}, reputation gain.</div>
+        <div class="desc">${describeVendorQuest(quest)}. Reward: +${quest.rewardXp} XP, +$${quest.rewardCash}, ${quest.factionId ? `standing +${FACTION_JOB_GAIN_MIN} to +${FACTION_JOB_GAIN_MIN + FACTION_JOB_GAIN_SPAN - 1}` : "reputation gain"}.</div>
         <div class="row-btns">
           <button class="mini-btn" id="btnAcceptQuest">accept</button>
           <button class="mini-btn danger2" id="btnDeclineQuest">decline</button>
@@ -4747,13 +5122,14 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     html += `<div class="desc" style="margin-bottom:10px;color:var(--text-dim);font-size:11px;">BUY</div><div class="shop-grid">`;
     sector.shopStock.forEach(entry => {
       const minLevel = entry.minLevel || 1;
-      const locked = s.level < minLevel;
+      const lockText = facId ? factionEntryLock(facId, entry) : (s.level < minLevel ? `UNLOCKS AT LEVEL ${minLevel}` : "");
+      const locked = !!lockText;
       const finalPrice = Math.max(1, Math.round(entry.price * discMult));
       const affordable = s.cash >= finalPrice;
-      html += `<div class="shop-card ${locked ? "locked" : ""}">${withItemArt(entry.name, `
-        <div class="title">${entry.name}${entry.qty && entry.qty > 1 ? ` x${entry.qty}` : ""}</div>
-        ${locked ? `<div class="lockline">UNLOCKS AT LEVEL ${minLevel}</div>` : ""}
-        <div class="req-list">${rep > 0 && !locked ? `<span style="text-decoration:line-through;color:var(--text-dim);">$${entry.price}</span> ` : ""}$${finalPrice}</div>
+      html += `<div class="shop-card ${locked ? "locked" : ""}"${entry.need ? ` data-exclusive="${entry.need}"` : ""}>${withItemArt(entry.name, `
+        <div class="title">${entry.name}${entry.qty && entry.qty > 1 ? ` x${entry.qty}` : ""}${entry.need ? ` <span class="excl-tag">${entry.need.toUpperCase()}</span>` : ""}</div>
+        ${locked ? `<div class="lockline">${lockText}</div>` : ""}
+        <div class="req-list">${finalPrice !== entry.price && !locked ? `<span style="text-decoration:line-through;color:var(--text-dim);">$${entry.price}</span> ` : ""}$${finalPrice}</div>
         <button class="mini-btn" data-buy="${entry.name}" data-price="${finalPrice}" data-qty="${entry.qty || 1}" ${(affordable && !locked) ? "" : "disabled"}>${locked ? "locked" : "buy"}</button>`)}
       </div>`;
     });
@@ -4766,6 +5142,8 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     if (declineBtn) declineBtn.addEventListener("click", () => declineVendorQuest(key));
     const turnInBtn = document.getElementById("btnTurnInQuest");
     if (turnInBtn) turnInBtn.addEventListener("click", () => turnInVendorQuest(key));
+    const giftBtn = document.getElementById("btnFactionGift");
+    if (giftBtn) giftBtn.addEventListener("click", () => giftFaction(facId));
 
     const sellGrid = document.getElementById("shopSellGrid");
     const invEntries = Object.entries(s.inventory).filter(([name]) => name !== "Research Fragment");
@@ -4863,6 +5241,35 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
   }
   function eligibleArmorOptions() {
     return Object.keys(s.inventory).filter(n => CATALOG[n] && (CATALOG[n].category === "Armor" || CATALOG[n].category === "Clothing"));
+  }
+
+  function renderFactionsPanel() {
+    const ids = Object.keys(s.factions || {});
+    const known = ids.filter(id => s.factions[id].discovered);
+    document.getElementById("factionCountLabel").textContent = `(${known.length}/${ids.length} found)`;
+    const key = ids.map(id => { const f = s.factions[id]; return `${id}:${f.discovered ? 1 : 0}:${Math.round(f.standing)}:${f.jobs}`; }).join("|") + `|${s.level}`;
+    const wrap = document.getElementById("factionContent");
+    if (wrap.getAttribute("data-key") === key) return;
+    wrap.setAttribute("data-key", key);
+    const cards = known.map(id => {
+      const F = FACTIONS[id], f = s.factions[id], st = factionState(id);
+      const rival = s.factions[F.rival] ? (s.factions[F.rival].discovered ? FACTIONS[F.rival].name : "an unknown faction") : null;
+      const unlocks = F.stock.filter(e => e.need).map(e => `${e.name}${e.qty > 1 ? ` x${e.qty}` : ""} (${e.need})`);
+      if (F.sellBonusAllied) unlocks.push(`+${Math.round(F.sellBonusAllied * 100)}% sell prices (Allied)`);
+      return `<div class="faction-card" data-faction-card="${id}" style="border-left-color:${F.color};">
+        <div class="fname" style="color:${F.color};">${F.name}</div>
+        <div>Leader: <span style="color:var(--text);">${F.leader}</span> &middot; HQ: ${F.hq} [${f.x},${f.y}]</div>
+        <div class="faction-standing">${standingBarHtml(id)}</div>
+        <div style="margin:4px 0;">${F.agenda}</div>
+        <div>${FACTION_RANK[st] >= FACTION_RANK.Friendly ? "Their patrols thin the dead: zombie danger -1 in their territory." : (st === "Hostile" ? "Their HQ turns you away." : (st === "Wary" ? "Prices +25%, supply runs only." : "Normal trade and jobs."))}</div>
+        <div>Unlocks: ${unlocks.join(", ")}</div>
+        ${rival ? `<div>Rival: ${rival}. Standing you earn here costs half as much with them.</div>` : ""}
+        <div>Jobs done: ${f.jobs}</div>
+      </div>`;
+    });
+    const hidden = ids.length - known.length;
+    for (let i = 0; i < hidden; i++) cards.push(`<div class="faction-card unknown" data-faction-card="unknown">Unknown faction. Vendors sometimes talk; their territory lies 8 to 15 blocks from the Safehouse.</div>`);
+    wrap.innerHTML = `<div class="faction-grid">${cards.join("")}</div>`;
   }
 
   function renderRosterTab() {
@@ -5003,7 +5410,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     return {
       name: "Survivor", portraitSeed: Math.floor(Math.random() * 4294967295), portrait: null,
       attrs: { str: 1, agi: 1, end: 1, per: 1, lck: 1 }, pointsLeft: CREATION_POOL,
-      location: null, severity: "Medium", infection: "Normal", armedPct: "Medium"
+      location: null, severity: "Medium", infection: "Normal", armedPct: "Medium", factions: "Normal"
     };
   }
 
@@ -5058,8 +5465,10 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
       severity: document.getElementById("severitySelect").value,
       infection: document.getElementById("infectionSelect").value,
       armedPct: document.getElementById("armedSelect").value,
+      factions: FACTION_OPTIONS.includes(document.getElementById("factionSelect").value) ? document.getElementById("factionSelect").value : "Normal",
       audio: getAudioPrefs()
     };
+    s.factions = buildFactions(s.seed, s.settings.factions);
     syncAudioUI();
     const derived = computeDerived();
     s.hp = derived.maxHp;
@@ -5079,6 +5488,7 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     populateSelect("severitySelect", SEVERITY_OPTIONS, "Medium");
     populateSelect("infectionSelect", INFECTION_OPTIONS, "Normal");
     populateSelect("armedSelect", ARMED_OPTIONS, "Medium");
+    populateSelect("factionSelect", FACTION_OPTIONS, "Normal");
     renderCreation();
 
     const continueBlock = document.getElementById("continueBlock");
