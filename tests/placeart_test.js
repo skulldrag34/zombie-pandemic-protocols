@@ -20,6 +20,7 @@ const P = (w) => w.__zpPlaceArt;
   const realLoc = (real.match(/"locations":\{(.*?)\}/) || [])[1] || '';
   c.ok(['safehouse', 'commercial', 'residential', 'industrial', 'military'].every(k => new RegExp('"' + k + '":"data:image/webp').test(realLoc)), 'the live build embeds the Safehouse, Commercial, Residential, Industrial and Military banners');
   c.ok(/"wasteland":"data:image\/webp/.test(realLoc), 'and Wasteland: every sector type has a banner');
+  c.ok(['hq-authority', 'hq-union', 'hq-jackals', 'lair', 'pz'].every(k => new RegExp('"' + k + '":"data:image/webp').test(realLoc)), 'and the Authority, Union and Jackals HQs, the Alpha lair and Patient Zero');
   const realVend = (real.match(/"vendors":\{(.*?)\}/) || [])[1] || '';
   c.ok(['locker', 'ray', 'diane', 'pete', 'route9', 'miller', 'bill', 'authority', 'union', 'jackals', 'bloom'].every(k => new RegExp('"' + k + '":"data:image/webp').test(realVend)), 'the live build embeds the locker, all six vendors and all four faction leaders');
 
@@ -48,10 +49,12 @@ const P = (w) => w.__zpPlaceArt;
   await settle(w);
   c.ok($(w, 'sectorBanner').innerHTML === before, 'the banner is not rebuilt every second');
 
+  // HQs with their own banner use it; the Bloom (none yet) falls back to its sector type.
+  for (const id of ['authority', 'union', 'jackals']) { const f = w.__zpFactions.all()[id]; c.ok(P(w).locKey(f.x, f.y) === 'hq-' + id, `the ${id} HQ shows its own banner`); }
   // A faction HQ and the lair/Patient Zero fall back to the underlying type when they have no art.
   const auth = w.__zpFactions.all().authority;
   const hqType = w.__zpFactions.sector(auth.x, auth.y).type.toLowerCase();
-  c.ok(P(w).locKey(auth.x, auth.y) === (['safehouse', 'commercial', 'residential', 'industrial', 'military'].includes(hqType) ? hqType : null), `an HQ without its own art falls back to its sector type (${hqType})`);
+  c.ok(hqType && P(w).locKey(auth.x, auth.y) === 'hq-authority', `the Authority HQ's own banner beats its sector type (${hqType})`);
 
   // Vendor portraits.
   tab(w, 'shop'); await sleep(50);
@@ -77,6 +80,14 @@ const P = (w) => w.__zpPlaceArt;
   c.ok(!q(w, '#shopContent [data-vendor-art]') && !!q(w, '#shopContent .portrait-frame svg'), 'a vendor without art keeps the drawn face');
   w.__zpFactions.teleport(auth.x, auth.y); await settle(w);
   c.ok(!!q(w, '#shopContent [data-faction-hq="authority"] [data-vendor-art="authority"]'), "the Authority HQ shows President Voss's portrait");
+  done(s);
+
+  // Patient Zero's located sector shows the lab; the Bloom HQ (no banner yet) falls back to its sector type.
+  s = await session(baseSave({ questStage: 'located', patientZeroCoords: { x: 3, y: 4 }, settings: { severity: 'Medium', infection: 'Normal', armedPct: 'Medium', factions: 'Many' } })); w = s.window;
+  c.ok(P(w).locKey(3, 4) === 'pz', "Patient Zero's sector shows the Patient Zero banner");
+  const bl = w.__zpFactions.all().bloom;
+  const blType = w.__zpFactions.sector(bl.x, bl.y).type.toLowerCase();
+  c.ok(P(w).locKey(bl.x, bl.y) === blType, `the Bloom HQ, with no banner yet, falls back to ${blType}`);
   done(s);
 
   fs.unlinkSync(copy);

@@ -411,6 +411,51 @@
         1376,
         569
       ]
+    },
+    "hq-authority": {
+      "src": "locations/hq-authority-bunker.jpg",
+      "box": [
+        0,
+        70,
+        1376,
+        529
+      ]
+    },
+    "hq-union": {
+      "src": "locations/hq-union-depot.jpg",
+      "box": [
+        0,
+        110,
+        1376,
+        569
+      ]
+    },
+    "hq-jackals": {
+      "src": "locations/hq-jackals-fort.jpg",
+      "box": [
+        0,
+        140,
+        1376,
+        599
+      ]
+    },
+    "lair": {
+      "src": "locations/alpha-lair-tunnel.jpg",
+      "box": [
+        0,
+        170,
+        1376,
+        629
+      ]
+    },
+    "pz": {
+      "src": "locations/patient-zero-lab.jpg",
+      "box": [
+        0,
+        130,
+        1376,
+        589
+      ]
     }
   },
   "_vendors_comment": "Vendor and faction-leader portraits, centre 3:4 then 240x320. Keys: ray, diane, pete, route9, miller, bill, locker, authority, union, jackals, bloom.",
@@ -448,5 +493,6 @@
     "bloom": {
       "src": "vendors/leader-marsh.jpg"
     }
-  }
+  },
+  "_locations_held": "art-src/locations/held: river dock, bridge, stadium, downtown towers - Gemini drifts from the prompts, kept for later use."
 }
