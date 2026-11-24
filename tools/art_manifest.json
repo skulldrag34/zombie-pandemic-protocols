@@ -402,12 +402,42 @@
         1376,
         599
       ]
+    },
+    "wasteland": {
+      "src": "locations/wasteland-ashfield.jpg",
+      "box": [
+        0,
+        110,
+        1376,
+        569
+      ]
     }
   },
   "_vendors_comment": "Vendor and faction-leader portraits, centre 3:4 then 240x320. Keys: ray, diane, pete, route9, miller, bill, locker, authority, union, jackals, bloom.",
   "vendors": {
     "locker": {
       "src": "vendors/locker.jpg"
+    },
+    "ray": {
+      "src": "vendors/ray.jpg"
+    },
+    "diane": {
+      "src": "vendors/diane.jpg"
+    },
+    "pete": {
+      "src": "vendors/pete.jpg"
+    },
+    "route9": {
+      "src": "vendors/route9.jpg"
+    },
+    "miller": {
+      "src": "vendors/miller.jpg"
+    },
+    "bill": {
+      "src": "vendors/bill.jpg"
+    },
+    "authority": {
+      "src": "vendors/leader-voss.jpg"
     }
   }
 }

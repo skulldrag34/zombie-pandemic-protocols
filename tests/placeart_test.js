@@ -6,7 +6,8 @@ const PIX = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJA
 const fake = { ray: PIX, locker: PIX, authority: PIX, bogus: PIX };
 if (!/"vendors":\{[^}]*\}/.test(real)) { console.error('expected a vendors art family in index.html'); process.exit(1); }
 const copy = path.join(os.tmpdir(), `zp_placeart_${process.pid}.html`);
-fs.writeFileSync(copy, real.replace(/"vendors":\{[^}]*\}/, () => '"vendors":' + JSON.stringify(fake)));
+// Every sector type now has a banner, so the copy also drops Wasteland's (renamed to a key the game ignores) to test the no-art case.
+fs.writeFileSync(copy, real.replace(/"vendors":\{[^}]*\}/, () => '"vendors":' + JSON.stringify(fake)).replace('"wasteland":"data:image', '"bogusland":"data:image'));
 process.env.GAME_PATH = copy;
 const H = require('./harness.js');
 const { $, q, tab, click, loadSave, sleep, settle, baseSave, makeChecker } = H;
@@ -18,7 +19,9 @@ const P = (w) => w.__zpPlaceArt;
   const errors = []; const done = (s) => { errors.push(...s.errors); s.close(); };
   const realLoc = (real.match(/"locations":\{(.*?)\}/) || [])[1] || '';
   c.ok(['safehouse', 'commercial', 'residential', 'industrial', 'military'].every(k => new RegExp('"' + k + '":"data:image/webp').test(realLoc)), 'the live build embeds the Safehouse, Commercial, Residential, Industrial and Military banners');
-  c.ok(/"vendors":\{"locker":"data:image\/webp/.test(real), 'and the Home Supply Locker portrait');
+  c.ok(/"wasteland":"data:image\/webp/.test(realLoc), 'and Wasteland: every sector type has a banner');
+  const realVend = (real.match(/"vendors":\{(.*?)\}/) || [])[1] || '';
+  c.ok(['locker', 'ray', 'diane', 'pete', 'route9', 'miller', 'bill', 'authority'].every(k => new RegExp('"' + k + '":"data:image/webp').test(realVend)), 'the live build embeds the locker, all six vendors and President Voss');
 
   let s = await session(baseSave()); let w = s.window;
   c.ok(['safehouse', 'commercial', 'residential', 'industrial', 'military'].every(k => P(w).locations().includes(k)) && P(w).vendors().sort().join(',') === 'authority,locker,ray', 'only known keys get a style (a bogus key is ignored)');
@@ -35,7 +38,7 @@ const P = (w) => w.__zpPlaceArt;
   // Wasteland has no art yet: find one and check the banner hides there.
   let waste = null;
   for (let r = 6; r < 40 && !waste; r++) for (let x = -r; x <= r && !waste; x++) { const y = r - Math.abs(x); const sc = w.__zpFactions.sector(x, y); if (sc.type === 'Wasteland' && !sc.faction) waste = { x, y }; }
-  c.ok(waste && P(w).locKey(waste.x, waste.y) === null, `Wasteland has no art yet (checked at [${waste && waste.x},${waste && waste.y}])`);
+  c.ok(waste && P(w).locKey(waste.x, waste.y) === null, `with its art removed, Wasteland has no banner (checked at [${waste && waste.x},${waste && waste.y}])`);
   w.__zpFactions.teleport(waste.x, waste.y); await settle(w);
   c.ok($(w, 'sectorBanner').classList.contains('hidden'), 'standing in a sector without art hides the banner');
   w.__zpFactions.teleport(0, 1); await settle(w);
