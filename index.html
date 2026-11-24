@@ -168,6 +168,10 @@
   .standing-bar .sb-mid { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--text-dim); opacity: .6; }
   .standing-bar .sb-fill { position: absolute; top: 0; bottom: 0; }
   .standing-label { font-size: 10px; letter-spacing: 1px; white-space: nowrap; }
+  .sell-row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .sell-qty { display: flex; gap: 3px; align-items: center; flex: 1 1 100%; max-width: 140px; min-width: 0; }
+  .sell-qty input { flex: 1 1 auto; width: 0; min-width: 28px; background: #0c110b; color: var(--text); border: 1px solid var(--line); border-radius: 2px; font: inherit; font-size: 11px; padding: 3px 4px; }
+  .sell-qty input.bad { border-color: var(--blood); }
   .excl-tag { font-size: 8.5px; letter-spacing: 1px; color: var(--toxic); border: 1px solid var(--toxic); border-radius: 2px; padding: 0 3px; vertical-align: middle; }
   .hqglyph { font-weight: bold; }
   .faction-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
@@ -3702,15 +3706,18 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     render();
   }
 
-  function sellAtShop(name) {
-    if (!(s.inventory[name] > 0)) return;
+  function sellAtShop(name, qty) {
+    const have = s.inventory[name] || 0;
+    if (!(have > 0) || !currentSector().hasShop || name === "Research Fragment") return;
+    const n = Math.min(have, Math.max(1, Math.floor(Number(qty) || 1)));
     const key = `${s.x},${s.y}`;
     const facId = factionHqAt(s.x, s.y);
     if (facId && factionRefuses(facId)) return;
     const price = Math.max(1, Math.round(shopSellPrice(name) * (facId ? factionSellMult(facId) : vendorSellBonusMult(key))));
-    s.inventory[name] -= 1; if (s.inventory[name] <= 0) { delete s.inventory[name]; unequipIfMatches(name); }
-    s.cash += price; s.totalCashEarned += price;
-    addLog(`Sold ${name} to the vendor for $${price}.`, "loot");
+    s.inventory[name] -= n; if (s.inventory[name] <= 0) { delete s.inventory[name]; unequipIfMatches(name); }
+    s.cash += price * n; s.totalCashEarned += price * n;
+    delete sellQtyDraft[name];
+    addLog(n > 1 ? `Sold ${n}x ${name} to the vendor for $${price * n} ($${price} each).` : `Sold ${name} to the vendor for $${price}.`, "loot");
     playSfx("coin");
     checkAchievements();
     render();
@@ -5049,7 +5056,10 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     }
   }
 
+  const sellQtyDraft = {};                      // typed sell amounts, kept across the 1s re-render
   function renderShopTab() {
+    const ae = document.activeElement;
+    if (ae && ae.hasAttribute && ae.hasAttribute("data-sellqty") && document.getElementById("shopContent").contains(ae)) return;   // don't wipe a number being typed
     const sector = currentSector();
     document.getElementById("shopLabel").textContent = sector.hasShop ? `VENDOR \u2014 ${sector.shopName}` : "VENDOR";
     const wrap = document.getElementById("shopContent");
@@ -5151,9 +5161,25 @@ window.ZP_ART = {"items":{"Bandage":"data:image/webp;base64,UklGRvokAABXRUJQVlA4
     else {
       sellGrid.innerHTML = invEntries.map(([name, count]) => {
         const price = Math.max(1, Math.round(shopSellPrice(name) * bonusMult));
-        return `<div class="shop-card">${withItemArt(name, `<div class="title">${name} <span style="color:var(--amber);float:right;">${count}&times;</span></div><div class="req-list">$${price} each</div><button class="mini-btn sell" data-shopsell="${name}">sell 1</button>`)}</div>`;
+        const draft = sellQtyDraft[name] !== undefined ? sellQtyDraft[name] : "";
+        const multi = count > 1 ? `<button class="mini-btn sell" data-shopsell="${name}" data-sellcount="${count}">all (${count})</button>
+          <span class="sell-qty"><input type="number" inputmode="numeric" min="1" max="${count}" step="1" placeholder="#" aria-label="How many ${name} to sell" data-sellqty="${name}" value="${draft}"><button class="mini-btn sell" data-shopsell-typed="${name}">sell</button></span>` : "";
+        return `<div class="shop-card">${withItemArt(name, `<div class="title">${name} <span style="color:var(--amber);float:right;">${count}&times;</span></div><div class="req-list">$${price} each</div><div class="sell-row"><button class="mini-btn sell" data-shopsell="${name}" data-sellcount="1">sell 1</button>${multi}</div>`)}</div>`;
       }).join("");
-      sellGrid.querySelectorAll("[data-shopsell]").forEach(b => b.addEventListener("click", () => sellAtShop(b.getAttribute("data-shopsell"))));
+      sellGrid.querySelectorAll("[data-shopsell]").forEach(b => b.addEventListener("click", () => sellAtShop(b.getAttribute("data-shopsell"), parseInt(b.getAttribute("data-sellcount"), 10))));
+      const sellTyped = (name) => {
+        const inp = [...sellGrid.querySelectorAll("[data-sellqty]")].find(el => el.getAttribute("data-sellqty") === name);
+        const n = Math.floor(Number(inp && inp.value));
+        if (!(n >= 1)) { if (inp) inp.classList.add("bad"); return; }
+        if (inp) inp.blur();
+        sellAtShop(name, n);
+      };
+      sellGrid.querySelectorAll("[data-sellqty]").forEach(inp => {
+        const name = inp.getAttribute("data-sellqty");
+        inp.addEventListener("input", () => { sellQtyDraft[name] = inp.value; inp.classList.remove("bad"); });
+        inp.addEventListener("keydown", e => { e.stopPropagation(); if (e.key === "Enter") { e.preventDefault(); sellTyped(name); } });
+      });
+      sellGrid.querySelectorAll("[data-shopsell-typed]").forEach(b => b.addEventListener("click", () => sellTyped(b.getAttribute("data-shopsell-typed"))));
     }
   }
 

@@ -349,3 +349,9 @@ All timers are play time (accumulated in `tickAlpha`, paused during combat), sto
 - **Squad tab:** FACTIONS panel: discovered factions (leader, HQ, standing, agenda, unlocks, rival, jobs done) plus one "unknown faction" card per undiscovered one.
 - **Test hook:** `window.__zpFactions`. Suite: `tests/factions_test.js`.
 
+## Bulk selling (vendors)
+- Each stack in SELL YOUR GEAR has **sell 1**, **all (N)**, and a number box with a **sell** button (Enter also sells). Single items show only sell 1.
+- Amounts are clamped to what you carry; zero or blank sells nothing and outlines the box red. One log line per batch.
+- The shop tab skips its 1s rebuild while the box has focus, and typed amounts are remembered until sold. Keys typed in the box don't trigger game shortcuts.
+- Suite: `tests/bulksell_test.js`.
+
