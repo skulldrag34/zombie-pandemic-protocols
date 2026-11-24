@@ -438,6 +438,15 @@
     },
     "authority": {
       "src": "vendors/leader-voss.jpg"
+    },
+    "union": {
+      "src": "vendors/leader-teague.jpg"
+    },
+    "jackals": {
+      "src": "vendors/leader-marrow.jpg"
+    },
+    "bloom": {
+      "src": "vendors/leader-marsh.jpg"
     }
   }
 }

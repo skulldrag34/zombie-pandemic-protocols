@@ -21,7 +21,7 @@ const P = (w) => w.__zpPlaceArt;
   c.ok(['safehouse', 'commercial', 'residential', 'industrial', 'military'].every(k => new RegExp('"' + k + '":"data:image/webp').test(realLoc)), 'the live build embeds the Safehouse, Commercial, Residential, Industrial and Military banners');
   c.ok(/"wasteland":"data:image\/webp/.test(realLoc), 'and Wasteland: every sector type has a banner');
   const realVend = (real.match(/"vendors":\{(.*?)\}/) || [])[1] || '';
-  c.ok(['locker', 'ray', 'diane', 'pete', 'route9', 'miller', 'bill', 'authority'].every(k => new RegExp('"' + k + '":"data:image/webp').test(realVend)), 'the live build embeds the locker, all six vendors and President Voss');
+  c.ok(['locker', 'ray', 'diane', 'pete', 'route9', 'miller', 'bill', 'authority', 'union', 'jackals', 'bloom'].every(k => new RegExp('"' + k + '":"data:image/webp').test(realVend)), 'the live build embeds the locker, all six vendors and all four faction leaders');
 
   let s = await session(baseSave()); let w = s.window;
   c.ok(['safehouse', 'commercial', 'residential', 'industrial', 'military'].every(k => P(w).locations().includes(k)) && P(w).vendors().sort().join(',') === 'authority,locker,ray', 'only known keys get a style (a bogus key is ignored)');
