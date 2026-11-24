@@ -375,8 +375,39 @@
         1376,
         649
       ]
+    },
+    "residential": {
+      "src": "locations/residential-street.jpg",
+      "box": [
+        0,
+        100,
+        1376,
+        559
+      ]
+    },
+    "industrial": {
+      "src": "locations/industrial-railyard.jpg",
+      "box": [
+        0,
+        190,
+        1376,
+        649
+      ]
+    },
+    "military": {
+      "src": "locations/military-checkpoint.jpg",
+      "box": [
+        0,
+        140,
+        1376,
+        599
+      ]
     }
   },
   "_vendors_comment": "Vendor and faction-leader portraits, centre 3:4 then 240x320. Keys: ray, diane, pete, route9, miller, bill, locker, authority, union, jackals, bloom.",
-  "vendors": {}
+  "vendors": {
+    "locker": {
+      "src": "vendors/locker.jpg"
+    }
+  }
 }

@@ -15,6 +15,12 @@ const inv = async (w) => (await captureSave(w)).inventory;
   c.ok(!!btn(w, '[data-shopsell="Scrap Metal"][data-sellcount="1"]') && !!btn(w, '[data-shopsell="Scrap Metal"][data-sellcount="100"]') && !!btn(w, '[data-sellqty="Scrap Metal"]'), 'a stack shows sell 1, all (100) and a quantity box');
   c.ok(!btn(w, '[data-sellqty="Bandage"]') && !!btn(w, '[data-shopsell="Bandage"][data-sellcount="1"]') && !btn(w, '[data-shopsell="Bandage"][data-sellcount="2"]'), 'a single item shows only sell 1');
 
+  // Buy and sell are two clearly marked sections.
+  const buyS = q(w, '[data-shop-sect="buy"]'), sellS = q(w, '[data-shop-sect="sell"]');
+  c.ok(buyS && sellS && buyS.compareDocumentPosition(sellS) & w.Node.DOCUMENT_POSITION_FOLLOWING, 'the shop has a BUY section, then a SELL section');
+  c.ok(buyS.querySelectorAll('[data-buy]').length > 0 && !buyS.querySelector('[data-shopsell]') && sellS.querySelectorAll('[data-shopsell]').length > 0 && !sellS.querySelector('[data-buy]'), 'buy buttons only in BUY, sell buttons only in SELL');
+  c.ok(/BUY/.test(buyS.querySelector('.shop-sect-head').textContent) && /you have \$1000/.test(buyS.textContent) && /SELL/.test(sellS.querySelector('.shop-sect-head').textContent) && /from your backpack/.test(sellS.textContent), 'headers say what each side is (and your cash)');
+  c.ok(/pays \$\d+ each/.test(sellS.querySelector('.sell-price').textContent), 'sell cards read "pays $N each"');
   let cash0 = (await captureSave(w)).cash;
   clickEl(w, btn(w, '[data-shopsell="Scrap Metal"][data-sellcount="1"]'));
   c.ok((await inv(w))['Scrap Metal'] === 99, 'sell 1 sells one');

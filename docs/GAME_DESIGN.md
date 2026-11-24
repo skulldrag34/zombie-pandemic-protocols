@@ -358,6 +358,6 @@ All timers are play time (accumulated in `tickAlpha`, paused during combat), sto
 ## Field banners and shop portraits (art slots)
 - **Field banner:** top of the Field tab, 170px tall (110px on phones), the sector name, coordinates, type and danger over a bottom fade. Art key, most specific first: `pz`, `lair`, `hq-<faction>`, landmark (`safehouse` [0,0], `suburb` [0,1], `stripmall` [1,0], `precinct` [1,1]), then the sector type (`residential` ... `wasteland`). No matching art hides the banner. It rebuilds only when the sector or danger changes.
 - **Shop portraits:** the vendor header shows a 90x120 portrait keyed by shop name (`ray`, `diane`, `pete`, `route9`, `miller`, `bill`), `locker` at [0,0], or the faction id at an HQ; otherwise the drawn face stays.
-- **Pipeline:** `locations` (cropped to `box` or centre 3:1, then 900x300) and `vendors` (centre 3:4, then 240x320) in `tools/art_manifest.json`. In so far: Safehouse (rooftop survivors) and Commercial (street fight). Prompts: Art Prompt Pack, "Field banners and shop portraits".
+- **Pipeline:** `locations` (cropped to `box` or centre 3:1, then 900x300) and `vendors` (centre 3:4, then 240x320) in `tools/art_manifest.json`. In so far: banners Safehouse, Commercial, Residential, Industrial, Military; portrait Home Supply Locker. Prompts: Art Prompt Pack, "Field banners and shop portraits".
 - Suite: `tests/placeart_test.js` (injects stand-in vendor art into a temp copy).
-
+- **Shop layout:** two marked sections. BUY (cyan edge, "from <vendor> · you have $N") then SELL (amber edge and tint, "from your backpack · the vendor pays you", cards read "pays $N each").
