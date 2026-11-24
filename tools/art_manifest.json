@@ -355,5 +355,28 @@
     "herald": {
       "src": "alphas/herald.jpg"
     }
-  }
+  },
+  "_locations_comment": "Field-tab location banners, cropped to box then resized to 900x300 (3:1). Keys: safehouse, residential, commercial, industrial, military, wasteland, suburb, stripmall, precinct, hq-authority, hq-union, hq-jackals, hq-bloom, lair, pz.",
+  "locations": {
+    "safehouse": {
+      "src": "locations/safehouse-rooftop.jpg",
+      "box": [
+        0,
+        250,
+        1376,
+        709
+      ]
+    },
+    "commercial": {
+      "src": "locations/commercial-street-fight.jpg",
+      "box": [
+        0,
+        190,
+        1376,
+        649
+      ]
+    }
+  },
+  "_vendors_comment": "Vendor and faction-leader portraits, centre 3:4 then 240x320. Keys: ray, diane, pete, route9, miller, bill, locker, authority, union, jackals, bloom.",
+  "vendors": {}
 }
